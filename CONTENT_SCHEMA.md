@@ -7,6 +7,11 @@ selects the C# definition type; a `type` discriminator is therefore unnecessary.
 Property names use `camelCase`. Arrays retain author order only when order has gameplay
 meaning.
 
+The loader is intentionally strict: unknown JSON properties, wrong value types, and
+missing required properties are errors. JSON comments and trailing commas are accepted for
+author convenience. Validation is all-or-nothing—the runtime catalog is published only when
+every record parses and every implemented semantic/reference check succeeds.
+
 Every top-level record contains:
 
 | Field | Type | Rule |
@@ -282,10 +287,18 @@ The content validator milestone must report the file and JSON path for:
 Warnings should be reserved for suspicious but legal values. Anything that would crash
 or corrupt state is an error.
 
+Run the exact loader and validator used by the tests and Godot startup with:
+
+```sh
+dotnet run --project tools/content-validation/RpgGame.ContentValidation.csproj -- game/content
+```
+
+The tool prints every problem in deterministic file/path/code order and returns a nonzero
+process exit code, making it suitable for local authoring and future CI.
+
 ## Evolution policy
 
 Additive fields must have safe defaults. A breaking category change increments that
 category's `schemaVersion` and adds an explicit content migration before old files are
 removed. Never infer identity from filename changes. Status effects, shops, dialogue,
 and cutscene schemas will be added only when their first playable use case is built.
-

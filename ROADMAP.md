@@ -17,7 +17,7 @@ Deliverables:
 Explicitly excluded: movement, combat behavior, inventory behavior, dialogue,
 cutscenes, shops, quests, graphical assets, and production content.
 
-## Milestone 1 — Content pipeline and session shell
+## Milestone 1 — Content pipeline and session shell (implemented)
 
 - Implement JSON loading and aggregated validation for the nine initial categories.
 - Add a small command-line content-validation entry point.
@@ -28,6 +28,21 @@ cutscenes, shops, quests, graphical assets, and production content.
 
 Exit criteria: a headless test can load the complete fixture pack, create a new game,
 save it, load it, and prove equivalent state without opening a scene.
+
+Implementation notes:
+
+- one shared loader serves ordinary directories and Godot's `res://` filesystem;
+- validation aggregates errors and withholds the catalog if any record is invalid;
+- the fixture pack contains 15 records across all nine initial categories;
+- `GameSession`, `NewGameFactory`, `SaveCoordinator`, and `JsonFileSaveStore` complete
+  the scene-independent new-game/save/load flow;
+- the save serializer preserves unknown fields and owns the ordered migration boundary;
+- headless tests exercise the complete exit criterion using a real temporary save file.
+
+This milestone intentionally adds no title screen, save-slot UI, movement, combat,
+inventory behavior, dialogue, map art, or other gameplay presentation.
+See `MILESTONE_1_GUIDE.md` for the runtime flow, file-by-file responsibilities, and
+local validation instructions.
 
 ## Milestone 2 — Exploration interaction slice
 
@@ -83,4 +98,3 @@ the room, sees the trigger remain cleared, and can save/reload that result. This
 proves the four riskiest seams—content loading, scene-independent state, pure combat,
 and scene presentation—without building the full inventory, class, dialogue, or quest
 systems first.
-

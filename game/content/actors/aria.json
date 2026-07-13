@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "actor.hero.aria",
+  "displayNameKey": "actor.aria.name",
+  "startingClassId": "class.martial.vanguard",
+  "startingLevel": 1,
+  "baseStatistics": {
+    "stat.max-hp": 84,
+    "stat.max-mp": 12,
+    "stat.strength": 9,
+    "stat.defense": 7,
+    "stat.speed": 6
+  },
+  "startingAbilityIds": []
+}

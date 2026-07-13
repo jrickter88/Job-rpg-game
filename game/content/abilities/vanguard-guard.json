@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "ability.vanguard.guard",
+  "displayNameKey": "ability.guard.name",
+  "descriptionKey": "ability.guard.description",
+  "targetingId": "target.self",
+  "costStatisticId": null,
+  "costAmount": 0,
+  "rulesetId": "rules.defense.guard",
+  "numericParameters": {
+    "damage-reduction": 0.5
+  }
+}

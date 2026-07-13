@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "class.martial.vanguard",
+  "displayNameKey": "class.vanguard.name",
+  "baseStatisticBonuses": {
+    "stat.max-hp": 12,
+    "stat.defense": 2
+  },
+  "abilityUnlocks": [
+    {
+      "level": 1,
+      "abilityId": "ability.vanguard.guard"
+    }
+  ]
+}

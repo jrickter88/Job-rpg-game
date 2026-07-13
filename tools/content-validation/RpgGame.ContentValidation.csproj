@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    A tiny console host around the same loader used by Godot. It deliberately references
+    only the pure core project so content can be checked without an engine installation.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>RpgGame.ContentValidation</AssemblyName>
+    <RootNamespace>RpgGame.ContentValidation</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Rpg.Core/RpgGame.Core.csproj" />
+  </ItemGroup>
+</Project>

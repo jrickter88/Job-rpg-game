@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "id": "item.equipment.iron-sword",
+  "displayNameKey": "item.iron-sword.name",
+  "descriptionKey": "item.iron-sword.description",
+  "buyPrice": 120,
+  "sellPrice": 60,
+  "maxStack": 1
+}

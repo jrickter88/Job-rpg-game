@@ -5,8 +5,8 @@ namespace RpgGame.Core.Persistence;
 /// </summary>
 /// <remarks>
 /// Core code describes what must be stored but does not assume Windows paths, Godot's
-/// <c>user://</c> location, cloud storage, or a test filesystem. A Godot adapter will choose
-/// paths and eventually perform temporary-write plus atomic replacement.
+/// <c>user://</c> location, cloud storage, or a test filesystem. Composition code chooses
+/// the platform path; the JSON file implementation performs verified temporary writes.
 /// </remarks>
 public interface ISaveStore
 {

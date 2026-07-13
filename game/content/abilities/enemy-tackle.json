@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "ability.enemy.tackle",
+  "displayNameKey": "ability.tackle.name",
+  "descriptionKey": "ability.tackle.description",
+  "targetingId": "target.enemy.single",
+  "costStatisticId": null,
+  "costAmount": 0,
+  "rulesetId": "rules.damage.physical",
+  "numericParameters": {
+    "power": 10
+  }
+}

@@ -10,6 +10,7 @@ a general-purpose RPG engine.
 2. Read `CONTENT_SCHEMA.md` before adding or changing content records.
 3. Read `CODING_STANDARDS.md` before adding C# or Godot scenes.
 4. Check the current milestone and explicit deferrals in `ROADMAP.md`.
+5. Read `MILESTONE_1_GUIDE.md` before changing startup, content loading, session, or saves.
 
 When a requested feature conflicts with those documents, update the relevant design
 document in the same change or explain why the exception is temporary.
@@ -59,6 +60,7 @@ For nonvisual changes, run:
 
 ```bash
 dotnet test tests/RpgGame.Core.Tests/RpgGame.Core.Tests.csproj
+dotnet run --project tools/content-validation/RpgGame.ContentValidation.csproj -- game/content
 ```
 
 For project integration, when the matching Godot Mono editor is available, run:
@@ -69,7 +71,7 @@ godot --headless --editor --path . --quit
 ```
 
 Add a regression test for every fixed rules or save-migration bug. Content changes
-must eventually pass the content validator before they can be merged. If a required
+must pass the content validator before they can be merged. If a required
 tool is unavailable, run all remaining checks and state exactly what could not run.
 
 ## Definition of done
@@ -79,4 +81,3 @@ tool is unavailable, run all remaining checks and state exactly what could not r
 - Nonvisual behavior has focused automated tests.
 - Relevant documentation and schemas match the code.
 - No unrelated systems or speculative framework code were introduced.
-
