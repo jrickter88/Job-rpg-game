@@ -16,7 +16,7 @@ public sealed class NewGameFactoryTests
             StartingX = 4,
             StartingY = 7,
             StartingFacing = "south",
-            StartingActorIds = ["actor.hero.aria"],
+            StartingActorIds = ["actor.hero.james"],
         };
 
         GameState state = new NewGameFactory(TestContent.LoadCatalog()).Create(request);
@@ -26,10 +26,10 @@ public sealed class NewGameFactoryTests
         Assert.Equal(4, state.Location.X);
         Assert.Equal(7, state.Location.Y);
         Assert.Equal("south", state.Location.Facing);
-        Assert.Equal(["actor.hero.aria"], state.ActivePartyActorIds);
+        Assert.Equal(["actor.hero.james"], state.ActivePartyActorIds);
         Assert.Empty(state.EventFlags);
 
-        ActorProgressState progress = state.ActorProgress["actor.hero.aria"];
+        ActorProgressState progress = state.ActorProgress["actor.hero.james"];
         Assert.Equal("class.martial.vanguard", progress.ClassId);
         Assert.Equal(1, progress.Level);
         Assert.Equal(0, progress.Experience);
@@ -47,7 +47,7 @@ public sealed class NewGameFactoryTests
             {
                 SaveId = "event-test",
                 StartingMapId = "map.prologue.test-room",
-                StartingActorIds = ["actor.hero.aria"],
+                StartingActorIds = ["actor.hero.james"],
             });
 
         session.ReplaceState(state);

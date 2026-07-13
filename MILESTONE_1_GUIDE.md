@@ -62,14 +62,14 @@ The pipeline has four small parts:
 Errors include a file, JSON path, stable error code, and explanation. For example:
 
 ```text
-actors/aria.json $.startingClassId: Referenced ClassDefinition
+actors/james.json $.startingClassId: Referenced ClassDefinition
 'class.missing.vanguard' does not exist. [reference.missing]
 ```
 
 The catalog indexes definitions by both concrete type and ID. This is valid:
 
 ```csharp
-ActorDefinition aria = content.GetRequired<ActorDefinition>("actor.hero.aria");
+ActorDefinition james = content.GetRequired<ActorDefinition>("actor.hero.james");
 ```
 
 Requesting that same string as an `ItemDefinition` fails. The type parameter prevents one
@@ -83,8 +83,8 @@ The 15 checked-in records cover every initial category:
 |---|---|
 | Statistics | Bounds and dictionary references for HP, MP, strength, defense, and speed |
 | Abilities | One hero guard action and one enemy tackle action |
-| Class | Aria's Vanguard starting class and level-one ability unlock |
-| Actor | The starting actor used by new-game creation |
+| Class | James's Vanguard starting class and level-one ability unlock |
+| Actor | James, the starting actor used by new-game creation |
 | Items | A potion and the inventory identity for an iron sword |
 | Equipment | Equippable behavior that decorates the iron-sword item |
 | Enemy | A green slime with statistics, an ability, and loot |
@@ -107,6 +107,10 @@ The resulting state contains only save-specific facts:
 - active-party order;
 - each actor's current class, level, and experience;
 - persistent event flags.
+
+The party is stored as an ordered list, so it already supports the intended four members.
+The game begins with James alone; later recruitment and party-selection features will add the
+other three IDs without changing the save-state structure.
 
 Actor names, base statistics, and class definitions are not copied into the save. They remain
 in the content catalog and are found through stable IDs. This avoids bloated saves and makes

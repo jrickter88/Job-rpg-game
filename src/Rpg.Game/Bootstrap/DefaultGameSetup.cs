@@ -15,6 +15,6 @@ public static class DefaultGameSetup
         StartingX = 4,
         StartingY = 4,
         StartingFacing = "south",
-        StartingActorIds = ["actor.hero.aria"],
+        StartingActorIds = ["actor.hero.james"],
     };
 }

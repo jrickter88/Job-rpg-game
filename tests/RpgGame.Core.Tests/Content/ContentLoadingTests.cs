@@ -27,7 +27,7 @@ public sealed class ContentLoadingTests
         Assert.Single(catalog.GetAll<EncounterDefinition>());
         Assert.Single(catalog.GetAll<QuestDefinition>());
 
-        ActorDefinition actor = catalog.GetRequired<ActorDefinition>("actor.hero.aria");
+        ActorDefinition actor = catalog.GetRequired<ActorDefinition>("actor.hero.james");
         Assert.Equal("class.martial.vanguard", actor.StartingClassId);
     }
 

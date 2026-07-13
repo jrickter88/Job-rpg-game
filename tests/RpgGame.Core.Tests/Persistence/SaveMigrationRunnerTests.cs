@@ -13,7 +13,7 @@ public sealed class SaveMigrationRunnerTests
         var original = new JsonObject
         {
             ["saveFormatVersion"] = 1,
-            ["legacyName"] = "Aria",
+            ["legacyName"] = "James",
         };
         var runner = new SaveMigrationRunner(2, [new ExampleVersionOneToTwoMigration()]);
 
@@ -22,7 +22,7 @@ public sealed class SaveMigrationRunnerTests
         Assert.Equal(1, original["saveFormatVersion"]!.GetValue<int>());
         Assert.True(original.ContainsKey("legacyName"));
         Assert.Equal(2, migrated["saveFormatVersion"]!.GetValue<int>());
-        Assert.Equal("Aria", migrated["displayName"]!.GetValue<string>());
+        Assert.Equal("James", migrated["displayName"]!.GetValue<string>());
         Assert.False(migrated.ContainsKey("legacyName"));
     }
 

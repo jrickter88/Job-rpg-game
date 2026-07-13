@@ -44,7 +44,7 @@ Canonical IDs match:
 Use a category followed by useful namespaces and a specific name:
 
 ```text
-actor.hero.aria
+actor.hero.james
 class.magic.black-mage
 stat.max-hp
 item.consumable.potion
@@ -82,8 +82,8 @@ Rules:
 ```json
 {
   "schemaVersion": 1,
-  "id": "actor.hero.aria",
-  "displayNameKey": "actor.aria.name",
+  "id": "actor.hero.james",
+  "displayNameKey": "actor.james.name",
   "startingClassId": "class.martial.vanguard",
   "startingLevel": 1,
   "baseStatistics": { "stat.max-hp": 84, "stat.strength": 9 },

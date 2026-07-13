@@ -29,7 +29,7 @@ public sealed class SaveRoundTripTests
                     StartingX = 2,
                     StartingY = 3,
                     StartingFacing = "east",
-                    StartingActorIds = ["actor.hero.aria"],
+                    StartingActorIds = ["actor.hero.james"],
                 });
             original.EventFlags["flag.test.introduction-seen"] = true;
 
