@@ -1,0 +1,31 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RpgGame", "RpgGame.csproj", "{1F36B9AE-5EA5-43A5-83A1-8B2B9A475F02}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RpgGame.Core", "src\Rpg.Core\RpgGame.Core.csproj", "{5278110B-3496-4F0D-BF47-DC0AE6DA481B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RpgGame.Core.Tests", "tests\RpgGame.Core.Tests\RpgGame.Core.Tests.csproj", "{7B1BB62B-EB5A-47E4-B609-C27F025DC32D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1F36B9AE-5EA5-43A5-83A1-8B2B9A475F02}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1F36B9AE-5EA5-43A5-83A1-8B2B9A475F02}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1F36B9AE-5EA5-43A5-83A1-8B2B9A475F02}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1F36B9AE-5EA5-43A5-83A1-8B2B9A475F02}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5278110B-3496-4F0D-BF47-DC0AE6DA481B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5278110B-3496-4F0D-BF47-DC0AE6DA481B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5278110B-3496-4F0D-BF47-DC0AE6DA481B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5278110B-3496-4F0D-BF47-DC0AE6DA481B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7B1BB62B-EB5A-47E4-B609-C27F025DC32D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7B1BB62B-EB5A-47E4-B609-C27F025DC32D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7B1BB62B-EB5A-47E4-B609-C27F025DC32D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7B1BB62B-EB5A-47E4-B609-C27F025DC32D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
+

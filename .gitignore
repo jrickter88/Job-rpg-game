@@ -1,0 +1,23 @@
+# Godot generated data
+.godot/
+
+# .NET build output
+**/bin/
+**/obj/
+
+# IDE and user-local files
+.idea/
+.vs/
+.vscode/
+*.suo
+*.user
+*.userprefs
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local exports and packaged builds
+build/
+exports/
+

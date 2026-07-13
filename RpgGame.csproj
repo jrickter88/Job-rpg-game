@@ -1,0 +1,16 @@
+<Project Sdk="Godot.NET.Sdk/4.7.0">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>RpgGame</AssemblyName>
+    <RootNamespace>RpgGame</RootNamespace>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="src/Rpg.Game/**/*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="src/Rpg.Core/RpgGame.Core.csproj" />
+  </ItemGroup>
+</Project>
