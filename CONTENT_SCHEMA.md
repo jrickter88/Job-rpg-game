@@ -204,6 +204,17 @@ paths to this record. The exploration scene selects the record through its stabl
 }
 ```
 
+Statistic IDs form one extensible namespace shared by actor bases, class bonuses, enemy
+values, equipment modifiers, and future code-owned targeting rules. Runtime combat statistic
+resolution enumerates the loaded `StatisticDefinition` records rather than a hard-coded enum,
+so a valid mod statistic automatically participates. When an actor or enemy omits a registered
+statistic, its `defaultValue` is used; an actor's current class bonus is then added. The final
+derived value must remain inside the inclusive range.
+
+This clarification adds no JSON field and does not make current HP or current MP authored
+statistics. Those mutable resources belong to future transient battle state. A future AI
+selector may reference a stable statistic ID, but AI-profile content is not defined yet.
+
 ### Item and equipment
 
 An equipment record decorates an item record instead of inheriting from it in JSON.
@@ -282,7 +293,7 @@ known parameters.
 | `level` | integer | At least `1`. |
 | `statistics` | object of ID → integer | Keys reference statistics. |
 | `abilityIds` | ID array | References abilities. |
-| `formationFootprint` | object | Optional rectangular `rows` and `columns`; omitted means `1 × 1`. |
+| `formationFootprint` | object | Optional rectangular `rows` and `columns`; omitted means `1 × 1`, but explicit `null` is invalid. |
 | `loot` | array | `itemId`, chance from `0` to `1`, and inclusive quantity range. |
 
 ```json
@@ -293,7 +304,6 @@ known parameters.
   "level": 1,
   "statistics": { "stat.max-hp": 22, "stat.strength": 3 },
   "abilityIds": ["ability.enemy.tackle"],
-  "formationFootprint": { "rows": 1, "columns": 1 },
   "loot": [
     { "itemId": "item.consumable.potion", "chance": 0.125, "minQuantity": 1, "maxQuantity": 1 }
   ]
@@ -305,6 +315,8 @@ footprint is authored on the enemy species rather than repeated in each encounte
 extends from an encounter's top-front anchor toward increasing rows and increasing depth
 columns. Explicit JSON `null` is invalid; omit the property to select the compatible
 `1 × 1` default. Footprints are definition data, never save data or sprite-derived values.
+The content DTO converts to the core `FormationFootprint` without clamping either value;
+catalog publication occurs only after the authored dimensions pass validation.
 
 ### Encounter
 
@@ -373,7 +385,8 @@ The content validator milestone must report the file and JSON path for:
 - invalid or duplicate top-level IDs;
 - missing references and wrong-category references;
 - impossible ranges, negative prices/costs, and invalid probabilities;
-- malformed encounter anchors, footprints outside the grid, overlapping placements, or
+- null, nonpositive, or oversized enemy footprints, malformed encounter anchors,
+  footprints outside the grid, overlapping placements, or
   quest objective IDs duplicated within a quest;
 - unknown rulesets, targeting modes, parameters, slots, and flags where registries exist;
 - orphaned equipment records and duplicate equipment for one `itemId`.
@@ -399,7 +412,8 @@ process exit code, making it suitable for local authoring and future CI.
 ## Evolution policy
 
 Additive fields must have safe defaults. `formationFootprint` is such a field: enemy schema
-version `1` remains valid when it is omitted. A breaking category shape change increments
+version `1` remains valid when it is omitted, including existing mod records authored before
+Milestone 2.8. A breaking category shape change increments
 that category's `schemaVersion` and adds an explicit content migration before old files are
 removed. The canonical encounter-slot restriction is instead a public data-contract change,
 so Milestone 2.75 raises the mod `gameApiVersion` to `2`; it does not alter record schema or

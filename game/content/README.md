@@ -14,7 +14,8 @@ new-game choices. Until a class-selection screen exists, the bootstrap selects t
 stable ID in the resolved pool solely so the nonvisual startup demonstration can run.
 The additional dialogue record supplies the two placeholder lines used by the test-room guide.
 The fixed slime encounter uses canonical enemy formation anchors, and enemy records may
-declare rectangular `formationFootprint` dimensions. Omission safely means `1 × 1`.
+declare rectangular `formationFootprint` dimensions. The checked-in green slime deliberately
+omits that optional member to prove old/base records still receive the safe `1 × 1` default.
 
 Run validation without opening Godot:
 

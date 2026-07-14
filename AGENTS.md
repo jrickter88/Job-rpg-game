@@ -19,6 +19,11 @@ a general-purpose RPG engine.
     exploration/encounter scene handoff.
 11. Read `MILESTONE_2_75_GUIDE.md` before changing battle formation coordinates,
     footprints, encounter slot IDs, or formation presentation.
+12. Read `MILESTONE_2_8_GUIDE.md` before changing enemy footprint content, its
+    validation diagnostics, or its conversion into core formation geometry.
+13. Read `MILESTONE_2_85_GUIDE.md` before changing combat statistic calculation,
+    combatant initialization, actor/class/enemy combat values, AI statistic queries,
+    or future target ranking.
 
 When a requested feature conflicts with those documents, update the relevant design
 document in the same change or explain why the exception is temporary.

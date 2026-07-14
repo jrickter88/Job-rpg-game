@@ -34,16 +34,14 @@ public sealed class EncounterFormationBuilder
                     $"Encounter '{encounter.Id}' has invalid enemy slot '{source.SlotId}'.");
             }
 
-            EnemyFormationFootprintDefinition authoredFootprint = enemy.FormationFootprint
+            EnemyFootprintDefinition authoredFootprint = enemy.FormationFootprint
                 ?? throw new InvalidDataException(
                     $"Enemy '{enemy.Id}' has a null formation footprint.");
             placements.Add(new FormationPlacement(
                 $"enemy-{index}",
                 enemy.Id,
                 anchor,
-                new FormationFootprint(
-                    authoredFootprint.Rows,
-                    authoredFootprint.Columns)));
+                authoredFootprint.ToFormationFootprint()));
         }
 
         IReadOnlyList<FormationProblem> problems =

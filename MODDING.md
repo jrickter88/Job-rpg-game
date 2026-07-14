@@ -155,6 +155,25 @@ Validation rejects malformed anchors, any footprint that leaves the enemy 4 × 4
 overlap between enemies. See `CONTENT_SCHEMA.md` and `MILESTONE_2_75_GUIDE.md` for the full
 coordinate convention.
 
+Milestone 2.8 is an additive enemy-record change. Existing mod enemies do not need to be
+rewritten: absence of `formationFootprint` constructs the same deterministic `1 × 1` value
+as an explicit `{ "rows": 1, "columns": 1 }`. This does not change `gameApiVersion`, mod
+manifest shape, or save compatibility because footprints are immutable content definitions,
+not campaign state. See `MILESTONE_2_8_GUIDE.md` for the focused content contract.
+
+## Combat statistic resolution
+
+Valid mod-defined statistics and namespaced actor, class, or enemy values flow through the
+same pure statistic resolver as base content. Every loaded statistic is included by stable ID;
+an omitted value uses that statistic's authored default, and a current class bonus is additive.
+Milestone 2.85 adds no content fields and does not change `gameApiVersion` or the save format.
+
+Future data-authored AI targeting may refer to statistic IDs—for example, a code-owned
+"lowest statistic" selector parameterized with `stat.author.mod-name.magic-defense`. This
+milestone defines no AI-profile record, targeting behavior, or executable hook. Community
+scripts, assemblies, reflection-selected methods, and unrestricted expressions remain
+unsupported.
+
 ## Changing the new-game class pool
 
 The base game includes Vanguard, Black Mage, and White Mage. Availability is not stored on

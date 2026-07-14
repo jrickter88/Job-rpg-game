@@ -1,3 +1,5 @@
+using RpgGame.Core.Combat.Formation;
+
 namespace RpgGame.Core.Content.Definitions;
 
 /// <summary>
@@ -25,20 +27,31 @@ public sealed record EnemyDefinition : ContentDefinition
     /// Authored rectangular size on the 4 × 4 enemy formation. Omission remains compatible
     /// and means one cell; explicit JSON null is rejected by content validation.
     /// </summary>
-    public EnemyFormationFootprintDefinition FormationFootprint { get; init; } = new();
+    public EnemyFootprintDefinition FormationFootprint { get; init; } = new();
 
     /// <summary>Independent item-drop possibilities evaluated after victory.</summary>
     public List<LootEntryDefinition> Loot { get; init; } = [];
 }
 
 /// <summary>Rectangular rows-by-columns footprint authored for one enemy species.</summary>
-public sealed record EnemyFormationFootprintDefinition
+public sealed record EnemyFootprintDefinition
 {
     /// <summary>Occupied rows extending downward from the encounter anchor.</summary>
     public int Rows { get; init; } = 1;
 
     /// <summary>Occupied depth columns extending backward from the encounter anchor.</summary>
     public int Columns { get; init; } = 1;
+
+    /// <summary>
+    /// Converts authored content into the immutable footprint used by formation rules.
+    /// </summary>
+    /// <remarks>
+    /// Validation deliberately happens in the production content validator. This conversion
+    /// copies the authored values exactly—it never clamps or silently repairs invalid content.
+    /// Keeping the conversion here prevents future battle consumers from repeatedly mapping
+    /// the same two fields by hand while keeping this DTO separate from battle state.
+    /// </remarks>
+    public FormationFootprint ToFormationFootprint() => new(Rows, Columns);
 }
 
 /// <summary>Embedded description of one possible item drop.</summary>

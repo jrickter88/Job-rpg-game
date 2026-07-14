@@ -230,6 +230,12 @@ loosely documented `formation.*` keys to canonical grid coordinates. This delibe
 old encounter mods instead of guessing what `formation.left` meant. The additive enemy
 footprint still defaults to `1 × 1`, and neither change alters `SaveFormatVersion`.
 
+Milestone 2.8 keeps authored `EnemyFootprintDefinition` separate from transient formation
+state. Its one `ToFormationFootprint` conversion copies validated rows and columns into the
+pure core value; it does not infer size from a sprite or silently clamp author mistakes.
+Because the DTO supplies `1` for both omitted members, existing base and data-mod enemy files
+remain valid without a schema, data-API, or save-format increment.
+
 Milestone 1.5 has no replacement or patch semantics. A mod owns only IDs under the namespace
 derived from its manifest—for example, `mod.alex.weather-pack` may define
 `ability.alex.weather-pack.storm`. Duplicate IDs remain errors. A mod may reference valid
@@ -253,6 +259,43 @@ Files are an authoring detail. Runtime and save data only store stable IDs. The 
 fixture pack exercises the architecture; it is not intended to be production game content.
 
 ## Combat boundary
+
+### Combat statistic initialization
+
+Milestone 2.85 adds one pure calculation immediately before future combat-state creation:
+
+```mermaid
+flowchart TD
+    Actor["ActorDefinition"] --> PartyResolver["CombatStatisticResolver"]
+    Progress["ActorProgressState"] --> PartyResolver
+    Class["ClassDefinition"] --> PartyResolver
+    PartyResolver --> PartyValues["Immutable starting statistics"]
+    Enemy["EnemyDefinition"] --> EnemyResolver["CombatStatisticResolver"]
+    EnemyResolver --> EnemyValues["Immutable starting statistics"]
+```
+
+Definitions remain immutable application-lifetime content. `ActorProgressState` supplies the
+class selected for this campaign and records level, while `CombatStatisticResolver` produces a
+new transient read-only dictionary for a future battle constructor. Nothing is copied back
+into `GameState`, and neither actor nor enemy definitions are changed.
+
+For a party actor, each registered statistic is the actor's explicit base—or the statistic's
+default when omitted—plus the current class's explicit bonus—or zero when omitted. For an
+enemy, each registered statistic is its explicit value or the statistic default. Both paths
+enumerate every `StatisticDefinition` in ordinal stable-ID order and validate the final value
+against that definition's inclusive range. Unknown source keys are rejected defensively even
+if a hand-built catalog bypasses normal content validation.
+
+Level and experience do not change these values yet because no progression formula exists.
+Enemy level likewise does not scale authored values. Resolved `stat.max-hp` and `stat.max-mp`
+are maximums; mutable current HP/MP belong to future encounter state and are not statistic
+content or campaign save fields. `CombatSnapshot` construction remains deferred.
+
+The complete stable-ID map preserves a narrow future AI seam. A later selector can query a
+registered ID such as `stat.magic-defense` without adding a closed C# stat enum, but target
+discovery, ranking, and AI profiles do not belong in this resolver. Future enemy AI must emit
+ordinary `CombatCommand` values through the same validation/resolution path as player intent;
+only combat resolution applies outcomes.
 
 `ICombatResolver` accepts a `CombatSnapshot` plus a `CombatCommand` and returns the
 next snapshot plus typed `CombatEvent` values. A future resolver will depend on
@@ -322,7 +365,9 @@ formation bounds/overlap, deterministic encounter and party placement, aggregate
 failures, mod manifests/namespaces/dependency ordering, modded-save compatibility,
 new-game construction, exploration location/flag mutations, session notification, dialogue
 content, save migrations, safe slot names, unknown future fields, and an actual filesystem
-save/load round trip.
+save/load round trip. Focused combat-statistic tests cover actor-plus-class and enemy formulas,
+defaults, range failures, unknown IDs, ordinal enumeration, result immutability, and automatic
+participation by a newly registered statistic.
 
 ## Decisions intentionally deferred
 

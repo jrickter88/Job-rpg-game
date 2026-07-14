@@ -145,6 +145,10 @@ because it is usually an authoring mistake rather than an intentional default. N
 enemy footprint nor an encounter anchor is inferred from a filename, display name, sprite,
 or Godot node.
 
+Milestone 2.8 formalizes this content-to-geometry connection, its enemy-specific diagnostics,
+and its mod-compatibility tests. The formation dimensions and rectangular geometry continue
+to be owned here by the Milestone 2.75 pure rules. See `MILESTONE_2_8_GUIDE.md`.
+
 ## Runtime ownership and data flow
 
 ```mermaid
@@ -197,7 +201,9 @@ any exist:
 | Code | Meaning | Typical JSON path |
 |---|---|---|
 | `formation.slot-invalid` | Encounter anchor is malformed, noncanonical, party-side, or outside 0–3 | `$.enemyGroup[2].slotId` |
-| `formation.footprint-invalid` | Footprint is null or a dimension is outside 1–4 | `$.formationFootprint.rows` |
+| `enemy.footprint-null` | The optional footprint member was explicitly set to null | `$.formationFootprint` |
+| `enemy.footprint-rows-invalid` | Rows are outside the enemy formation's 1–4 range | `$.formationFootprint.rows` |
+| `enemy.footprint-columns-invalid` | Columns are outside the enemy formation's 1–4 range | `$.formationFootprint.columns` |
 | `formation.out-of-bounds` | Valid anchor plus footprint leaves the enemy grid | `$.enemyGroup[0].slotId` |
 | `formation.overlap` | Two enemy rectangles claim at least one cell | `$.enemyGroup[1].slotId` |
 

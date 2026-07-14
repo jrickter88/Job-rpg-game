@@ -151,6 +151,38 @@ Explicitly excluded: combat commands, targeting, movement, range, row bonuses,
 party formation editing, HP, turns, victory, defeat, and rewards. See
 `MILESTONE_2_75_GUIDE.md` for coordinates, ownership, validation, and the manual proof.
 
+### Milestone 2.8 — Enemy footprint content (validation pending)
+
+- Allow enemy definitions to declare rectangular formation footprints.
+- Default omitted footprints to one row by one column.
+- Validate positive dimensions against the four-by-four enemy formation.
+- Preserve existing base and mod enemy content through an additive default.
+
+Exit criteria: base and mod enemies load with deterministic footprints, and headless tests
+prove valid large footprints load while invalid dimensions prevent catalog publication.
+
+Explicitly excluded: encounter coordinates, placement overlap, battle-grid rendering, party
+placement, targeting, combat commands, HP, turns, and rewards. See
+`MILESTONE_2_8_GUIDE.md` for the authored JSON contract, validation codes, conversion
+boundary, and compatibility rationale.
+
+### Milestone 2.85 — Combat statistic resolution (validation pending)
+
+- Resolve party combat statistics from actor bases plus the campaign's current class bonuses.
+- Resolve enemy combat statistics from authored enemy values.
+- Fill omitted statistics from registered statistic defaults.
+- Validate derived values against statistic ranges and return immutable deterministic results.
+- Preserve stable statistic-ID lookup for future data-authored enemy targeting rules.
+
+Exit criteria: headless tests prove that current party and enemy definitions resolve into
+complete, immutable statistic maps and that newly registered statistics automatically
+participate without constructing combat state or opening Godot.
+
+Explicitly excluded: current HP/MP, combat snapshots, commands, turns, targeting, enemy AI,
+damage, Guard, victory, defeat, rewards, level growth, equipment, statuses, and battle UI.
+See `MILESTONE_2_85_GUIDE.md` for the formulas, ownership rules, defensive checks, and
+future-AI boundary.
+
 ## Milestone 3 — First playable battle slice
 
 - Implement one deterministic battle resolver with Attack, Guard, HP, speed-based turn

@@ -32,3 +32,8 @@ footprints, both battlefield boundaries, large-enemy overlap, adjacent rectangle
 battle-local IDs, encounter building, and the temporary four-member party mapping. Content
 tests also prove exact formation diagnostics while the running Godot scene remains a manual
 presentation check.
+
+Milestone 2.8 content tests load omitted, explicit `1 × 1`, and valid `2 × 2` enemy
+footprints; reject null, zero, negative, and oversized dimensions with exact diagnostics;
+prove an older mod enemy still receives the default; and verify the content-to-core
+conversion preserves both dimensions. No Godot test is needed for this authored-data change.

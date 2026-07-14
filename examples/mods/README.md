@@ -17,7 +17,8 @@ starting pool is Chronoguard, White Mage, and Vanguard.
 
 The manifest uses data API `2`. This version requires encounter mods to use canonical enemy
 anchors such as `formation.enemy.r1.c0`; API `1` abstract formation names are no longer
-accepted. Enemy records may omit `formationFootprint` to retain the `1 × 1` default.
+accepted. Milestone 2.8 remains additive: enemy records may omit `formationFootprint` and
+still load with the deterministic `1 × 1` default, so the data API remains version `2`.
 
 To try discovery in a development build, copy the entire `mod.example.starter-pack` folder into
 the Godot project's `user://mods` folder. The startup output will report one enabled data mod.

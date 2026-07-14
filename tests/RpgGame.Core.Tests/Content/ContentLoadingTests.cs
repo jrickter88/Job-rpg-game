@@ -1,3 +1,4 @@
+using RpgGame.Core.Combat.Formation;
 using RpgGame.Core.Content.Definitions;
 using RpgGame.Core.Content.Loading;
 using Xunit;
@@ -312,6 +313,40 @@ public sealed class ContentLoadingTests
     }
 
     [Fact]
+    public void EnemyFootprint_ExplicitOneByOne_LoadsExactly()
+    {
+        ContentDocument enemy = CreateEnemyDocument(
+            "enemy.test.explicit-single",
+            "explicit-single.json",
+            "{ \"rows\": 1, \"columns\": 1 }");
+
+        ContentLoadResult result = LoadFormationDocuments(enemy);
+
+        Assert.True(result.IsSuccess, string.Join(Environment.NewLine, result.Problems));
+        EnemyDefinition loaded = result.Catalog!.GetRequired<EnemyDefinition>(
+            "enemy.test.explicit-single");
+        Assert.Equal(1, loaded.FormationFootprint.Rows);
+        Assert.Equal(1, loaded.FormationFootprint.Columns);
+    }
+
+    [Fact]
+    public void EnemyFootprint_ValidTwoByTwo_LoadsExactly()
+    {
+        ContentDocument enemy = CreateEnemyDocument(
+            "enemy.test.large",
+            "large.json",
+            "{ \"rows\": 2, \"columns\": 2 }");
+
+        ContentLoadResult result = LoadFormationDocuments(enemy);
+
+        Assert.True(result.IsSuccess, string.Join(Environment.NewLine, result.Problems));
+        EnemyDefinition loaded = result.Catalog!.GetRequired<EnemyDefinition>(
+            "enemy.test.large");
+        Assert.Equal(2, loaded.FormationFootprint.Rows);
+        Assert.Equal(2, loaded.FormationFootprint.Columns);
+    }
+
+    [Fact]
     public void EnemyFootprint_ExplicitNull_IsRejectedAtExactPath()
     {
         ContentDocument enemy = new("enemies/null-footprint.json", """
@@ -331,33 +366,144 @@ public sealed class ContentLoadingTests
 
         ContentProblem problem = Assert.Single(
             result.Problems,
-            candidate => candidate.Code == "formation.footprint-invalid");
+            candidate => candidate.Code == "enemy.footprint-null");
+        Assert.Equal("base/enemies/null-footprint.json", problem.FilePath);
         Assert.Equal("$.formationFootprint", problem.JsonPath);
+        Assert.Contains("omit it", problem.Message, StringComparison.Ordinal);
+        Assert.Null(result.Catalog);
     }
 
     [Fact]
-    public void EnemyFootprint_InvalidDimensions_AggregateExactPaths()
+    public void EnemyFootprint_ZeroRows_IsRejected()
     {
-        ContentDocument enemy = new("enemies/invalid-footprint.json", """
-            {
-              "schemaVersion": 1,
-              "id": "enemy.test.invalid-footprint",
-              "displayNameKey": "enemy.test.invalid-footprint.name",
-              "level": 1,
-              "statistics": {},
-              "abilityIds": [],
-              "formationFootprint": { "rows": 0, "columns": 5 },
-              "loot": []
-            }
-            """);
+        ContentDocument enemy = CreateEnemyDocument(
+            "enemy.test.zero-rows",
+            "zero-rows.json",
+            "{ \"rows\": 0, \"columns\": 1 }");
+
+        ContentLoadResult result = LoadFormationDocuments(enemy);
+
+        AssertFootprintProblem(
+            result,
+            "enemy.footprint-rows-invalid",
+            "$.formationFootprint.rows",
+            "base/enemies/zero-rows.json");
+    }
+
+    [Fact]
+    public void EnemyFootprint_ZeroColumns_IsRejected()
+    {
+        ContentDocument enemy = CreateEnemyDocument(
+            "enemy.test.zero-columns",
+            "zero-columns.json",
+            "{ \"rows\": 1, \"columns\": 0 }");
+
+        ContentLoadResult result = LoadFormationDocuments(enemy);
+
+        AssertFootprintProblem(
+            result,
+            "enemy.footprint-columns-invalid",
+            "$.formationFootprint.columns",
+            "base/enemies/zero-columns.json");
+    }
+
+    [Fact]
+    public void EnemyFootprint_NegativeDimensions_AggregateBothProblems()
+    {
+        ContentDocument enemy = CreateEnemyDocument(
+            "enemy.test.negative",
+            "negative.json",
+            "{ \"rows\": -2, \"columns\": -3 }");
 
         ContentLoadResult result = LoadFormationDocuments(enemy);
 
         Assert.Collection(
-            result.Problems.Where(problem => problem.Code == "formation.footprint-invalid"),
-            problem => Assert.Equal("$.formationFootprint.columns", problem.JsonPath),
-            problem => Assert.Equal("$.formationFootprint.rows", problem.JsonPath));
+            result.Problems.Where(problem => problem.Code.StartsWith(
+                "enemy.footprint-",
+                StringComparison.Ordinal)),
+            problem =>
+            {
+                Assert.Equal("enemy.footprint-columns-invalid", problem.Code);
+                Assert.Equal("$.formationFootprint.columns", problem.JsonPath);
+            },
+            problem =>
+            {
+                Assert.Equal("enemy.footprint-rows-invalid", problem.Code);
+                Assert.Equal("$.formationFootprint.rows", problem.JsonPath);
+            });
         Assert.Null(result.Catalog);
+    }
+
+    [Fact]
+    public void EnemyFootprint_MoreThanFormationRows_IsRejected()
+    {
+        int invalidRows = BattleFormationRules.RowCount + 1;
+        ContentDocument enemy = CreateEnemyDocument(
+            "enemy.test.too-tall",
+            "too-tall.json",
+            $"{{ \"rows\": {invalidRows}, \"columns\": 1 }}");
+
+        ContentLoadResult result = LoadFormationDocuments(enemy);
+
+        AssertFootprintProblem(
+            result,
+            "enemy.footprint-rows-invalid",
+            "$.formationFootprint.rows",
+            "base/enemies/too-tall.json");
+    }
+
+    [Fact]
+    public void EnemyFootprint_MoreThanEnemyFormationColumns_IsRejected()
+    {
+        int invalidColumns = BattleFormationRules.EnemyColumnCount + 1;
+        ContentDocument enemy = CreateEnemyDocument(
+            "enemy.test.too-wide",
+            "too-wide.json",
+            $"{{ \"rows\": 1, \"columns\": {invalidColumns} }}");
+
+        ContentLoadResult result = LoadFormationDocuments(enemy);
+
+        AssertFootprintProblem(
+            result,
+            "enemy.footprint-columns-invalid",
+            "$.formationFootprint.columns",
+            "base/enemies/too-wide.json");
+    }
+
+    [Fact]
+    public void ModEnemy_OmittedFootprint_DefaultsToOneByOne()
+    {
+        const string modId = "mod.example.footprint-pack";
+        ContentDocument modEnemy = CreateEnemyDocument(
+            "enemy.example.footprint-pack.default",
+            "default.json");
+
+        ContentLoadResult result = new JsonContentLoader().Load(
+        [
+            new MemoryContentSource(ContentSourceIds.Base, CreateRequiredBaseDocuments()),
+            new MemoryContentSource(modId, [modEnemy]),
+        ]);
+
+        Assert.True(result.IsSuccess, string.Join(Environment.NewLine, result.Problems));
+        EnemyDefinition loaded = result.Catalog!.GetRequired<EnemyDefinition>(
+            "enemy.example.footprint-pack.default");
+        Assert.Equal(1, loaded.FormationFootprint.Rows);
+        Assert.Equal(1, loaded.FormationFootprint.Columns);
+    }
+
+    [Fact]
+    public void EnemyFootprint_ConversionPreservesRowsAndColumns()
+    {
+        var authored = new EnemyFootprintDefinition
+        {
+            Rows = 2,
+            Columns = 3,
+        };
+
+        FormationFootprint footprint = authored.ToFormationFootprint();
+
+        Assert.Equal(2, footprint.Rows);
+        Assert.Equal(3, footprint.Columns);
     }
 
     [Fact]
@@ -416,6 +562,13 @@ public sealed class ContentLoadingTests
     private static ContentLoadResult LoadFormationDocuments(
         params ContentDocument[] featureDocuments)
     {
+        ContentDocument[] documents = [.. CreateRequiredBaseDocuments(), .. featureDocuments];
+        return new JsonContentLoader().Load(
+            new MemoryContentSource(ContentSourceIds.Base, documents));
+    }
+
+    private static ContentDocument[] CreateRequiredBaseDocuments()
+    {
         ContentDocument classDefinition = new("classes/test.json", """
             {
               "schemaVersion": 1,
@@ -433,9 +586,48 @@ public sealed class ContentLoadingTests
               "excludeClassIds": []
             }
             """);
-        ContentDocument[] documents = [classDefinition, startingClassRule, .. featureDocuments];
-        return new JsonContentLoader().Load(
-            new MemoryContentSource(ContentSourceIds.Base, documents));
+        return [classDefinition, startingClassRule];
+    }
+
+    /// <summary>
+    /// Builds one in-memory enemy record while keeping each test focused on only the optional
+    /// footprint member. A null fragment means the JSON member is genuinely omitted.
+    /// </summary>
+    private static ContentDocument CreateEnemyDocument(
+        string id,
+        string fileName,
+        string? footprintJson = null)
+    {
+        string footprintMember = footprintJson is null
+            ? string.Empty
+            : $",{Environment.NewLine}  \"formationFootprint\": {footprintJson}";
+        return new ContentDocument(
+            $"enemies/{fileName}",
+            $$"""
+            {
+              "schemaVersion": 1,
+              "id": "{{id}}",
+              "displayNameKey": "{{id}}.name",
+              "level": 1,
+              "statistics": {},
+              "abilityIds": []{{footprintMember}},
+              "loot": []
+            }
+            """);
+    }
+
+    private static void AssertFootprintProblem(
+        ContentLoadResult result,
+        string expectedCode,
+        string expectedJsonPath,
+        string expectedFilePath)
+    {
+        ContentProblem problem = Assert.Single(
+            result.Problems,
+            candidate => candidate.Code == expectedCode);
+        Assert.Equal(expectedFilePath, problem.FilePath);
+        Assert.Equal(expectedJsonPath, problem.JsonPath);
+        Assert.Null(result.Catalog);
     }
 
     /// <summary>Minimal source double keeps failure scenarios free from temporary-file IO.</summary>

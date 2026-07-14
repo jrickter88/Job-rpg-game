@@ -385,10 +385,9 @@ internal sealed class ContentValidator
 
             if (!TryCreateEnemyFootprint(enemy, out FormationFootprint footprint))
             {
-                Add(item, $"{path}.enemyId", "formation.footprint-invalid",
-                    $"Enemy '{enemy.Id}' must define a footprint from 1 × 1 through "
-                    + $"{BattleFormationRules.RowCount} × "
-                    + $"{BattleFormationRules.EnemyColumnCount}.");
+                // The enemy's own source file already contains the actionable footprint
+                // diagnostic. Skip this placement so encounter validation can continue
+                // without repeating the same authoring error at every reference site.
                 continue;
             }
 
@@ -457,26 +456,27 @@ internal sealed class ContentValidator
 
     private void ValidateEnemyFootprint(LoadedContent item, EnemyDefinition enemy)
     {
-        EnemyFormationFootprintDefinition? footprint = enemy.FormationFootprint;
+        EnemyFootprintDefinition? footprint = enemy.FormationFootprint;
         if (footprint is null)
         {
-            Add(item, "$.formationFootprint", "formation.footprint-invalid",
+            Add(item, "$.formationFootprint", "enemy.footprint-null",
                 "formationFootprint cannot be null; omit it to use the 1 × 1 default.");
             return;
         }
 
         if (footprint.Rows < 1 || footprint.Rows > BattleFormationRules.RowCount)
         {
-            Add(item, "$.formationFootprint.rows", "formation.footprint-invalid",
-                $"Footprint rows must be from 1 through {BattleFormationRules.RowCount}.");
+            Add(item, "$.formationFootprint.rows", "enemy.footprint-rows-invalid",
+                $"Footprint rows must be from 1 through {BattleFormationRules.RowCount}; "
+                + $"found {footprint.Rows}.");
         }
 
         if (footprint.Columns < 1
             || footprint.Columns > BattleFormationRules.EnemyColumnCount)
         {
-            Add(item, "$.formationFootprint.columns", "formation.footprint-invalid",
+            Add(item, "$.formationFootprint.columns", "enemy.footprint-columns-invalid",
                 "Footprint columns must be from 1 through "
-                + $"{BattleFormationRules.EnemyColumnCount}.");
+                + $"{BattleFormationRules.EnemyColumnCount}; found {footprint.Columns}.");
         }
     }
 
@@ -484,7 +484,7 @@ internal sealed class ContentValidator
         EnemyDefinition enemy,
         out FormationFootprint footprint)
     {
-        EnemyFormationFootprintDefinition? authored = enemy.FormationFootprint;
+        EnemyFootprintDefinition? authored = enemy.FormationFootprint;
         if (authored is null
             || authored.Rows < 1
             || authored.Rows > BattleFormationRules.RowCount
@@ -495,7 +495,7 @@ internal sealed class ContentValidator
             return false;
         }
 
-        footprint = new FormationFootprint(authored.Rows, authored.Columns);
+        footprint = authored.ToFormationFootprint();
         return true;
     }
 
