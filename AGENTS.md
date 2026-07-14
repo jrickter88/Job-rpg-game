@@ -10,6 +10,8 @@ a general-purpose RPG engine.
 2. Read `CONTENT_SCHEMA.md` before adding or changing content records.
 3. Read `CODING_STANDARDS.md` before adding C# or Godot scenes.
 4. Check the current milestone and explicit deferrals in `ROADMAP.md`.
+5. Read `MILESTONE_1_GUIDE.md` before changing startup, content loading, session, or saves.
+6. Read `MODDING.md` before changing mod manifests, discovery, namespaces, or compatibility.
 
 When a requested feature conflicts with those documents, update the relevant design
 document in the same change or explain why the exception is temporary.
@@ -39,6 +41,10 @@ document in the same change or explain why the exception is temporary.
 - A new reference field requires validation for missing targets and invalid categories.
 - Prefer explicit fields over an open-ended behavior language. Unique mechanics may
   use a small code-owned ruleset selected by a stable `rulesetId`.
+- Data mods are loose JSON packages only. Do not add script, assembly, PCK, remote
+  download, Workshop, or arbitrary file-loading support without a later explicit milestone.
+- A mod ID uses `mod.author.mod-name`; every record it owns uses the matching namespace
+  after its category, such as `ability.author.mod-name.fire`.
 
 ## Implementation discipline
 
@@ -59,6 +65,7 @@ For nonvisual changes, run:
 
 ```bash
 dotnet test tests/RpgGame.Core.Tests/RpgGame.Core.Tests.csproj
+dotnet run --project tools/content-validation/RpgGame.ContentValidation.csproj -- game/content
 ```
 
 For project integration, when the matching Godot Mono editor is available, run:
@@ -69,7 +76,7 @@ godot --headless --editor --path . --quit
 ```
 
 Add a regression test for every fixed rules or save-migration bug. Content changes
-must eventually pass the content validator before they can be merged. If a required
+must pass the content validator before they can be merged. If a required
 tool is unavailable, run all remaining checks and state exactly what could not run.
 
 ## Definition of done
@@ -79,4 +86,3 @@ tool is unavailable, run all remaining checks and state exactly what could not r
 - Nonvisual behavior has focused automated tests.
 - Relevant documentation and schemas match the code.
 - No unrelated systems or speculative framework code were introduced.
-

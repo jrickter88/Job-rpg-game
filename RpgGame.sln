@@ -8,6 +8,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RpgGame.Core", "src\Rpg.Cor
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RpgGame.Core.Tests", "tests\RpgGame.Core.Tests\RpgGame.Core.Tests.csproj", "{7B1BB62B-EB5A-47E4-B609-C27F025DC32D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RpgGame.ContentValidation", "tools\content-validation\RpgGame.ContentValidation.csproj", "{7427FB65-EFCB-4DC1-A375-DBD8B67AC75C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -26,6 +28,9 @@ Global
 		{7B1BB62B-EB5A-47E4-B609-C27F025DC32D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7B1BB62B-EB5A-47E4-B609-C27F025DC32D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7B1BB62B-EB5A-47E4-B609-C27F025DC32D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7427FB65-EFCB-4DC1-A375-DBD8B67AC75C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7427FB65-EFCB-4DC1-A375-DBD8B67AC75C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7427FB65-EFCB-4DC1-A375-DBD8B67AC75C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7427FB65-EFCB-4DC1-A375-DBD8B67AC75C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
-

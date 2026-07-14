@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "encounter.forest.slimes-01",
+  "enemyGroup": [
+    {
+      "enemyId": "enemy.forest.green-slime",
+      "slotId": "formation.left"
+    },
+    {
+      "enemyId": "enemy.forest.green-slime",
+      "slotId": "formation.right"
+    }
+  ],
+  "battlefieldId": "battlefield.forest.day",
+  "musicCueId": "music.battle.normal"
+}

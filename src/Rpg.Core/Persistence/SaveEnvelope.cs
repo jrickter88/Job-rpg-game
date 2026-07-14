@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using RpgGame.Core.Mods;
 using RpgGame.Core.State;
 
 namespace RpgGame.Core.Persistence;
@@ -31,6 +32,13 @@ public sealed record SaveEnvelope
 
     /// <summary>Scene-independent campaign state being persisted.</summary>
     public required GameState State { get; init; }
+
+    /// <summary>
+    /// Data mods whose records may be referenced by this campaign. This additive field does
+    /// not require a save-format migration: saves written before Milestone 1.5 deserialize it
+    /// as an empty list and remain valid.
+    /// </summary>
+    public List<ModReference> EnabledMods { get; init; } = [];
 
     /// <summary>Unknown future envelope fields retained during round-trip serialization.</summary>
     [JsonExtensionData]

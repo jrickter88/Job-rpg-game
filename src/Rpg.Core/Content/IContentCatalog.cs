@@ -6,13 +6,16 @@ namespace RpgGame.Core.Content;
 /// Read-only, validated index of all game-specific content available to RPG rules.
 /// </summary>
 /// <remarks>
-/// The future Godot adapter will load JSON and construct this catalog once during
-/// application startup. Rules depend on this interface rather than file paths or Godot
+/// The Godot adapter loads JSON and constructs this catalog once during application
+/// startup. Rules depend on this interface rather than file paths or Godot
 /// resources, which keeps them headless and testable. Generic methods preserve the
 /// expected definition category at compile time.
 /// </remarks>
 public interface IContentCatalog
 {
+    /// <summary>Total number of definitions across every loaded category.</summary>
+    int Count { get; }
+
     /// <summary>
     /// Gets every definition in one category. The returned collection cannot be edited
     /// through this interface.

@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "id": "mod.example.starter-pack",
+  "name": "Example Starter Pack",
+  "version": "1.0.0",
+  "gameApiVersion": 1,
+  "dependencies": []
+}

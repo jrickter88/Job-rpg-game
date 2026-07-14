@@ -35,6 +35,7 @@ controls, animation, input devices, file locations, or scene transitions.
 │   ├── Rpg.Core/               # Pure .NET definitions, state, rules, and ports
 │   │   ├── Combat/
 │   │   ├── Content/
+│   │   ├── Mods/                   # Data-only manifests and compatibility
 │   │   ├── Persistence/
 │   │   └── State/
 │   └── Rpg.Game/               # Godot nodes, adapters, and composition root
@@ -42,8 +43,10 @@ controls, animation, input devices, file locations, or scene transitions.
 │       └── Bootstrap/
 ├── tests/
 │   └── RpgGame.Core.Tests/     # Fast nonvisual tests
+├── examples/
+│   └── mods/                    # Valid community package fixture
 ├── tools/
-│   └── content-validation/     # Reserved for the content linter milestone
+│   └── content-validation/     # Headless host for the production content loader
 ├── project.godot
 ├── RpgGame.csproj              # Godot C# assembly
 └── RpgGame.sln
@@ -62,10 +65,20 @@ There are three kinds of data and they must remain distinct:
 | Runtime state | Current HP during battle | Core feature/session | Encounter or session |
 | Presentation state | Selected menu row | Godot scene/control | Scene |
 
-The future `GameSession` implementation owns the active `GameState` across scene
+`GameSession` owns the active `GameState` across scene
 changes. A map scene reads the location it needs and submits state changes through an
 application use case; it does not become the source of truth. Battle scenes receive a
 battle snapshot and can be destroyed and reconstructed without losing campaign state.
+
+### Party capacity
+
+The game has one ordered party, stored in `ActivePartyActorIds`, with a hard maximum of four
+heroes. `PartyRules` owns that number so future new-game, recruitment, party-menu, and combat
+code do not each invent separate limits. Mods may add alternative hero definitions, but the
+same four-person maximum applies to base and modded content.
+
+There is intentionally no reserve roster or configurable party capacity. Those concepts can
+be introduced later only if the actual game design needs them.
 
 ## Narrow application services
 
@@ -77,9 +90,10 @@ Expected examples are:
 - a save coordinator using `ISaveStore`: migration, serialization, and atomic storage;
 - a scene navigator, once more than one real transition exists.
 
-These are injected into entry scene controllers. They are not exposed through a
-general `Globals` object. No autoload is configured yet; service lifetime and access
-will be introduced with the feature that needs it.
+`GameRoot` currently constructs these services and exposes narrow Milestone 1 methods
+for new game, save, and load. Future entry scene controllers will receive the interfaces
+they need. The services are not exposed through a general `Globals` object, and no autoload
+is configured.
 
 ## System communication
 
@@ -96,19 +110,38 @@ between Godot signals and core commands.
 
 ## Content architecture
 
-The future content adapter will recursively read category folders, deserialize JSON
-into the definitions in `RpgGame.Core.Content.Definitions`, and build typed read-only
-indexes. Startup validation must reject duplicate IDs, malformed IDs, invalid ranges,
-missing references, and references to the wrong category.
+The content pipeline recursively reads category folders, deserializes JSON into the
+definitions in `RpgGame.Core.Content.Definitions`, and builds typed read-only indexes.
+It aggregates parse, identity, range, and cross-reference problems in one pass. A catalog
+is published only if the complete pack passes; gameplay never receives partial content.
+
+Explicitly identified sources feed the same loader:
+
+- `GodotContentSource` reads built-in `res://game/content` through Godot's virtual filesystem;
+- `DirectoryContentSource` reads ordinary files for tests, tools, and loose folders beneath
+  the platform-specific `user://mods` directory.
+
+This split isolates platform IO while ensuring the editor, tests, and CI all apply the
+same deserialization and validation rules.
+
+`DirectoryModDiscovery` validates one strict `manifest.json` per immediate mod folder,
+checks its data-contract API version, verifies dependencies, and produces a deterministic
+topological order. `GameRoot` loads base content first and each mod's `content/` folder in
+that order. Validation remains all-or-nothing across the combined catalog.
+
+Milestone 1.5 has no replacement or patch semantics. A mod owns only IDs under the namespace
+derived from its manifest—for example, `mod.alex.weather-pack` may define
+`ability.alex.weather-pack.storm`. Duplicate IDs remain errors. A mod may reference valid
+base-game or dependency records through stable IDs. Installation order therefore cannot
+silently decide which definition wins.
 
 JSON was selected over Godot `Resource` subclasses because definitions remain usable
 in headless tests and tools, diffs stay readable, and data does not acquire engine
 lifetime or import concerns. Godot resources remain appropriate for presentation
 assets and authored scenes.
 
-Files are an authoring detail. Runtime and save data only store stable IDs. Content
-loading and validation are intentionally deferred; the current records define the
-boundary without pretending the pipeline is already implemented.
+Files are an authoring detail. Runtime and save data only store stable IDs. The current
+fixture pack exercises the architecture; it is not intended to be production game content.
 
 ## Combat boundary
 
@@ -141,11 +174,18 @@ Compatibility policy:
 - migrations operate on JSON before strongly typed deserialization;
 - unknown fields are retained through `JsonExtensionData` where practical;
 - released migrations are immutable and tested with fixture saves;
-- saving eventually uses a temporary file, validation, atomic replacement, and a
-  last-known-good backup.
+- saving uses a temporary file in the destination directory, reads it back through the
+  production serializer, atomically moves it over the primary file, and keeps the previous
+  primary as a last-known-good `.bak` file.
 
 The game version is diagnostic. `SaveFormatVersion`, not the executable version,
 decides whether migration is necessary.
+
+The save envelope also records the stable ID and exact authored version of every data mod
+enabled when it was written. Loading requires those mods at the recorded versions and raises
+typed compatibility errors when one is missing or different. This additive field defaults to
+an empty list, so pre-mod saves remain readable. Extra currently installed mods are allowed
+until a later mod-profile UI provides exact-set control.
 
 ## Testing strategy
 
@@ -162,7 +202,10 @@ The test pyramid is intentionally weighted toward fast, headless tests:
 5. **Manual playtests:** feel, pacing, visual timing, controller navigation, and map
    correctness—areas where unit tests provide little value.
 
-`RpgGame.Core.Tests` currently demonstrates stable-ID and unknown-save-field tests.
+`RpgGame.Core.Tests` now covers stable IDs, complete-pack loading, aggregated content
+failures, mod manifests/namespaces/dependency ordering, modded-save compatibility,
+new-game construction, session notification, save migrations, safe slot names, unknown
+future fields, and an actual filesystem save/load round trip.
 
 ## Decisions intentionally deferred
 
@@ -173,7 +216,11 @@ The test pyramid is intentionally weighted toward fast, headless tests:
 - inventory stacking and equipment slot rules;
 - AI planning model;
 - final save-slot UI and platform paths;
-- content hot reload and custom editor tooling.
+- content hot reload and custom editor tooling;
+- a mod enable/disable or profile UI;
+- packaged PCK/ZIP mods, Steam Workshop, remote downloads, and signatures;
+- community scripts, C# assemblies, native libraries, or a behavior scripting language;
+- base-record replacement, patch merging, and conflict resolution.
 
 Each should be decided against a playable use case rather than a speculative engine.
 
@@ -187,5 +234,8 @@ Each should be decided against a playable use case rather than a speculative eng
 | Scene coupling returns through convenience | Direct node searches and scene-owned state make transitions and tests fragile. | Compose narrow services at `GameRoot`; keep campaign truth in `GameState`; use owned signals. |
 | Save DTOs mirror runtime objects too closely | Refactors could become accidental file-format breaks. | Keep named, simple DTO fields; migrate JSON at the boundary; test historical fixtures. |
 | Hundreds of JSON files become tedious | Manual errors and bulk tuning can overwhelm one developer. | Build validation first; add focused search/bulk-edit tooling only after real authoring pain appears. |
+| Community packs conflict or corrupt saves | Ambiguous overrides and missing definitions can make state impossible to reconstruct. | Reserve a namespace per mod, reject overrides, dependency-order deterministically, and record required ID/version pairs in saves. |
+| Mod support becomes arbitrary code execution | Loading community assemblies or scripts creates a much larger security and compatibility surface. | Milestone 1.5 accepts strict JSON records only; executable hooks remain explicitly unsupported. |
+| Exported build omits raw JSON | `res://` directory results can differ after export, and non-resource files must be included in the PCK. | Add `*.json` to the export preset's non-resource include filter and smoke-test content startup in every release export. |
 | Premature framework work consumes the project | A solo project can stall before it becomes playable. | Gate abstractions against the next vertical slice and the explicit roadmap deferrals. |
 | Platform choice arrives late | C# export support and platform requirements can constrain release targets. | Select and smoke-test the intended desktop/mobile targets before production content ramps up. |

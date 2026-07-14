@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "quest.prologue.first-steps",
+  "displayNameKey": "quest.first-steps.name",
+  "descriptionKey": "quest.first-steps.description",
+  "objectives": [
+    {
+      "id": "reach-gate",
+      "kind": "objective.reach",
+      "targetId": "map.prologue.gate",
+      "requiredCount": 1
+    }
+  ],
+  "rewards": [
+    {
+      "itemId": "item.consumable.potion",
+      "quantity": 2
+    }
+  ],
+  "completionFlagId": "flag.quest.first-steps.completed"
+}

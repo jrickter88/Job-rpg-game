@@ -31,6 +31,8 @@ public sealed record GameState
     /// <summary>
     /// Actor definition IDs in active-party order. The IDs select persistent actor
     /// progress from <see cref="ActorProgress"/> rather than copying actor definitions.
+    /// A list supports the four-hero party while allowing the game to begin with only James.
+    /// Every use case that changes this list must enforce <see cref="PartyRules"/>.
     /// </summary>
     public List<string> ActivePartyActorIds { get; init; } = [];
 

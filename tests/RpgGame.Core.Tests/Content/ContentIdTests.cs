@@ -11,7 +11,7 @@ public sealed class ContentIdTests
     // A Theory runs the same test body once for every InlineData example. This gives the
     // naming rule a compact executable specification instead of one test per sample.
     [Theory]
-    [InlineData("actor.hero.aria")]
+    [InlineData("actor.hero.james")]
     [InlineData("ability.black-magic.fire-2")]
     [InlineData("quest.prologue.first-steps")]
     public void IsValid_AcceptsCanonicalIds(string id)

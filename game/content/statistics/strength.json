@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "id": "stat.strength",
+  "displayNameKey": "stat.strength.name",
+  "minimumValue": 0,
+  "maximumValue": 999,
+  "defaultValue": 1
+}

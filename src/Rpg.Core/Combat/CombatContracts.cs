@@ -10,11 +10,11 @@ namespace RpgGame.Core.Combat;
 /// </remarks>
 public interface ICombatResolver
 {
-    /// <summary>
-    /// Applies one validated intent to the current snapshot and returns the next snapshot
-    /// plus ordered domain events that presentation can animate.
-    /// </summary>
-    CombatResolution Resolve(CombatSnapshot current, CombatCommand command);
+	/// <summary>
+	/// Applies one validated intent to the current snapshot and returns the next snapshot
+	/// plus ordered domain events that presentation can animate.
+	/// </summary>
+	CombatResolution Resolve(CombatSnapshot current, CombatCommand command);
 }
 
 /// <summary>
@@ -26,11 +26,11 @@ public interface ICombatResolver
 /// </remarks>
 public interface IRandomSource
 {
-    /// <summary>
-    /// Returns an integer in the half-open range [<paramref name="minInclusive"/>,
-    /// <paramref name="maxExclusive"/>), matching standard .NET range semantics.
-    /// </summary>
-    int Next(int minInclusive, int maxExclusive);
+	/// <summary>
+	/// Returns an integer in the half-open range [<paramref name="minInclusive"/>,
+	/// <paramref name="maxExclusive"/>), matching standard .NET range semantics.
+	/// </summary>
+	int Next(int minInclusive, int maxExclusive);
 }
 
 /// <summary>
@@ -39,8 +39,8 @@ public interface IRandomSource
 /// <param name="Round">Current logical round number; exact turn semantics are deferred.</param>
 /// <param name="Combatants">Combatants in explicit deterministic order.</param>
 public sealed record CombatSnapshot(
-    int Round,
-    IReadOnlyList<CombatantSnapshot> Combatants);
+	int Round,
+	IReadOnlyList<CombatantSnapshot> Combatants);
 
 /// <summary>
 /// Rules-facing state for one party member or enemy instance in a specific battle.
@@ -51,9 +51,9 @@ public sealed record CombatSnapshot(
 /// <param name="DefinitionId">Actor or enemy content ID from which this instance came.</param>
 /// <param name="Statistics">Current authoritative values keyed by statistic ID.</param>
 public sealed record CombatantSnapshot(
-    string InstanceId,
-    string DefinitionId,
-    IReadOnlyDictionary<string, int> Statistics);
+	string InstanceId,
+	string DefinitionId,
+	IReadOnlyDictionary<string, int> Statistics);
 
 /// <summary>
 /// Player- or AI-authored intent to use one ability on explicitly selected targets.
@@ -66,9 +66,9 @@ public sealed record CombatantSnapshot(
 /// builds commands but cannot directly subtract HP or otherwise author an outcome.
 /// </remarks>
 public sealed record CombatCommand(
-    string ActingCombatantId,
-    string AbilityId,
-    IReadOnlyList<string> TargetCombatantIds);
+	string ActingCombatantId,
+	string AbilityId,
+	IReadOnlyList<string> TargetCombatantIds);
 
 /// <summary>
 /// Atomic output of resolving one command.
@@ -78,8 +78,8 @@ public sealed record CombatCommand(
 /// Ordered facts describing what happened, consumed by UI/animation and useful in tests.
 /// </param>
 public sealed record CombatResolution(
-    CombatSnapshot Next,
-    IReadOnlyList<CombatEvent> Events);
+	CombatSnapshot Next,
+	IReadOnlyList<CombatEvent> Events);
 
 /// <summary>
 /// Presentation adapters will translate concrete domain events into visuals and sound.

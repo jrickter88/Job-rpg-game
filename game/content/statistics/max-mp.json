@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "id": "stat.max-mp",
+  "displayNameKey": "stat.max-mp.name",
+  "minimumValue": 0,
+  "maximumValue": 9999,
+  "defaultValue": 0
+}

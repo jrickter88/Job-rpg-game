@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "id": "equipment.weapon.iron-sword",
+  "itemId": "item.equipment.iron-sword",
+  "slotId": "slot.weapon.main-hand",
+  "statisticModifiers": {
+    "stat.strength": 3
+  },
+  "grantedAbilityIds": []
+}

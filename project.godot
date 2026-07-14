@@ -1,38 +1,30 @@
 ; Engine configuration file.
-; Prefer editing this file through Godot unless a reviewed text change is clearer.
-; This file tells Godot how to open and run the project; it is not gameplay state.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
 config_version=5
 
 [application]
 
-; Displayed by the editor/window until the game's final title is chosen.
 config/name="Original JRPG"
-
-; Records the editor generation, scripting language, and renderer expected by the project.
-config/features=PackedStringArray("4.7", "C#", "GL Compatibility")
-
-; Pressing Play instantiates this bootstrap scene first.
 run/main_scene="res://game/scenes/bootstrap/GameRoot.tscn"
+config/features=PackedStringArray("4.7", "C#", "GL Compatibility")
 
 [display]
 
-; A logical 720p viewport gives future pixel-art/UI work a consistent design canvas.
 window/size/viewport_width=1280
 window/size/viewport_height=720
-
-; Scale the 2D canvas when the actual window size differs from the logical viewport.
 window/stretch/mode="canvas_items"
 
 [dotnet]
 
-; Must match the AssemblyName in RpgGame.csproj so Godot loads the correct C# assembly.
 project/assembly_name="RpgGame"
 
 [rendering]
 
-; Compatibility rendering favors broad hardware support and is ample for a 2D JRPG.
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
-
-; Avoid an unwanted blur/mipmap choice in future nearest-neighbor 2D presentation.
-textures/default_filters/use_nearest_mipmap_filter=false

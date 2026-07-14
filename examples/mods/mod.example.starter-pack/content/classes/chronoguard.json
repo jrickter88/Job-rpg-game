@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "class.example.starter-pack.chronoguard",
+  "displayNameKey": "class.example.starter-pack.chronoguard.name",
+  "baseStatisticBonuses": {
+    "stat.defense": 2,
+    "stat.speed": 1
+  },
+  "abilityUnlocks": [
+    {
+      "level": 1,
+      "abilityId": "ability.example.starter-pack.temporal-guard"
+    }
+  ]
+}

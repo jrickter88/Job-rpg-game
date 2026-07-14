@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "id": "item.consumable.potion",
+  "displayNameKey": "item.potion.name",
+  "descriptionKey": "item.potion.description",
+  "buyPrice": 30,
+  "sellPrice": 15,
+  "maxStack": 99
+}

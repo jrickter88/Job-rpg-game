@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "ability.example.starter-pack.temporal-guard",
+  "displayNameKey": "ability.example.starter-pack.temporal-guard.name",
+  "descriptionKey": "ability.example.starter-pack.temporal-guard.description",
+  "targetingId": "target.self",
+  "rulesetId": "rules.defense.guard",
+  "costStatisticId": null,
+  "costAmount": 0,
+  "numericParameters": {
+    "damage-reduction": 0.35
+  }
+}

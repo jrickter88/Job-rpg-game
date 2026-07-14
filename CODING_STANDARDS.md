@@ -66,6 +66,14 @@ edition of the Godot editor; standard editor builds cannot compile C# projects.
   the first public save format exists.
 - Content loaders aggregate actionable validation errors rather than failing on only
   the first file.
+- Validate party size through `PartyRules`. Do not scatter literal `4` checks through future
+  recruitment, menus, or combat code.
+- Treat a mod manifest ID and version as a compatibility contract. Never derive either
+  from display text or silently rewrite it during discovery.
+- Data mods contain JSON definitions only. Do not deserialize type names, invoke authored
+  paths, load assemblies/native libraries, or introduce a generic expression language.
+- Mod ordering is explicit dependency order with ordinal ID tie-breaking. Filesystem
+  enumeration order must never affect the combined catalog.
 
 ## Testing
 

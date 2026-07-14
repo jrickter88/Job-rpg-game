@@ -7,6 +7,11 @@ selects the C# definition type; a `type` discriminator is therefore unnecessary.
 Property names use `camelCase`. Arrays retain author order only when order has gameplay
 meaning.
 
+The loader is intentionally strict: unknown JSON properties, wrong value types, and
+missing required properties are errors. JSON comments and trailing commas are accepted for
+author convenience. Validation is all-or-nothing—the runtime catalog is published only when
+every record parses and every implemented semantic/reference check succeeds.
+
 Every top-level record contains:
 
 | Field | Type | Rule |
@@ -39,7 +44,7 @@ Canonical IDs match:
 Use a category followed by useful namespaces and a specific name:
 
 ```text
-actor.hero.aria
+actor.hero.james
 class.magic.black-mage
 stat.max-hp
 item.consumable.potion
@@ -62,6 +67,20 @@ Rules:
   targeting modes, and code-owned rulesets also use stable namespaced strings, even
   though they are not all top-level content records.
 
+### Data-mod namespaces
+
+A mod manifest ID uses `mod.author.mod-name`. Records owned by that mod must place the
+same namespace between the category and record name:
+
+| Manifest ID | Valid record examples |
+|---|---|
+| `mod.example.starter-pack` | `class.example.starter-pack.chronoguard`, `ability.example.starter-pack.temporal-guard` |
+
+This is enforced by the production loader. Mod records cannot reuse or replace base-game
+IDs, and all IDs remain globally unique. References may point to base content or a declared
+dependency, but the referenced record is still selected only by stable ID. See `MODDING.md`
+for the manifest and folder contract.
+
 ## Record fields
 
 ### Actor
@@ -77,8 +96,8 @@ Rules:
 ```json
 {
   "schemaVersion": 1,
-  "id": "actor.hero.aria",
-  "displayNameKey": "actor.aria.name",
+  "id": "actor.hero.james",
+  "displayNameKey": "actor.james.name",
   "startingClassId": "class.martial.vanguard",
   "startingLevel": 1,
   "baseStatistics": { "stat.max-hp": 84, "stat.strength": 9 },
@@ -282,10 +301,24 @@ The content validator milestone must report the file and JSON path for:
 Warnings should be reserved for suspicious but legal values. Anything that would crash
 or corrupt state is an error.
 
+Run the exact loader and validator used by the tests and Godot startup with:
+
+```sh
+dotnet run --project tools/content-validation/RpgGame.ContentValidation.csproj -- game/content
+```
+
+To validate base content with an installed or example mod directory:
+
+```sh
+dotnet run --project tools/content-validation/RpgGame.ContentValidation.csproj -- game/content examples/mods
+```
+
+The tool prints every problem in deterministic file/path/code order and returns a nonzero
+process exit code, making it suitable for local authoring and future CI.
+
 ## Evolution policy
 
 Additive fields must have safe defaults. A breaking category change increments that
 category's `schemaVersion` and adds an explicit content migration before old files are
 removed. Never infer identity from filename changes. Status effects, shops, dialogue,
 and cutscene schemas will be added only when their first playable use case is built.
-

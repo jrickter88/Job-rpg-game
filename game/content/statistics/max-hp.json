@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "id": "stat.max-hp",
+  "displayNameKey": "stat.max-hp.name",
+  "minimumValue": 1,
+  "maximumValue": 9999,
+  "defaultValue": 1
+}
