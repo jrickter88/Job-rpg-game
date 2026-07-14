@@ -151,7 +151,7 @@ Explicitly excluded: combat commands, targeting, movement, range, row bonuses,
 party formation editing, HP, turns, victory, defeat, and rewards. See
 `MILESTONE_2_75_GUIDE.md` for coordinates, ownership, validation, and the manual proof.
 
-### Milestone 2.8 — Enemy footprint content (validation pending)
+### Milestone 2.8 — Enemy footprint content (implemented)
 
 - Allow enemy definitions to declare rectangular formation footprints.
 - Default omitted footprints to one row by one column.
@@ -166,7 +166,7 @@ placement, targeting, combat commands, HP, turns, and rewards. See
 `MILESTONE_2_8_GUIDE.md` for the authored JSON contract, validation codes, conversion
 boundary, and compatibility rationale.
 
-### Milestone 2.85 — Combat statistic resolution (validation pending)
+### Milestone 2.85 — Combat statistic resolution (implemented)
 
 - Resolve party combat statistics from actor bases plus the campaign's current class bonuses.
 - Resolve enemy combat statistics from authored enemy values.
@@ -184,6 +184,22 @@ See `MILESTONE_2_85_GUIDE.md` for the formulas, ownership rules, defensive check
 future-AI boundary.
 
 ## Milestone 3 — First playable battle slice
+
+### Milestone 3.0 — Initial combat state (implementation review pending)
+
+- Construct transient battle snapshots from campaign progress, encounter content,
+  formation placement, and resolved combat statistics.
+- Initialize current HP from `stat.max-hp`.
+- Resolve party abilities from actor starting abilities and current-class unlocks.
+- Preserve deterministic battle-local identity, formation placement, and immutable collections.
+
+Exit criteria: headless tests describe a deterministic initial snapshot containing James
+and both green-slime instances with starting HP, statistics, abilities, and formation data.
+
+Explicitly excluded: damage, targeting, commands, Guard resolution, enemy AI, turn order,
+victory, defeat, rewards, battle UI, and campaign result handling.
+
+### Remaining first-playable work
 
 - Implement one deterministic battle resolver with Attack, Guard, HP, speed-based turn
   order, victory, and defeat—no generalized effect scripting.

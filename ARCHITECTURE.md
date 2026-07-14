@@ -62,7 +62,7 @@ There are three kinds of data and they must remain distinct:
 | Kind | Example | Owner | Lifetime |
 |---|---|---|---|
 | Definition | `ability.black-magic.fire` | Immutable content catalog | Application |
-| Runtime state | Current HP during battle | Core feature/session | Encounter or session |
+| Runtime state | Current HP during battle | `CombatSnapshot` in the core | Encounter |
 | Presentation state | Selected menu row | Godot scene/control | Scene |
 
 `GameSession` owns the active `GameState` across scene
@@ -260,63 +260,47 @@ fixture pack exercises the architecture; it is not intended to be production gam
 
 ## Combat boundary
 
-### Combat statistic initialization
+### Statistic resolution and initial combat state
 
-Milestone 2.85 adds one pure calculation immediately before future combat-state creation:
+Milestone 2.85 resolves complete immutable statistic dictionaries. Milestone 3.0 consumes
+those unchanged results to construct one deterministic, transient snapshot:
 
 ```mermaid
 flowchart TD
-    Actor["ActorDefinition"] --> PartyResolver["CombatStatisticResolver"]
-    Progress["ActorProgressState"] --> PartyResolver
-    Class["ClassDefinition"] --> PartyResolver
-    PartyResolver --> PartyValues["Immutable starting statistics"]
-    Enemy["EnemyDefinition"] --> EnemyResolver["CombatStatisticResolver"]
-    EnemyResolver --> EnemyValues["Immutable starting statistics"]
+    Inputs["GameState + EncounterDefinition + FormationPlacement"] --> Factory["CombatSnapshotFactory"]
+    Factory --> Snapshot["Transient immutable CombatSnapshot"]
 ```
 
-Definitions remain immutable application-lifetime content. `ActorProgressState` supplies the
-class selected for this campaign and records level, while `CombatStatisticResolver` produces a
-new transient read-only dictionary for a future battle constructor. Nothing is copied back
-into `GameState`, and neither actor nor enemy definitions are changed.
+Definitions remain application-lifetime content. `ActorProgressState` supplies the current
+campaign class and level. `CombatStatisticResolver` combines actor bases with class bonuses or
+resolves enemy-authored values, always including every registered statistic in ordinal ID
+order. `CombatSnapshotFactory` copies those results; it never modifies their source records or
+`GameState`.
 
-For a party actor, each registered statistic is the actor's explicit base—or the statistic's
-default when omitted—plus the current class's explicit bonus—or zero when omitted. For an
-enemy, each registered statistic is its explicit value or the statistic default. Both paths
-enumerate every `StatisticDefinition` in ordinal stable-ID order and validate the final value
-against that definition's inclusive range. Unknown source keys are rejected defensively even
-if a hand-built catalog bypasses normal content validation.
+Each `CombatantSnapshot` preserves its existing `FormationPlacement`, which remains the one
+authority for battle-local instance ID, definition ID, side, anchor, and rectangular
+footprint. The snapshot adds independently owned read-only statistics and ability IDs plus
+current HP. Starting current HP equals resolved `stat.max-hp` and must be positive. It is a
+separate encounter value, so later damage will not rewrite maximum HP or authored content.
 
-Level and experience do not change these values yet because no progression formula exists.
-Enemy level likewise does not scale authored values. Resolved `stat.max-hp` and `stat.max-mp`
-are maximums; mutable current HP/MP belong to future encounter state and are not statistic
-content or campaign save fields. `CombatSnapshot` construction remains deferred.
+Party ability availability is actor `startingAbilityIds` followed by current-class unlocks at
+or below the actor's level. Authored order is preserved and duplicates keep their first
+occurrence. Enemy abilities are copied in their authored order, and an empty enemy ability
+list is valid initial state. Every included ID is resolved through `IContentCatalog`.
 
-The complete stable-ID map preserves a narrow future AI seam. A later selector can query a
-registered ID such as `stat.magic-defense` without adding a closed C# stat enum, but target
-discovery, ranking, and AI profiles do not belong in this resolver. Future enemy AI must emit
-ordinary `CombatCommand` values through the same validation/resolution path as player intent;
-only combat resolution applies outcomes.
+The factory preserves supplied party order followed by supplied enemy order and starts the
+snapshot at round one. It rejects wrong-side/category placements, duplicate battle-local IDs,
+missing or duplicate actor progress, inactive party actors, missing abilities, and invalid
+maximum HP rather than silently skipping or repairing a combatant.
 
-`ICombatResolver` accepts a `CombatSnapshot` plus a `CombatCommand` and returns the
-next snapshot plus typed `CombatEvent` values. A future resolver will depend on
-content, explicit rules, and an injected `IRandomSource`; it will not depend on Godot.
+This snapshot belongs only to a future battle's lifetime. It is not added to `GameState`,
+`SaveEnvelope`, content JSON, or a Godot node. Milestone 3.0 does not connect it to
+`GameRoot`; the running project intentionally continues to show the Milestone 2.75
+non-combat formation placeholder.
 
-The battle scene will:
-
-1. convert player or AI intent into a command;
-2. ask the resolver for an outcome;
-3. play the returned events in order;
-4. render the returned state.
-
-This makes damage formulas, targeting, status interactions, and AI decisions testable
-without rendering a frame. It also prevents animation timing from changing results.
-Concrete event types are deferred until the combat slice proves which events are
-actually needed.
-
-Battle formation is an input to that future boundary, not combat resolution. Formation
-placements currently contain only transient instance identity, content identity, side,
-anchor, and rectangular footprint. They contain no HP, commands, targeting, turns, or
-rewards, and the placeholder does not construct a `CombatSnapshot`.
+`ICombatResolver`, `CombatCommand`, and `CombatEvent` remain narrow reserved contracts from
+the architecture foundation. There is still no resolver implementation, target selection,
+damage, Guard behavior, turn order, enemy AI, outcome, or campaign result handling.
 
 ## Save and load
 
@@ -367,7 +351,9 @@ new-game construction, exploration location/flag mutations, session notification
 content, save migrations, safe slot names, unknown future fields, and an actual filesystem
 save/load round trip. Focused combat-statistic tests cover actor-plus-class and enemy formulas,
 defaults, range failures, unknown IDs, ordinal enumeration, result immutability, and automatic
-participation by a newly registered statistic.
+participation by a newly registered statistic. Milestone 3.0 adds focused tests for initial
+identity/order, formation preservation, current HP, ability availability, defensive failures,
+and independently owned read-only snapshot collections.
 
 ## Decisions intentionally deferred
 

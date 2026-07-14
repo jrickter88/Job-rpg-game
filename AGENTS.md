@@ -24,6 +24,8 @@ a general-purpose RPG engine.
 13. Read `MILESTONE_2_85_GUIDE.md` before changing combat statistic calculation,
     combatant initialization, actor/class/enemy combat values, AI statistic queries,
     or future target ranking.
+14. Read `MILESTONE_3_0_GUIDE.md` before changing initial combat snapshots, starting
+    current HP, or combatant ability availability.
 
 When a requested feature conflicts with those documents, update the relevant design
 document in the same change or explain why the exception is temporary.

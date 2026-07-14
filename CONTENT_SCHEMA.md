@@ -212,8 +212,9 @@ statistic, its `defaultValue` is used; an actor's current class bonus is then ad
 derived value must remain inside the inclusive range.
 
 This clarification adds no JSON field and does not make current HP or current MP authored
-statistics. Those mutable resources belong to future transient battle state. A future AI
-selector may reference a stable statistic ID, but AI-profile content is not defined yet.
+statistics. Milestone 3.0 copies resolved `stat.max-hp` into separate transient current HP
+when it creates an initial combat snapshot; current MP remains deferred. A future AI selector
+may reference a stable statistic ID, but AI-profile content is not defined yet.
 
 ### Item and equipment
 

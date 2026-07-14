@@ -1,5 +1,9 @@
 # Milestone 2.85 guide — combat statistic resolution
 
+> Milestone 2.85 itself stops at immutable statistic dictionaries. Milestone 3.0 now
+> consumes those results when it builds initial transient combat state; see
+> `MILESTONE_3_0_GUIDE.md`. Statistic formulas remain unchanged.
+
 ## Purpose
 
 Milestone 2.85 answers two narrow questions in plain .NET code:
@@ -200,15 +204,16 @@ authored stable IDs and parameters. It does not mean embedded C#, reflection-sel
 names, executable mod assemblies, unrestricted expressions, or a general scripting language.
 No AI profile, target selector, command creation, or target tie-breaker is implemented here.
 
-## Why combat snapshot creation is deferred
+## Boundary with Milestone 3.0
 
-This milestone produces only immutable starting statistic dictionaries. It does not modify
-`CombatSnapshot` or `CombatantSnapshot`, create a combat-state factory, initialize current
-HP/MP, or connect the result to the Godot battle placeholder.
+Milestone 2.85 produces only immutable starting statistic dictionaries. It does not itself
+modify `CombatSnapshot` or `CombatantSnapshot`, create combat state, initialize current HP/MP,
+or connect a result to the Godot battle placeholder.
 
-That later integration needs real decisions about combatant instance identity, current
-resources, commands, and battle lifetime. Keeping it separate makes this calculation easy to
-test now without prematurely designing the whole combat system.
+Milestone 3.0 is the later, separate integration for formation identity, available abilities,
+and starting current HP. It still adds no current MP, commands, targeting, damage, outcomes,
+enemy planning, or Godot presentation. Keeping the steps separate preserves the focused tests
+and avoids designing the whole combat system at once.
 
 ## Automated proof
 
@@ -258,9 +263,9 @@ Use the actual matching Godot .NET executable path when installed elsewhere. Do 
 roadmap milestone implemented or commit until all five commands return exit code `0` and the
 manual diff review confirms that the explicitly deferred systems were not introduced.
 
-## Deliberately deferred
+## Deliberately deferred after Milestone 3.0
 
-- combat snapshot/state construction and current HP/MP;
+- current MP and any change to current HP after initialization;
 - Attack, Guard, damage, healing, resource costs, and status effects;
 - commands, targeting, legal-target discovery, range, and cursor behavior;
 - enemy AI profiles, decision trees, selectors, priorities, and randomness;
