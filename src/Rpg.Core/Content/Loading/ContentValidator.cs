@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using RpgGame.Core.Combat.Formation;
 using RpgGame.Core.Content.Definitions;
 using RpgGame.Core.State;
 
@@ -314,6 +315,8 @@ internal sealed class ContentValidator
             RequireReference<AbilityDefinition>(item, $"$.abilityIds[{index}]", abilityIds[index]);
         }
 
+        ValidateEnemyFootprint(item, enemy);
+
         IReadOnlyList<LootEntryDefinition> lootEntries = RequireList(item, "$.loot", enemy.Loot);
         for (int index = 0; index < lootEntries.Count; index++)
         {
@@ -349,7 +352,8 @@ internal sealed class ContentValidator
             Add(item, "$.enemyGroup", "encounter.empty", "An encounter must contain an enemy.");
         }
 
-        var seenSlots = new HashSet<string>(StringComparer.Ordinal);
+        var formationPlacements = new List<FormationPlacement>(enemyGroup.Count);
+        var encounterIndexByInstanceId = new Dictionary<string, int>(StringComparer.Ordinal);
         for (int index = 0; index < enemyGroup.Count; index++)
         {
             string path = $"$.enemyGroup[{index}]";
@@ -360,13 +364,83 @@ internal sealed class ContentValidator
                 continue;
             }
 
-            RequireReference<EnemyDefinition>(item, $"{path}.enemyId", placement.EnemyId);
-            RequireStableKey(item, $"{path}.slotId", placement.SlotId, "formation.");
-
-            if (!seenSlots.Add(placement.SlotId))
+            EnemyDefinition? enemy = RequireReference<EnemyDefinition>(
+                item,
+                $"{path}.enemyId",
+                placement.EnemyId);
+            bool slotIsValid = FormationSlotId.TryParseEnemy(
+                placement.SlotId,
+                out FormationCell anchor);
+            if (!slotIsValid)
             {
-                Add(item, $"{path}.slotId", "encounter.duplicate-slot",
-                    $"Formation slot '{placement.SlotId}' is used more than once.");
+                Add(item, $"{path}.slotId", "formation.slot-invalid",
+                    $"Enemy slot '{placement.SlotId}' must use canonical form "
+                    + "'formation.enemy.r<0-3>.c<0-3>'.");
+            }
+
+            if (enemy is null || !slotIsValid)
+            {
+                continue;
+            }
+
+            if (!TryCreateEnemyFootprint(enemy, out FormationFootprint footprint))
+            {
+                Add(item, $"{path}.enemyId", "formation.footprint-invalid",
+                    $"Enemy '{enemy.Id}' must define a footprint from 1 × 1 through "
+                    + $"{BattleFormationRules.RowCount} × "
+                    + $"{BattleFormationRules.EnemyColumnCount}.");
+                continue;
+            }
+
+            string instanceId = $"enemy-{index}";
+            formationPlacements.Add(new FormationPlacement(
+                instanceId,
+                enemy.Id,
+                anchor,
+                footprint));
+            encounterIndexByInstanceId.Add(instanceId, index);
+        }
+
+        foreach (FormationProblem problem in
+                 BattleFormationRules.ValidatePlacements(formationPlacements))
+        {
+            if (!encounterIndexByInstanceId.TryGetValue(
+                    problem.InstanceId,
+                    out int encounterIndex))
+            {
+                continue;
+            }
+
+            FormationPlacement placement = formationPlacements.First(candidate =>
+                string.Equals(
+                    candidate.InstanceId,
+                    problem.InstanceId,
+                    StringComparison.Ordinal));
+            string path = $"$.enemyGroup[{encounterIndex}]";
+            switch (problem.Kind)
+            {
+                case FormationProblemKind.InvalidFootprint:
+                    Add(item, $"{path}.enemyId", "formation.footprint-invalid",
+                        $"Enemy '{placement.DefinitionId}' has nonpositive footprint "
+                        + $"{placement.Footprint.Rows} × {placement.Footprint.Columns}.");
+                    break;
+                case FormationProblemKind.OutOfBounds:
+                    Add(item, $"{path}.slotId", "formation.out-of-bounds",
+                        $"Anchor {FormationSlotId.Format(placement.Anchor)} with footprint "
+                        + $"{placement.Footprint.Rows} × {placement.Footprint.Columns} "
+                        + $"leaves the enemy formation at {DescribeCells(problem.Cells)}.");
+                    break;
+                case FormationProblemKind.Overlap:
+                    int conflictingIndex = encounterIndexByInstanceId[
+                        problem.ConflictingInstanceId!];
+                    Add(item, $"{path}.slotId", "formation.overlap",
+                        $"Enemy placement {encounterIndex} overlaps placement "
+                        + $"{conflictingIndex} at {DescribeCells(problem.Cells)}.");
+                    break;
+                case FormationProblemKind.DuplicateInstanceId:
+                    Add(item, path, "formation.instance-id-duplicate",
+                        $"Battle-local instance ID '{problem.InstanceId}' is duplicated.");
+                    break;
             }
         }
 
@@ -380,6 +454,55 @@ internal sealed class ContentValidator
             RequireStableKey(item, "$.musicCueId", encounter.MusicCueId, "music.");
         }
     }
+
+    private void ValidateEnemyFootprint(LoadedContent item, EnemyDefinition enemy)
+    {
+        EnemyFormationFootprintDefinition? footprint = enemy.FormationFootprint;
+        if (footprint is null)
+        {
+            Add(item, "$.formationFootprint", "formation.footprint-invalid",
+                "formationFootprint cannot be null; omit it to use the 1 × 1 default.");
+            return;
+        }
+
+        if (footprint.Rows < 1 || footprint.Rows > BattleFormationRules.RowCount)
+        {
+            Add(item, "$.formationFootprint.rows", "formation.footprint-invalid",
+                $"Footprint rows must be from 1 through {BattleFormationRules.RowCount}.");
+        }
+
+        if (footprint.Columns < 1
+            || footprint.Columns > BattleFormationRules.EnemyColumnCount)
+        {
+            Add(item, "$.formationFootprint.columns", "formation.footprint-invalid",
+                "Footprint columns must be from 1 through "
+                + $"{BattleFormationRules.EnemyColumnCount}.");
+        }
+    }
+
+    private static bool TryCreateEnemyFootprint(
+        EnemyDefinition enemy,
+        out FormationFootprint footprint)
+    {
+        EnemyFormationFootprintDefinition? authored = enemy.FormationFootprint;
+        if (authored is null
+            || authored.Rows < 1
+            || authored.Rows > BattleFormationRules.RowCount
+            || authored.Columns < 1
+            || authored.Columns > BattleFormationRules.EnemyColumnCount)
+        {
+            footprint = default;
+            return false;
+        }
+
+        footprint = new FormationFootprint(authored.Rows, authored.Columns);
+        return true;
+    }
+
+    private static string DescribeCells(IEnumerable<FormationCell> cells) =>
+        string.Join(
+            ", ",
+            cells.Select(cell => $"(r{cell.Row},c{cell.Column})"));
 
     private void ValidateQuest(LoadedContent item, QuestDefinition quest)
     {

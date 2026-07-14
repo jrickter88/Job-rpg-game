@@ -12,6 +12,10 @@
   "abilityIds": [
     "ability.enemy.tackle"
   ],
+  "formationFootprint": {
+    "rows": 1,
+    "columns": 1
+  },
   "loot": [
     {
       "itemId": "item.consumable.potion",

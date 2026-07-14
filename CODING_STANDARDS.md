@@ -51,6 +51,10 @@ edition of the Godot editor; standard editor builds cannot compile C# projects.
   entire scene tree for a service.
 - Change scenes through one navigator once navigation exists. Do not scatter hardcoded
   `res://` transitions through gameplay nodes.
+- Gameplay consumes stable logical actions from `GameInputActions`; scene controllers do not
+  hard-code player keyboard keys. Temporary developer shortcuts must remain clearly separate.
+- Control preferences live outside `GameState` and content. Apply them through the narrow
+  input-binding service composed at `GameRoot`, not an autoload or global input manager.
 - Load presentation resources by a presentation catalog keyed by stable IDs, not from
   core definitions containing raw resource paths.
 - Do not make nodes persistent merely to preserve data; preserve data in `GameState`.

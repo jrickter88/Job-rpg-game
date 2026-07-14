@@ -109,6 +109,21 @@ public sealed class DirectoryModDiscoveryTests
         Assert.Contains(result.Problems, problem => problem.Code == "dependency.cycle");
     }
 
+    [Fact]
+    public void GameApiVersion1_AfterCanonicalFormationChange_IsRejected()
+    {
+        using var installation = new TemporaryModInstallation();
+        installation.Add("mod.example.legacy", [], gameApiVersion: 1);
+
+        ModDiscoveryResult result = new DirectoryModDiscovery().Discover(installation.Root);
+
+        Assert.False(result.IsSuccess);
+        ModProblem problem = Assert.Single(
+            result.Problems,
+            problem => problem.Code == "manifest.api-unsupported");
+        Assert.Contains("expected 2", problem.Message, StringComparison.Ordinal);
+    }
+
     /// <summary>
     /// Creates one isolated installation per test. Only manifests and content folders are
     /// required here because content parsing is covered by the checked-in example test.
@@ -126,7 +141,10 @@ public sealed class DirectoryModDiscoveryTests
 
         public string Root { get; }
 
-        public void Add(string id, IReadOnlyList<string> dependencies)
+        public void Add(
+            string id,
+            IReadOnlyList<string> dependencies,
+            int gameApiVersion = DirectoryModDiscovery.SupportedGameApiVersion)
         {
             string packageDirectory = Path.Combine(Root, id);
             Directory.CreateDirectory(Path.Combine(packageDirectory, "content"));
@@ -140,7 +158,7 @@ public sealed class DirectoryModDiscoveryTests
                   "id": "{{id}}",
                   "name": "Test {{id}}",
                   "version": "1.0.0",
-                  "gameApiVersion": 1,
+                  "gameApiVersion": {{gameApiVersion}},
                   "dependencies": [{{dependenciesJson}}]
                 }
                 """;

@@ -23,7 +23,7 @@ sequenceDiagram
     Loader-->>Root: Validated ContentCatalog
     Root->>Session: ReplaceState(new game)
     Root->>Saves: Configure user://saves
-    Root-->>Godot: Print Milestone 2 ready
+    Root-->>Godot: Print Milestone 2.75 ready
 ```
 
 `game/scenes/bootstrap/GameRoot.tscn` is a small composition root. Milestone 2 now has it
@@ -32,7 +32,7 @@ James, the guide, the grid, and development controls. Startup details also appea
 **Output** panel:
 
 ```text
-Milestone 2 ready: loaded 19 definitions with 0 data mod(s); new game ... starts at map.prologue.test-room.
+Milestone 2.75 ready: loaded 19 definitions with 0 data mod(s); new game ... starts at map.prologue.test-room.
 ```
 
 If content is invalid, startup prints every discovered problem and exits instead of giving
@@ -60,10 +60,11 @@ The pipeline has four small parts:
 - statistic ranges and statistic-valued maps;
 - nonnegative prices and ability costs;
 - valid loot probabilities and quantity ranges;
-- duplicate class unlocks, encounter positions, quest objective IDs, and equipment items;
+- duplicate class unlocks, overlapping/out-of-bounds encounter footprints, quest objective
+  IDs, and equipment items;
 - starting-class rule references, duplicates, contradictions, and a nonempty final pool;
-- stable prefixes for targeting, rulesets, equipment slots, formation slots, music,
-  battlefields, objectives, maps, and event flags.
+- canonical enemy formation coordinates plus stable prefixes for targeting, rulesets,
+  equipment slots, music, battlefields, objectives, maps, and event flags.
 
 Errors include a file, JSON path, stable error code, and explanation. For example:
 
@@ -83,7 +84,7 @@ kind of content from silently being used as another.
 
 ## The fixture pack
 
-The 18 checked-in records cover every implemented category:
+The 19 checked-in records cover every implemented category:
 
 | Category | Fixture purpose |
 |---|---|
@@ -92,10 +93,11 @@ The 18 checked-in records cover every implemented category:
 | Classes | Vanguard, Black Mage, and White Mage definitions |
 | Starting-class rule | Makes those three vanilla classes legal new-game choices |
 | Actor | Class-neutral James, the starting actor used by new-game creation |
+| Dialogue | One short guide exchange used by the test room |
 | Items | A potion and the inventory identity for an iron sword |
 | Equipment | Equippable behavior that decorates the iron-sword item |
-| Enemy | A green slime with statistics, an ability, and loot |
-| Encounter | A two-slime formation with abstract presentation keys |
+| Enemy | A green slime with statistics, an ability, loot, and a `1 × 1` footprint |
+| Encounter | A two-slime formation with canonical coordinate anchors |
 | Quest | One reach objective, item reward, and completion flag |
 
 These records exist to prove the pipeline and cross-references. They are not a commitment to
@@ -245,3 +247,8 @@ Milestone 1 stored a starting map ID and tile coordinate without creating a map.
 now consumes those fields in one exploration interaction slice while keeping `GameState`
 authoritative and scenes disposable. See `MILESTONE_2_GUIDE.md`; combat and the other defined
 content systems remain deferred.
+
+Milestone 2.75 also validates encounter anchors and enemy footprints while constructing a
+transient battle formation. This adds no campaign or save fields: formation content is loaded
+through the same catalog, and the placeholder's party arrangement is rebuilt from active-party
+order each time. See `MILESTONE_2_75_GUIDE.md`.

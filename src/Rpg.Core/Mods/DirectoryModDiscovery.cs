@@ -14,7 +14,7 @@ namespace RpgGame.Core.Mods;
 public sealed class DirectoryModDiscovery
 {
     public const int SupportedManifestSchemaVersion = 1;
-    public const int SupportedGameApiVersion = 1;
+    public const int SupportedGameApiVersion = 2;
 
     private static readonly JsonSerializerOptions SerializerOptions = CreateSerializerOptions();
 

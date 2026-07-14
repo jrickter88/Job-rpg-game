@@ -90,6 +90,65 @@ graphical assets and has only one real map. It is still a tile-based map: moveme
 occupancy, facing, and saved coordinates all use integer grid positions. A generalized map
 loader, entry-point registry, and scene navigator wait for a second map to prove their shape.
 
+### Fixed encounter handoff
+
+Milestone 2.5 adds one direct, feature-specific transition without changing persistent-state
+ownership. `TestRoomView` maps the walkable tile `(3, 4)` to the stable content ID
+`encounter.forest.slimes-01`. After a successful step, `ExplorationSceneController` first
+publishes James's destination and facing through `IGameSession.UpdateLocation`, then raises a
+typed `EncounterLaunchRequest`. It never locates or replaces another Node itself.
+
+`GameRoot` resolves that ID as an `EncounterDefinition` and builds its transient enemy/party
+formations before removing exploration. It then shows `BattlePlaceholderController`, which
+receives the definition, placements, and existing input-binding service but deliberately
+receives no `IGameSession`; the placeholder can display the formation and request a return,
+but it cannot mutate campaign progress. A typed return
+request makes `GameRoot` instantiate a fresh test room with the same content, session,
+development commands, and controls. The new room reconstructs location and flags solely from
+`Session.Current`.
+
+The trigger check exists only on the accepted-movement path, after the session update. Scene
+construction, `StateChanged`, R reconstruction, quick-load, and placeholder return only apply
+authoritative state to presentation. Consequently James can return standing on the marker
+without an immediate second transition; stepping off and deliberately stepping back on creates
+a new movement edge and requests it again. There is no saved current/pending encounter and no
+cleared flag because this milestone has no battle outcome.
+
+These two private composition methods—show exploration and show the battle placeholder—are not
+a general navigator, scene stack, route registry, or transition state machine. A reusable map
+navigation design still waits for a second actual map.
+
+### Battle formation foundation
+
+Milestone 2.75 gives the placeholder a real logical battlefield without making it a combat
+scene. Plain .NET types beneath `Rpg.Core/Combat/Formation` define a 4 × 4 enemy grid and a
+4 × 2 party grid. On both sides, rows increase downward and side-relative column `0` means
+front. `FormationSlotId` is the single parser/formatter for canonical encounter anchors;
+`BattleFormationRules` enumerates rectangular footprints and reports invalid dimensions,
+bounds, duplicate instance IDs, and same-side overlap in deterministic order.
+
+The ownership chain is intentionally narrow:
+
+```mermaid
+flowchart TD
+    Encounter["Encounter: enemy ID + anchor"] --> Builder["Core formation builder"]
+    Enemy["Enemy: rectangular footprint"] --> Builder
+    Builder --> Rules["Core bounds + overlap rules"]
+    Rules --> View["Godot mirrored grid view"]
+```
+
+`EncounterFormationBuilder` preserves authored encounter order and assigns transient
+`enemy-0`, `enemy-1`, and so on. `PartyFormationBuilder` reads the current ordered party and
+temporarily places its members down party column `0`; it delegates the four-member maximum to
+`PartyRules`. Neither result is written to `GameState`. There is no persistent front/back
+choice yet, and entering or leaving the placeholder still cannot change campaign state.
+
+`BattleFormationView` receives only already built core placements. It owns pixel sizes,
+mirrors the enemy and party columns so both front columns face each other, and draws each
+multi-cell placement as one rectangle. It does not parse content IDs, repeat validation, or
+infer logical size from graphics. This keeps future attack/target rules headless while leaving
+all screen geometry in Godot.
+
 ### Party capacity
 
 The game has one ordered party, stored in `ActivePartyActorIds`, with a hard maximum of four
@@ -108,12 +167,29 @@ Expected examples are:
 - `IContentCatalog`: immutable, validated content lookup after startup;
 - `IGameSession`: owns the current scene-independent campaign state;
 - a save coordinator using `ISaveStore`: migration, serialization, and atomic storage;
-- a scene navigator, once more than one real transition exists.
+- a scene navigator, once multiple real maps/destinations prove what navigation must support.
 
 `GameRoot` currently constructs these services and exposes narrow Milestone 1 methods
 for new game, save, and load. Future entry scene controllers will receive the interfaces
 they need. The services are not exposed through a general `Globals` object, and no autoload
 is configured.
+
+### Player input preferences
+
+`InputBindingService` is an application-lifetime Godot adapter composed by `GameRoot`. It owns
+the validated mapping from stable logical actions such as `game.move-up` to Godot keyboard
+events and persists that mapping under `user://settings/controls.json`. Exploration consumes
+`InputMap` actions and therefore has no knowledge of the player's concrete gameplay keys.
+
+Control preferences are independent of `GameState`: loading another campaign must not change
+the player's keyboard layout, and remapping controls must not dirty a save slot. They are also
+not content or data-mod records. `ControlsPanel` receives the service directly from its owning
+exploration scene and exposes only binding selection/reset behavior; no autoload, service
+locator, or global input event bus was introduced.
+
+The battle-formation placeholder reuses the same `game.interact` and `game.menu` actions to return. It
+asks `InputBindingService` to format the current bindings, so remapped controls work and the
+screen never duplicates default-key knowledge.
 
 ## System communication
 
@@ -148,6 +224,11 @@ same deserialization and validation rules.
 checks its data-contract API version, verifies dependencies, and produces a deterministic
 topological order. `GameRoot` loads base content first and each mod's `content/` folder in
 that order. Validation remains all-or-nothing across the combined catalog.
+
+The supported data API is `2`. It changed from `1` when encounter formation slots moved from
+loosely documented `formation.*` keys to canonical grid coordinates. This deliberately rejects
+old encounter mods instead of guessing what `formation.left` meant. The additive enemy
+footprint still defaults to `1 × 1`, and neither change alters `SaveFormatVersion`.
 
 Milestone 1.5 has no replacement or patch semantics. A mod owns only IDs under the namespace
 derived from its manifest—for example, `mod.alex.weather-pack` may define
@@ -188,6 +269,11 @@ This makes damage formulas, targeting, status interactions, and AI decisions tes
 without rendering a frame. It also prevents animation timing from changing results.
 Concrete event types are deferred until the combat slice proves which events are
 actually needed.
+
+Battle formation is an input to that future boundary, not combat resolution. Formation
+placements currently contain only transient instance identity, content identity, side,
+anchor, and rectangular footprint. They contain no HP, commands, targeting, turns, or
+rewards, and the placeholder does not construct a `CombatSnapshot`.
 
 ## Save and load
 
@@ -230,7 +316,9 @@ The test pyramid is intentionally weighted toward fast, headless tests:
 5. **Manual playtests:** feel, pacing, visual timing, controller navigation, and map
    correctness—areas where unit tests provide little value.
 
-`RpgGame.Core.Tests` now covers stable IDs, complete-pack loading, aggregated content
+`RpgGame.Core.Tests` now covers stable IDs, complete-pack loading (including the fixed
+encounter's formation), canonical slot parsing, rectangular occupied-cell ordering,
+formation bounds/overlap, deterministic encounter and party placement, aggregated content
 failures, mod manifests/namespaces/dependency ordering, modded-save compatibility,
 new-game construction, exploration location/flag mutations, session notification, dialogue
 content, save migrations, safe slot names, unknown future fields, and an actual filesystem
@@ -241,7 +329,7 @@ save/load round trip.
 - final damage and progression formulas;
 - status-effect stacking and timing;
 - dialogue choices, conditions, cutscene commands, and localization;
-- map transition and encounter triggering details;
+- general map transitions and random/scalable encounter triggering details;
 - inventory stacking and equipment slot rules;
 - AI planning model;
 - final save-slot UI and platform paths;

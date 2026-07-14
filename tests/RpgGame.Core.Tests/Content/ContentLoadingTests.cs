@@ -31,6 +31,30 @@ public sealed class ContentLoadingTests
 
         ActorDefinition actor = catalog.GetRequired<ActorDefinition>("actor.hero.james");
         Assert.Equal("actor.james.name", actor.DisplayNameKey);
+
+        // Milestone 2.75 uses this exact checked-in record at the scene boundary. Keeping the
+        // proof here confirms the production loader—not a duplicated placeholder list—owns
+        // the enemy placements and presentation lookup key.
+        EncounterDefinition encounter = catalog.GetRequired<EncounterDefinition>(
+            "encounter.forest.slimes-01");
+        Assert.Equal("battlefield.forest.day", encounter.BattlefieldId);
+        Assert.Collection(
+            encounter.EnemyGroup,
+            enemy =>
+            {
+                Assert.Equal("enemy.forest.green-slime", enemy.EnemyId);
+                Assert.Equal("formation.enemy.r1.c0", enemy.SlotId);
+            },
+            enemy =>
+            {
+                Assert.Equal("enemy.forest.green-slime", enemy.EnemyId);
+                Assert.Equal("formation.enemy.r2.c0", enemy.SlotId);
+            });
+
+        EnemyDefinition slime = catalog.GetRequired<EnemyDefinition>(
+            "enemy.forest.green-slime");
+        Assert.Equal(1, slime.FormationFootprint.Rows);
+        Assert.Equal(1, slime.FormationFootprint.Columns);
     }
 
     /// <summary>
@@ -261,6 +285,157 @@ public sealed class ContentLoadingTests
         Assert.Contains(
             result.Problems,
             problem => problem.Code == "starting-class-pool.empty");
+    }
+
+    [Fact]
+    public void EnemyFootprint_OmittedFromJson_DefaultsToOneByOne()
+    {
+        ContentDocument enemy = new("enemies/default-footprint.json", """
+            {
+              "schemaVersion": 1,
+              "id": "enemy.test.default-footprint",
+              "displayNameKey": "enemy.test.default-footprint.name",
+              "level": 1,
+              "statistics": {},
+              "abilityIds": [],
+              "loot": []
+            }
+            """);
+
+        ContentLoadResult result = LoadFormationDocuments(enemy);
+
+        Assert.True(result.IsSuccess, string.Join(Environment.NewLine, result.Problems));
+        EnemyDefinition loaded = result.Catalog!.GetRequired<EnemyDefinition>(
+            "enemy.test.default-footprint");
+        Assert.Equal(1, loaded.FormationFootprint.Rows);
+        Assert.Equal(1, loaded.FormationFootprint.Columns);
+    }
+
+    [Fact]
+    public void EnemyFootprint_ExplicitNull_IsRejectedAtExactPath()
+    {
+        ContentDocument enemy = new("enemies/null-footprint.json", """
+            {
+              "schemaVersion": 1,
+              "id": "enemy.test.null-footprint",
+              "displayNameKey": "enemy.test.null-footprint.name",
+              "level": 1,
+              "statistics": {},
+              "abilityIds": [],
+              "formationFootprint": null,
+              "loot": []
+            }
+            """);
+
+        ContentLoadResult result = LoadFormationDocuments(enemy);
+
+        ContentProblem problem = Assert.Single(
+            result.Problems,
+            candidate => candidate.Code == "formation.footprint-invalid");
+        Assert.Equal("$.formationFootprint", problem.JsonPath);
+    }
+
+    [Fact]
+    public void EnemyFootprint_InvalidDimensions_AggregateExactPaths()
+    {
+        ContentDocument enemy = new("enemies/invalid-footprint.json", """
+            {
+              "schemaVersion": 1,
+              "id": "enemy.test.invalid-footprint",
+              "displayNameKey": "enemy.test.invalid-footprint.name",
+              "level": 1,
+              "statistics": {},
+              "abilityIds": [],
+              "formationFootprint": { "rows": 0, "columns": 5 },
+              "loot": []
+            }
+            """);
+
+        ContentLoadResult result = LoadFormationDocuments(enemy);
+
+        Assert.Collection(
+            result.Problems.Where(problem => problem.Code == "formation.footprint-invalid"),
+            problem => Assert.Equal("$.formationFootprint.columns", problem.JsonPath),
+            problem => Assert.Equal("$.formationFootprint.rows", problem.JsonPath));
+        Assert.Null(result.Catalog);
+    }
+
+    [Fact]
+    public void EncounterFormation_InvalidSlotsBoundsAndOverlap_AggregateDiagnostics()
+    {
+        ContentDocument enemy = new("enemies/large.json", """
+            {
+              "schemaVersion": 1,
+              "id": "enemy.test.large",
+              "displayNameKey": "enemy.test.large.name",
+              "level": 1,
+              "statistics": {},
+              "abilityIds": [],
+              "formationFootprint": { "rows": 2, "columns": 2 },
+              "loot": []
+            }
+            """);
+        ContentDocument encounter = new("encounters/invalid-formation.json", """
+            {
+              "schemaVersion": 1,
+              "id": "encounter.test.invalid-formation",
+              "enemyGroup": [
+                { "enemyId": "enemy.test.large", "slotId": "formation.enemy.r3.c0" },
+                { "enemyId": "enemy.test.large", "slotId": "formation.enemy.r0.c3" },
+                { "enemyId": "enemy.test.large", "slotId": "formation.enemy.r1.c0" },
+                { "enemyId": "enemy.test.large", "slotId": "formation.enemy.r2.c1" },
+                { "enemyId": "enemy.test.large", "slotId": "formation.left" }
+              ],
+              "battlefieldId": null,
+              "musicCueId": null
+            }
+            """);
+
+        ContentLoadResult result = LoadFormationDocuments(enemy, encounter);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains(
+            result.Problems,
+            problem => problem.Code == "formation.out-of-bounds"
+                && problem.JsonPath == "$.enemyGroup[0].slotId");
+        Assert.Contains(
+            result.Problems,
+            problem => problem.Code == "formation.out-of-bounds"
+                && problem.JsonPath == "$.enemyGroup[1].slotId");
+        Assert.Contains(
+            result.Problems,
+            problem => problem.Code == "formation.overlap"
+                && problem.JsonPath == "$.enemyGroup[3].slotId");
+        Assert.Contains(
+            result.Problems,
+            problem => problem.Code == "formation.slot-invalid"
+                && problem.JsonPath == "$.enemyGroup[4].slotId");
+        Assert.Null(result.Catalog);
+    }
+
+    private static ContentLoadResult LoadFormationDocuments(
+        params ContentDocument[] featureDocuments)
+    {
+        ContentDocument classDefinition = new("classes/test.json", """
+            {
+              "schemaVersion": 1,
+              "id": "class.test.starting",
+              "displayNameKey": "class.test.starting.name",
+              "baseStatisticBonuses": {},
+              "abilityUnlocks": []
+            }
+            """);
+        ContentDocument startingClassRule = new("starting-class-rules/default.json", """
+            {
+              "schemaVersion": 1,
+              "id": "newgame.class-rule.base.test",
+              "includeClassIds": ["class.test.starting"],
+              "excludeClassIds": []
+            }
+            """);
+        ContentDocument[] documents = [classDefinition, startingClassRule, .. featureDocuments];
+        return new JsonContentLoader().Load(
+            new MemoryContentSource(ContentSourceIds.Base, documents));
     }
 
     /// <summary>Minimal source double keeps failure scenarios free from temporary-file IO.</summary>

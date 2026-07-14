@@ -15,5 +15,9 @@ dotnet run --project tools/content-validation/RpgGame.ContentValidation.csproj -
 Successful combined validation loads 22 definitions. With this example enabled, the final
 starting pool is Chronoguard, White Mage, and Vanguard.
 
+The manifest uses data API `2`. This version requires encounter mods to use canonical enemy
+anchors such as `formation.enemy.r1.c0`; API `1` abstract formation names are no longer
+accepted. Enemy records may omit `formationFootprint` to retain the `1 × 1` default.
+
 To try discovery in a development build, copy the entire `mod.example.starter-pack` folder into
 the Godot project's `user://mods` folder. The startup output will report one enabled data mod.

@@ -1,10 +1,11 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://src/Rpg.Game/Exploration/ExplorationSceneController.cs" id="1_controller"]
 [ext_resource type="Script" path="res://src/Rpg.Game/Exploration/TestRoomView.cs" id="2_room"]
 [ext_resource type="Script" path="res://src/Rpg.Game/Exploration/PlayerMarkerView.cs" id="3_player"]
 [ext_resource type="Script" path="res://src/Rpg.Game/Exploration/TestGuideNpc.cs" id="4_guide"]
 [ext_resource type="Script" path="res://src/Rpg.Game/Exploration/DialoguePanel.cs" id="5_dialogue"]
+[ext_resource type="Script" path="res://src/Rpg.Game/Input/ControlsPanel.cs" id="6_controls"]
 
 [node name="TestRoom" type="Node2D"]
 script = ExtResource("1_controller")
@@ -40,20 +41,85 @@ horizontal_alignment = 1
 
 [node name="Instructions" type="Label" parent="Interface"]
 offset_left = 96.0
-offset_top = 24.0
-offset_right = 940.0
-offset_bottom = 55.0
-text = "WASD / Arrows: Move    Space / Enter / E: Interact    R: Rebuild    K: Save    L: Load"
-theme_override_font_sizes/font_size = 18
+offset_top = 18.0
+offset_right = 1184.0
+offset_bottom = 70.0
+text = "Current control bindings load here."
+theme_override_font_sizes/font_size = 15
 
 [node name="DevelopmentStatus" type="Label" parent="Interface"]
 offset_left = 96.0
-offset_top = 56.0
-offset_right = 940.0
-offset_bottom = 84.0
+offset_top = 84.0
+offset_right = 1184.0
+offset_bottom = 112.0
 text = "Status: Ready. Quick slot is slot_1."
 modulate = Color(0.55, 1, 0.65, 1)
 theme_override_font_sizes/font_size = 16
+
+[node name="Controls" type="PanelContainer" parent="Interface"]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -450.0
+offset_top = -285.0
+offset_right = 450.0
+offset_bottom = 285.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("6_controls")
+
+[node name="Margin" type="MarginContainer" parent="Interface/Controls"]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 20
+
+[node name="VBox" type="VBoxContainer" parent="Interface/Controls/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="Interface/Controls/Margin/VBox"]
+layout_mode = 2
+text = "Controls"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 26
+
+[node name="Help" type="Label" parent="Interface/Controls/Margin/VBox"]
+layout_mode = 2
+text = "Select a binding, then press any keyboard key. Keys cannot be shared between actions.\nR, K, and L remain reserved for temporary developer tools."
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="BindingRows" type="VBoxContainer" parent="Interface/Controls/Margin/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 8
+
+[node name="Status" type="Label" parent="Interface/Controls/Margin/VBox"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+text = "Choose a binding, then press the replacement key."
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="Footer" type="HBoxContainer" parent="Interface/Controls/Margin/VBox"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 18
+
+[node name="Reset" type="Button" parent="Interface/Controls/Margin/VBox/Footer"]
+custom_minimum_size = Vector2(180, 42)
+layout_mode = 2
+text = "Reset Defaults"
+
+[node name="Close" type="Button" parent="Interface/Controls/Margin/VBox/Footer"]
+custom_minimum_size = Vector2(180, 42)
+layout_mode = 2
+text = "Close"
 
 [node name="Dialogue" type="PanelContainer" parent="Interface"]
 visible = false
@@ -94,5 +160,5 @@ theme_override_font_sizes/font_size = 18
 
 [node name="Hint" type="Label" parent="Interface/Dialogue/Margin/VBox"]
 layout_mode = 2
-text = "Space / Enter / E to continue    Esc to close"
+text = "Use Interact / Confirm to continue    Use Menu / Cancel to close"
 horizontal_alignment = 2

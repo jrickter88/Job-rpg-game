@@ -21,8 +21,24 @@ public sealed record EnemyDefinition : ContentDefinition
     /// <summary>Abilities available to this enemy's future AI.</summary>
     public List<string> AbilityIds { get; init; } = [];
 
+    /// <summary>
+    /// Authored rectangular size on the 4 × 4 enemy formation. Omission remains compatible
+    /// and means one cell; explicit JSON null is rejected by content validation.
+    /// </summary>
+    public EnemyFormationFootprintDefinition FormationFootprint { get; init; } = new();
+
     /// <summary>Independent item-drop possibilities evaluated after victory.</summary>
     public List<LootEntryDefinition> Loot { get; init; } = [];
+}
+
+/// <summary>Rectangular rows-by-columns footprint authored for one enemy species.</summary>
+public sealed record EnemyFormationFootprintDefinition
+{
+    /// <summary>Occupied rows extending downward from the encounter anchor.</summary>
+    public int Rows { get; init; } = 1;
+
+    /// <summary>Occupied depth columns extending backward from the encounter anchor.</summary>
+    public int Columns { get; init; } = 1;
 }
 
 /// <summary>Embedded description of one possible item drop.</summary>

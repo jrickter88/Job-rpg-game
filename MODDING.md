@@ -57,7 +57,7 @@ where an array/string is expected, and unsupported versions are errors.
   "id": "mod.example.starter-pack",
   "name": "Example Starter Pack",
   "version": "1.0.0",
-  "gameApiVersion": 1,
+  "gameApiVersion": 2,
   "dependencies": []
 }
 ```
@@ -68,12 +68,24 @@ where an array/string is expected, and unsupported versions are errors.
 | `id` | Permanent lowercase ID in `mod.author.mod-name` form. It must equal the folder name. |
 | `name` | Nonblank human-facing name. It is never used as identity. |
 | `version` | Author-controlled Semantic Version such as `1.0.0` or `1.1.0-beta.1`. |
-| `gameApiVersion` | Integer data contract supported by the game; currently exactly `1`. |
+| `gameApiVersion` | Integer data contract supported by the game; currently exactly `2`. |
 | `dependencies` | Stable IDs of mods that must be installed and loaded first. |
 
 `gameApiVersion` is separate from the executable's build string. Ordinary game releases do
 not invalidate all mods; this integer changes only when the public data contract becomes
 incompatible. A mod's own `version` should change whenever its published data changes.
+
+### Data API 2 formation change
+
+Milestone 2.75 raises the public data API from `1` to `2`. API 1 documented encounter
+`slotId` values only as general `formation.*` stable keys, so accepting names such as
+`formation.left` and then silently changing their meaning would break encounter mods. API 2
+instead requires canonical enemy coordinates such as `formation.enemy.r1.c0`. A mod manifest
+must opt into that contract by declaring `gameApiVersion: 2`.
+
+This is not a save-format change. Formation anchors and enemy footprints are content used to
+build a transient battle arrangement; they are not stored in `GameState` or the save envelope.
+The manifest schema remains `1`, as do the existing content-record schema versions.
 
 ## Record ownership and references
 
@@ -100,6 +112,48 @@ A record may reference:
 
 The validator proves that every reference exists, has the right content category, and—when
 it crosses from one mod to another—that the target mod is listed as a direct dependency.
+
+## Authoring enemy formations
+
+An enemy may declare its rectangular battlefield size:
+
+```json
+{
+  "schemaVersion": 1,
+  "id": "enemy.example.starter-pack.clockwork-slime",
+  "displayNameKey": "enemy.example.starter-pack.clockwork-slime.name",
+  "level": 1,
+  "statistics": {},
+  "abilityIds": [],
+  "formationFootprint": { "rows": 2, "columns": 2 },
+  "loot": []
+}
+```
+
+Omitting `formationFootprint` means `1 × 1`; explicit `null`, zero, negative values, and
+dimensions larger than `4 × 4` are errors. An encounter anchors that enemy with a canonical
+coordinate:
+
+```json
+{
+  "schemaVersion": 1,
+  "id": "encounter.example.starter-pack.clockwork-slime-01",
+  "enemyGroup": [
+    {
+      "enemyId": "enemy.example.starter-pack.clockwork-slime",
+      "slotId": "formation.enemy.r1.c0"
+    }
+  ],
+  "battlefieldId": "battlefield.example.starter-pack.workshop",
+  "musicCueId": null
+}
+```
+
+Rows and columns are zero-based. Row `0` is top and column `0` is front. The anchor is
+the top-front occupied cell, so this `2 × 2` enemy occupies rows `1–2` and columns `0–1`.
+Validation rejects malformed anchors, any footprint that leaves the enemy 4 × 4 grid, and
+overlap between enemies. See `CONTENT_SCHEMA.md` and `MILESTONE_2_75_GUIDE.md` for the full
+coordinate convention.
 
 ## Changing the new-game class pool
 

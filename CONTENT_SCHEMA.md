@@ -282,6 +282,7 @@ known parameters.
 | `level` | integer | At least `1`. |
 | `statistics` | object of ID → integer | Keys reference statistics. |
 | `abilityIds` | ID array | References abilities. |
+| `formationFootprint` | object | Optional rectangular `rows` and `columns`; omitted means `1 × 1`. |
 | `loot` | array | `itemId`, chance from `0` to `1`, and inclusive quantity range. |
 
 ```json
@@ -292,17 +293,24 @@ known parameters.
   "level": 1,
   "statistics": { "stat.max-hp": 22, "stat.strength": 3 },
   "abilityIds": ["ability.enemy.tackle"],
+  "formationFootprint": { "rows": 1, "columns": 1 },
   "loot": [
     { "itemId": "item.consumable.potion", "chance": 0.125, "minQuantity": 1, "maxQuantity": 1 }
   ]
 }
 ```
 
+`formationFootprint.rows` and `.columns` must each be from `1` through `4`. The
+footprint is authored on the enemy species rather than repeated in each encounter. It
+extends from an encounter's top-front anchor toward increasing rows and increasing depth
+columns. Explicit JSON `null` is invalid; omit the property to select the compatible
+`1 × 1` default. Footprints are definition data, never save data or sprite-derived values.
+
 ### Encounter
 
 | Field | Type | Notes |
 |---|---|---|
-| `enemyGroup` | array | Entries contain `enemyId` and a unique formation `slotId`. |
+| `enemyGroup` | array | Ordered entries contain `enemyId` and a canonical enemy formation anchor `slotId`. |
 | `battlefieldId` | ID or null | Presentation lookup, never a resource path. |
 | `musicCueId` | ID or null | Presentation lookup, never an audio path. |
 
@@ -311,13 +319,25 @@ known parameters.
   "schemaVersion": 1,
   "id": "encounter.forest.slimes-01",
   "enemyGroup": [
-    { "enemyId": "enemy.forest.green-slime", "slotId": "formation.left" },
-    { "enemyId": "enemy.forest.green-slime", "slotId": "formation.right" }
+    { "enemyId": "enemy.forest.green-slime", "slotId": "formation.enemy.r1.c0" },
+    { "enemyId": "enemy.forest.green-slime", "slotId": "formation.enemy.r2.c0" }
   ],
   "battlefieldId": "battlefield.forest.day",
   "musicCueId": "music.battle.normal"
 }
 ```
+
+Enemy slot IDs use exactly `formation.enemy.r<row>.c<column>`, where both coordinates
+are zero-based from `0` through `3`. Row `0` is the top; column `0` is the front, closest
+to the party. The slot is the enemy footprint's top-front cell. For example, a `2 × 2`
+enemy at `formation.enemy.r1.c0` occupies `(r1,c0)`, `(r1,c1)`, `(r2,c0)`, and
+`(r2,c1)`. Every occupied cell must remain in the enemy 4 × 4 grid, and two entries may
+not overlap. Array order is preserved and produces deterministic battle-local IDs
+`enemy-0`, `enemy-1`, and so on.
+
+Party coordinates use the same side-relative meaning on a separate 4 × 2 grid, but they
+are not encounter content in Milestone 2.75. The active party is placed temporarily from
+party order and is not persisted.
 
 ### Quest
 
@@ -353,7 +373,8 @@ The content validator milestone must report the file and JSON path for:
 - invalid or duplicate top-level IDs;
 - missing references and wrong-category references;
 - impossible ranges, negative prices/costs, and invalid probabilities;
-- duplicate encounter slots or quest objective IDs;
+- malformed encounter anchors, footprints outside the grid, overlapping placements, or
+  quest objective IDs duplicated within a quest;
 - unknown rulesets, targeting modes, parameters, slots, and flags where registries exist;
 - orphaned equipment records and duplicate equipment for one `itemId`.
 
@@ -377,7 +398,10 @@ process exit code, making it suitable for local authoring and future CI.
 
 ## Evolution policy
 
-Additive fields must have safe defaults. A breaking category change increments that
-category's `schemaVersion` and adds an explicit content migration before old files are
-removed. Never infer identity from filename changes. Status effects, shops, dialogue,
+Additive fields must have safe defaults. `formationFootprint` is such a field: enemy schema
+version `1` remains valid when it is omitted. A breaking category shape change increments
+that category's `schemaVersion` and adds an explicit content migration before old files are
+removed. The canonical encounter-slot restriction is instead a public data-contract change,
+so Milestone 2.75 raises the mod `gameApiVersion` to `2`; it does not alter record schema or
+save format. Never infer identity from filename changes. Status effects, shops, dialogue,
 and cutscene schemas will be added only when their first playable use case is built.

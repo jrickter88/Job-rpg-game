@@ -2,6 +2,8 @@ using Godot;
 using RpgGame.Core.Content;
 using RpgGame.Core.Content.Definitions;
 using RpgGame.Core.State;
+using RpgGame.Encounters;
+using RpgGame.Input;
 
 namespace RpgGame.Exploration;
 
@@ -21,14 +23,24 @@ public partial class ExplorationSceneController : Node2D
     private PlayerMarkerView _player = null!;
     private TestGuideNpc _guide = null!;
     private DialoguePanel _dialogue = null!;
+    private ControlsPanel _controlsPanel = null!;
+    private Label _instructions = null!;
     private Label _developmentStatus = null!;
     private IContentCatalog? _content;
     private IGameSession? _session;
     private IExplorationDevelopmentCommands? _developmentCommands;
+    private InputBindingService? _inputBindings;
     private bool _developmentCommandInProgress;
+    private bool _encounterTransitionRequested;
 
     /// <summary>Requests reconstruction by the composition root without adding navigation.</summary>
     public event EventHandler? ReloadRequested;
+
+    /// <summary>
+    /// Requests a direct handoff to one encounter after an accepted step enters its tile.
+    /// The owner decides which scene to show; exploration never searches for GameRoot.
+    /// </summary>
+    public event EventHandler<EncounterLaunchRequestedEventArgs>? EncounterRequested;
 
     public override void _Ready()
     {
@@ -36,6 +48,8 @@ public partial class ExplorationSceneController : Node2D
         _player = GetNode<PlayerMarkerView>("Player");
         _guide = GetNode<TestGuideNpc>("Guide");
         _dialogue = GetNode<DialoguePanel>("Interface/Dialogue");
+        _controlsPanel = GetNode<ControlsPanel>("Interface/Controls");
+        _instructions = GetNode<Label>("Interface/Instructions");
         _developmentStatus = GetNode<Label>("Interface/DevelopmentStatus");
         SetProcessUnhandledInput(false);
     }
@@ -47,11 +61,13 @@ public partial class ExplorationSceneController : Node2D
     public void Initialize(
         IContentCatalog content,
         IGameSession session,
-        IExplorationDevelopmentCommands developmentCommands)
+        IExplorationDevelopmentCommands developmentCommands,
+        InputBindingService inputBindings)
     {
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(session);
         ArgumentNullException.ThrowIfNull(developmentCommands);
+        ArgumentNullException.ThrowIfNull(inputBindings);
 
         if (_session is not null)
         {
@@ -61,7 +77,11 @@ public partial class ExplorationSceneController : Node2D
         _content = content;
         _session = session;
         _developmentCommands = developmentCommands;
+        _inputBindings = inputBindings;
         _session.StateChanged += OnSessionStateChanged;
+        _inputBindings.BindingsChanged += OnBindingsChanged;
+        _controlsPanel.Initialize(_inputBindings);
+        RefreshInstructionText();
         ApplyAuthoritativeState();
         SetProcessUnhandledInput(true);
     }
@@ -84,12 +104,25 @@ public partial class ExplorationSceneController : Node2D
         {
             _session.StateChanged -= OnSessionStateChanged;
         }
+
+        if (_inputBindings is not null)
+        {
+            _inputBindings.BindingsChanged -= OnBindingsChanged;
+        }
     }
 
     public override void _UnhandledInput(InputEvent @event)
     {
         if (_session is null
+            || _encounterTransitionRequested
             || @event is not InputEventKey { Pressed: true, Echo: false } keyEvent)
+        {
+            return;
+        }
+
+        // The controls panel captures rebinding input in _Input before this unhandled-input
+        // phase. UI navigation that remains unconsumed must still never move James.
+        if (_controlsPanel.IsOpen)
         {
             return;
         }
@@ -126,12 +159,12 @@ public partial class ExplorationSceneController : Node2D
 
         if (_dialogue.IsOpen)
         {
-            if (IsInteractKey(keyEvent.Keycode))
+            if (keyEvent.IsActionPressed(GameInputActions.Interact))
             {
                 _dialogue.Advance();
                 GetViewport().SetInputAsHandled();
             }
-            else if (keyEvent.Keycode == Key.Escape)
+            else if (keyEvent.IsActionPressed(GameInputActions.Menu))
             {
                 _dialogue.Close();
                 GetViewport().SetInputAsHandled();
@@ -140,14 +173,23 @@ public partial class ExplorationSceneController : Node2D
             return;
         }
 
-        if (TryGetMovement(keyEvent.Keycode, out Vector2I delta, out string facing))
+        if (keyEvent.IsActionPressed(GameInputActions.Menu))
         {
-            TryMove(delta, facing);
+            _controlsPanel.Open();
             GetViewport().SetInputAsHandled();
             return;
         }
 
-        if (IsInteractKey(keyEvent.Keycode))
+        if (TryGetMovement(keyEvent, out Vector2I delta, out string facing))
+        {
+            // A successful step may synchronously ask GameRoot to remove this scene. Mark the
+            // input handled while this Node still owns a viewport, then perform the move.
+            GetViewport().SetInputAsHandled();
+            TryMove(delta, facing);
+            return;
+        }
+
+        if (keyEvent.IsActionPressed(GameInputActions.Interact))
         {
             TryInteract();
             GetViewport().SetInputAsHandled();
@@ -163,6 +205,7 @@ public partial class ExplorationSceneController : Node2D
         bool canEnter = _room.IsWalkable(requestedTile)
             && requestedTile != _guide.TilePosition;
         Vector2I acceptedTile = canEnter ? requestedTile : currentTile;
+        bool moved = acceptedTile != currentTile;
 
         // Facing changes even when a wall blocks movement, matching classic JRPG controls
         // and allowing the player to turn toward an adjacent NPC before interacting.
@@ -174,6 +217,25 @@ public partial class ExplorationSceneController : Node2D
             Y = acceptedTile.Y,
             Facing = facing,
         });
+
+        // Trigger only on the edge created by a successful step. ApplyAuthoritativeState,
+        // save/load, R reconstruction, and returning from the placeholder merely render the
+        // saved tile and never call this code, so standing on the marker cannot auto-launch.
+        if (!moved
+            || _encounterTransitionRequested
+            || !_room.TryGetEncounterAt(acceptedTile, out string encounterId))
+        {
+            return;
+        }
+
+        // Location has already been published above. A newly reconstructed room will
+        // therefore place James on the exact tile he entered. Disable further input before
+        // raising the typed request so one held/duplicated event cannot request two swaps.
+        _encounterTransitionRequested = true;
+        SetProcessUnhandledInput(false);
+        EncounterRequested?.Invoke(
+            this,
+            new EncounterLaunchRequestedEventArgs(new EncounterLaunchRequest(encounterId)));
     }
 
     private void TryInteract()
@@ -196,6 +258,23 @@ public partial class ExplorationSceneController : Node2D
 
     private void OnSessionStateChanged(object? sender, EventArgs eventArgs) =>
         ApplyAuthoritativeState();
+
+    private void OnBindingsChanged(object? sender, EventArgs eventArgs) =>
+        RefreshInstructionText();
+
+    private void RefreshInstructionText()
+    {
+        InputBindingService bindings = RequireInputBindings();
+        _instructions.Text =
+            $"Move: U[{bindings.FormatBindings(GameInputActions.MoveUp)}] "
+            + $"R[{bindings.FormatBindings(GameInputActions.MoveRight)}] "
+            + $"D[{bindings.FormatBindings(GameInputActions.MoveDown)}] "
+            + $"L[{bindings.FormatBindings(GameInputActions.MoveLeft)}]"
+            + System.Environment.NewLine
+            + $"Interact[{bindings.FormatBindings(GameInputActions.Interact)}]    "
+            + $"Menu / Controls[{bindings.FormatBindings(GameInputActions.Menu)}]    "
+            + "Developer: R rebuild, K save, L load";
+    }
 
     private void ApplyAuthoritativeState()
     {
@@ -221,41 +300,42 @@ public partial class ExplorationSceneController : Node2D
     }
 
     private static bool TryGetMovement(
-        Key key,
+        InputEventKey keyEvent,
         out Vector2I delta,
         out string facing)
     {
-        switch (key)
+        if (keyEvent.IsActionPressed(GameInputActions.MoveUp))
         {
-            case Key.Up:
-            case Key.W:
-                delta = Vector2I.Up;
-                facing = "north";
-                return true;
-            case Key.Right:
-            case Key.D:
-                delta = Vector2I.Right;
-                facing = "east";
-                return true;
-            case Key.Down:
-            case Key.S:
-                delta = Vector2I.Down;
-                facing = "south";
-                return true;
-            case Key.Left:
-            case Key.A:
-                delta = Vector2I.Left;
-                facing = "west";
-                return true;
-            default:
-                delta = Vector2I.Zero;
-                facing = string.Empty;
-                return false;
+            delta = Vector2I.Up;
+            facing = "north";
+            return true;
         }
-    }
 
-    private static bool IsInteractKey(Key key) =>
-        key is Key.Space or Key.Enter or Key.KpEnter or Key.E;
+        if (keyEvent.IsActionPressed(GameInputActions.MoveRight))
+        {
+            delta = Vector2I.Right;
+            facing = "east";
+            return true;
+        }
+
+        if (keyEvent.IsActionPressed(GameInputActions.MoveDown))
+        {
+            delta = Vector2I.Down;
+            facing = "south";
+            return true;
+        }
+
+        if (keyEvent.IsActionPressed(GameInputActions.MoveLeft))
+        {
+            delta = Vector2I.Left;
+            facing = "west";
+            return true;
+        }
+
+        delta = Vector2I.Zero;
+        facing = string.Empty;
+        return false;
+    }
 
     /// <summary>
     /// Accepts both the localized keycode and physical keyboard position. This keeps the
@@ -280,6 +360,9 @@ public partial class ExplorationSceneController : Node2D
 
     private IExplorationDevelopmentCommands RequireDevelopmentCommands() =>
         _developmentCommands
+        ?? throw new InvalidOperationException("ExplorationSceneController is not initialized.");
+
+    private InputBindingService RequireInputBindings() => _inputBindings
         ?? throw new InvalidOperationException("ExplorationSceneController is not initialized.");
 
     private async Task SaveQuickSlotAsync()

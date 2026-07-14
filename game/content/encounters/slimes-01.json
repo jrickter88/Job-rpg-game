@@ -4,11 +4,11 @@
   "enemyGroup": [
     {
       "enemyId": "enemy.forest.green-slime",
-      "slotId": "formation.left"
+      "slotId": "formation.enemy.r1.c0"
     },
     {
       "enemyId": "enemy.forest.green-slime",
-      "slotId": "formation.right"
+      "slotId": "formation.enemy.r2.c0"
     }
   ],
   "battlefieldId": "battlefield.forest.day",

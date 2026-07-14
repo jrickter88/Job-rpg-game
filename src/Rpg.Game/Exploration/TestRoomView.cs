@@ -15,8 +15,18 @@ public partial class TestRoomView : Node2D
     public const int TileSize = 48;
     public const int WidthInTiles = 12;
     public const int HeightInTiles = 9;
+    public const string EncounterId = "encounter.forest.slimes-01";
 
-    private static readonly Vector2 DrawingOrigin = new(96, 80);
+    /// <summary>
+    /// Game-specific location of the one fixed encounter marker. It is intentionally not
+    /// stored in GameState: the room owns what exists at a tile, while a save owns where
+    /// James currently stands.
+    /// </summary>
+    public static Vector2I EncounterTile { get; } = new(3, 4);
+
+    // The room begins below the two-line, remappable-controls HUD. Logical tile coordinates
+    // remain unchanged; this is presentation-only spacing owned by the exploration scene.
+    private static readonly Vector2 DrawingOrigin = new(96, 136);
 
     private static readonly HashSet<Vector2I> InteriorWalls =
     [
@@ -35,6 +45,25 @@ public partial class TestRoomView : Node2D
 
     /// <summary>True when a logical tile is inside the room and is not a wall.</summary>
     public bool IsWalkable(Vector2I tile) => IsInside(tile) && !IsWall(tile);
+
+    /// <summary>
+    /// Answers the one map-specific encounter lookup needed by Milestone 2.5.
+    /// </summary>
+    /// <remarks>
+    /// This remains a narrow room query rather than an encounter table or generalized map
+    /// format. The returned value is a stable content ID, never a scene or file path.
+    /// </remarks>
+    public bool TryGetEncounterAt(Vector2I tile, out string encounterId)
+    {
+        if (tile == EncounterTile)
+        {
+            encounterId = EncounterId;
+            return true;
+        }
+
+        encounterId = string.Empty;
+        return false;
+    }
 
     public override void _Draw()
     {
@@ -58,6 +87,20 @@ public partial class TestRoomView : Node2D
                 DrawRect(rectangle, gridColor, false, 1.0f);
             }
         }
+
+        // A bright inset diamond makes the trigger obvious in the gray-box room while the
+        // underlying floor tile stays walkable. Production art remains deliberately deferred.
+        Vector2 center = TileToWorld(EncounterTile);
+        Vector2[] diamond =
+        [
+            center + new Vector2(0.0f, -15.0f),
+            center + new Vector2(15.0f, 0.0f),
+            center + new Vector2(0.0f, 15.0f),
+            center + new Vector2(-15.0f, 0.0f),
+        ];
+        DrawColoredPolygon(diamond, new Color(0.82f, 0.23f, 0.36f));
+        Vector2[] outline = [diamond[0], diamond[1], diamond[2], diamond[3], diamond[0]];
+        DrawPolyline(outline, Colors.White, 2.0f);
     }
 
     private static bool IsInside(Vector2I tile) =>

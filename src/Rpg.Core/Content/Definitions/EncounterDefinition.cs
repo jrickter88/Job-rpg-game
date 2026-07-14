@@ -25,8 +25,8 @@ public sealed record EncounterEnemyDefinition
     public required string EnemyId { get; init; }
 
     /// <summary>
-    /// Unique formation position such as <c>formation.left</c>. This is an abstract slot,
-    /// allowing presentation to decide its exact screen coordinates.
+    /// Canonical enemy anchor such as <c>formation.enemy.r1.c0</c>. It identifies the
+    /// top-front occupied cell; presentation decides how that logical cell maps to pixels.
     /// </summary>
     public required string SlotId { get; init; }
 }

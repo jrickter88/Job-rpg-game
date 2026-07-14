@@ -1,11 +1,15 @@
 using Godot;
 using RpgGame.Adapters.Content;
+using RpgGame.Core.Combat.Formation;
 using RpgGame.Core.Content;
+using RpgGame.Core.Content.Definitions;
 using RpgGame.Core.Content.Loading;
 using RpgGame.Core.Mods;
 using RpgGame.Core.Persistence;
 using RpgGame.Core.State;
+using RpgGame.Encounters;
 using RpgGame.Exploration;
+using RpgGame.Input;
 
 namespace RpgGame.Bootstrap;
 
@@ -26,11 +30,15 @@ namespace RpgGame.Bootstrap;
 /// </remarks>
 public partial class GameRoot : Node, IExplorationDevelopmentCommands
 {
-    private const string GameVersion = "0.2.1-milestone2.1";
+    private const string GameVersion = "0.2.75-battle-formation";
     private const string TestRoomScenePath = "res://game/scenes/exploration/TestRoom.tscn";
+    private const string BattlePlaceholderScenePath =
+        "res://game/scenes/encounters/BattlePlaceholder.tscn";
     private const string DevelopmentQuickSlotId = "slot_1";
 
-    private ExplorationSceneController? _explorationScene;
+    // Exactly one transient gameplay presentation is active at a time. Campaign truth is
+    // still held only by Session, so replacing this Node never replaces or copies GameState.
+    private Node? _activeGameplayScene;
 
     /// <summary>Validated immutable content available after <see cref="_Ready"/>.</summary>
     public IContentCatalog Content { get; private set; } = null!;
@@ -40,6 +48,9 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
 
     /// <summary>Save/load application service using Godot's writable user directory.</summary>
     public SaveCoordinator Saves { get; private set; } = null!;
+
+    /// <summary>Application-lifetime player preferences applied through Godot InputMap.</summary>
+    public InputBindingService InputBindings { get; private set; } = null!;
 
     /// <summary>
     /// Validated loose-folder data mods active for this process, in dependency order. The
@@ -60,9 +71,9 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
         try
         {
             InitializeApplicationServices();
-            RebuildExplorationScene();
+            ShowExploration();
             GD.Print(
-                $"Milestone 2 ready: loaded {Content.Count} definitions "
+                $"Milestone 2.75 ready: loaded {Content.Count} definitions "
                 + $"with {EnabledMods.Count} data mod(s); "
                 + $"new game {Session.Current.SaveId} starts at {Session.Current.Location.MapId}.");
         }
@@ -195,41 +206,137 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
         var store = new JsonFileSaveStore(saveDirectory, serializer);
         Saves = new SaveCoordinator(store, GameVersion, EnabledMods);
 
+        // Controls are user preferences shared by every campaign. They therefore live beside,
+        // not inside, save slots. A malformed file falls back to defaults without blocking play.
+        string controlsPath = ProjectSettings.GlobalizePath("user://settings/controls.json");
+        InputBindings = new InputBindingService(controlsPath);
+        InputBindings.Initialize();
+        if (InputBindings.LoadWarning is not null)
+        {
+            GD.PushWarning(InputBindings.LoadWarning);
+        }
+
         // Creating the initial session last guarantees every dependency used by the public
         // new-game/save/load methods is ready before StateChanged can notify listeners.
         StartNewGame();
     }
 
     /// <summary>
-    /// Reconstructs the only current map from GameState. This is deliberately not a general
-    /// scene navigator; that abstraction waits until a second real map needs transitions.
+    /// Presents a newly instantiated test room reconstructed entirely from GameState.
     /// </summary>
-    private void RebuildExplorationScene(string? developmentStatus = null)
+    /// <remarks>
+    /// This and <see cref="ShowBattlePlaceholder(EncounterLaunchRequest)"/> are two direct,
+    /// feature-specific handoff methods—not a route registry or an API for navigating to
+    /// arbitrary scene strings.
+    /// </remarks>
+    private void ShowExploration(string? developmentStatus = null)
     {
-        if (_explorationScene is not null)
-        {
-            _explorationScene.ReloadRequested -= OnExplorationReloadRequested;
-            RemoveChild(_explorationScene);
-            _explorationScene.QueueFree();
-        }
-
         PackedScene packedScene = ResourceLoader.Load<PackedScene>(TestRoomScenePath)
             ?? throw new InvalidOperationException(
                 $"Could not load exploration scene '{TestRoomScenePath}'.");
         var scene = packedScene.Instantiate<ExplorationSceneController>();
-        AddChild(scene);
-        scene.Initialize(Content, Session, this);
-        scene.ReloadRequested += OnExplorationReloadRequested;
-        if (developmentStatus is not null)
-        {
-            scene.ShowDevelopmentStatus(developmentStatus);
-        }
 
-        _explorationScene = scene;
+        RemoveActiveGameplayScene();
+        AddChild(scene);
+        try
+        {
+            scene.Initialize(Content, Session, this, InputBindings);
+            scene.ReloadRequested += OnExplorationReloadRequested;
+            scene.EncounterRequested += OnEncounterRequested;
+            if (developmentStatus is not null)
+            {
+                scene.ShowDevelopmentStatus(developmentStatus);
+            }
+
+            _activeGameplayScene = scene;
+        }
+        catch
+        {
+            RemoveChild(scene);
+            scene.QueueFree();
+            throw;
+        }
     }
 
+    /// <summary>
+    /// Resolves an encounter request before replacing exploration, then shows the temporary
+    /// non-combat presentation for that exact definition.
+    /// </summary>
+    private void ShowBattlePlaceholder(EncounterLaunchRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        // This typed lookup is intentionally performed before removing exploration. A bad ID
+        // therefore produces ContentCatalog's actionable category-aware error instead of a
+        // blank or unrelated placeholder. Enemy references were already validated at startup.
+        EncounterDefinition encounter = Content.GetRequired<EncounterDefinition>(
+            request.EncounterId);
+        IReadOnlyList<FormationPlacement> enemyPlacements =
+            new EncounterFormationBuilder(Content).Build(encounter);
+        IReadOnlyList<FormationPlacement> partyPlacements = PartyFormationBuilder.Build(
+            Session.Current.ActivePartyActorIds);
+        PackedScene packedScene = ResourceLoader.Load<PackedScene>(BattlePlaceholderScenePath)
+            ?? throw new InvalidOperationException(
+                $"Could not load encounter placeholder scene '{BattlePlaceholderScenePath}'.");
+        var scene = packedScene.Instantiate<BattlePlaceholderController>();
+
+        RemoveActiveGameplayScene();
+        AddChild(scene);
+        try
+        {
+            scene.Initialize(
+                encounter,
+                enemyPlacements,
+                partyPlacements,
+                InputBindings);
+            scene.ReturnRequested += OnEncounterReturnRequested;
+            _activeGameplayScene = scene;
+        }
+        catch
+        {
+            RemoveChild(scene);
+            scene.QueueFree();
+            throw;
+        }
+    }
+
+    /// <summary>Disconnects and frees whichever of the two known gameplay scenes is active.</summary>
+    private void RemoveActiveGameplayScene()
+    {
+        if (_activeGameplayScene is null)
+        {
+            return;
+        }
+
+        // Explicit type handling keeps ownership obvious. There is no reflection, scene
+        // registry, stack, or generic navigation protocol hidden in this helper.
+        if (_activeGameplayScene is ExplorationSceneController exploration)
+        {
+            exploration.ReloadRequested -= OnExplorationReloadRequested;
+            exploration.EncounterRequested -= OnEncounterRequested;
+        }
+        else if (_activeGameplayScene is BattlePlaceholderController placeholder)
+        {
+            placeholder.ReturnRequested -= OnEncounterReturnRequested;
+        }
+
+        RemoveChild(_activeGameplayScene);
+        _activeGameplayScene.QueueFree();
+        _activeGameplayScene = null;
+    }
+
+    private void OnEncounterRequested(
+        object? sender,
+        EncounterLaunchRequestedEventArgs eventArgs) =>
+        ShowBattlePlaceholder(eventArgs.Request);
+
+    private void OnEncounterReturnRequested(
+        object? sender,
+        EncounterReturnRequestedEventArgs eventArgs) =>
+        ShowExploration($"Returned from {eventArgs.Request.EncounterId} placeholder.");
+
     private void OnExplorationReloadRequested(object? sender, EventArgs eventArgs) =>
-        RebuildExplorationScene("Room reconstructed from in-memory GameState.");
+        ShowExploration("Room reconstructed from in-memory GameState.");
 
     private static void EnsureInitialized(object? service, string serviceName)
     {

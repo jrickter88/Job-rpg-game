@@ -103,6 +103,54 @@ See `MILESTONE_2_GUIDE.md` for controls, ownership, reconstruction, and validati
 Exit criteria: R visibly confirms reconstruction, K writes the current location and event
 flags, and L visibly restores them in the running test room.
 
+### Milestone 2.2 — Remappable keyboard controls (implemented)
+
+- Define stable logical actions for movement, interaction/confirmation, and menu/cancel.
+- Load validated player bindings from `user://settings/controls.json` and apply them through
+  Godot `InputMap`, falling back safely when preferences are missing or malformed.
+- Add a small in-game controls panel with immediate rebinding, duplicate rejection, persisted
+  changes, reset defaults, and current-binding feedback.
+- Keep controls independent from campaign saves, game content, data mods, and `Rpg.Core`.
+- Keep R/K/L development proof shortcuts fixed and outside the player binding profile.
+
+Exit criteria: a player can replace movement, interaction, or menu keyboard keys, use the new
+bindings immediately, restart the game, and retain those preferences across campaigns.
+
+### Milestone 2.5 — Fixed encounter handoff (implemented)
+
+- Add one fixed encounter trigger to the test room using the validated
+  `encounter.forest.slimes-01` definition.
+- Raise a typed encounter request after accepted movement enters the trigger.
+- Let `GameRoot` replace exploration with a temporary battle-placeholder scene.
+- Return to a newly reconstructed exploration scene using the authoritative session state.
+- Preserve remappable controls, persistence, and existing exploration behavior.
+
+Exit criteria: James can enter the fixed encounter placeholder, return to a reconstructed
+test room at the correct location with existing flags and campaign state intact, avoid an
+immediate reconstruction retrigger, and deliberately enter the same encounter again.
+
+Explicitly excluded: combat resolution, HP, Attack, Guard, turn order, victory, defeat,
+rewards, AI, random encounters, encounter clearing, a general navigator, and battle saves.
+See `MILESTONE_2_5_GUIDE.md` for the exact handoff and manual test route.
+
+### Milestone 2.75 — Battle formation foundation (implemented)
+
+- Define a four-row by four-column enemy formation and a four-row by
+  two-column party formation.
+- Give encounter enemies canonical formation anchors and authored rectangular
+  footprints.
+- Validate placement bounds and overlap through pure core rules.
+- Render both formations in the battle placeholder.
+- Place the active party deterministically without adding persistent formation choices.
+
+Exit criteria: the fixed encounter renders from validated content in the enemy grid,
+the current party renders in the party grid, and headless tests prove that multi-cell
+enemy footprints cannot overlap or leave the battlefield.
+
+Explicitly excluded: combat commands, targeting, movement, range, row bonuses,
+party formation editing, HP, turns, victory, defeat, and rewards. See
+`MILESTONE_2_75_GUIDE.md` for coordinates, ownership, validation, and the manual proof.
+
 ## Milestone 3 — First playable battle slice
 
 - Implement one deterministic battle resolver with Attack, Guard, HP, speed-based turn
@@ -122,7 +170,7 @@ retain the result after save/load.
 - Add a limited set of common ability effects and status effects based on actual slice
   content.
 - Add one short scripted cutscene and map transition.
-- Add keyboard/controller navigation, placeholder sound, and presentation polish.
+- Extend menu navigation to controllers, then add placeholder sound and presentation polish.
 
 Exit criteria: a 10–15 minute start-to-finish slice includes exploration, dialogue, a
 quest, a shop/equipment choice, two encounters, a boss, and reliable save/load.

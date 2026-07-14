@@ -1,0 +1,89 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://src/Rpg.Game/Encounters/BattlePlaceholderController.cs" id="1_controller"]
+[ext_resource type="Script" path="res://src/Rpg.Game/Encounters/BattleFormationView.cs" id="2_formation"]
+
+[node name="BattlePlaceholder" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_controller")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.055, 0.065, 0.095, 1)
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 100
+theme_override_constants/margin_top = 26
+theme_override_constants/margin_right = 100
+theme_override_constants/margin_bottom = 26
+
+[node name="VBox" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+theme_override_constants/separation = 9
+
+[node name="Title" type="Label" parent="Margin/VBox"]
+layout_mode = 2
+text = "Milestone 2.75 — Battle Formation Foundation"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 27
+
+[node name="Explanation" type="Label" parent="Margin/VBox"]
+layout_mode = 2
+text = "Validated logical formations, mirrored for presentation. No combat is implemented."
+horizontal_alignment = 1
+autowrap_mode = 2
+theme_override_colors/font_color = Color(0.72, 0.82, 1, 1)
+theme_override_font_sizes/font_size = 16
+
+[node name="EncounterId" type="Label" parent="Margin/VBox"]
+layout_mode = 2
+text = "Encounter ID loads here."
+theme_override_font_sizes/font_size = 18
+
+[node name="BattlefieldId" type="Label" parent="Margin/VBox"]
+layout_mode = 2
+text = "Battlefield ID loads here."
+theme_override_font_sizes/font_size = 16
+
+[node name="FormationView" type="Control" parent="Margin/VBox"]
+custom_minimum_size = Vector2(900, 286)
+layout_mode = 2
+size_flags_vertical = 3
+script = ExtResource("2_formation")
+
+[node name="FormationDetails" type="Label" parent="Margin/VBox"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+text = "Validated formation details load here."
+horizontal_alignment = 1
+autowrap_mode = 2
+theme_override_colors/font_color = Color(1, 0.83, 0.58, 1)
+theme_override_font_sizes/font_size = 14
+
+[node name="Divider" type="HSeparator" parent="Margin/VBox"]
+layout_mode = 2
+
+[node name="ReturnHint" type="Label" parent="Margin/VBox"]
+layout_mode = 2
+text = "Current return bindings load here."
+horizontal_alignment = 1
+autowrap_mode = 2
+theme_override_colors/font_color = Color(0.55, 1, 0.65, 1)
+theme_override_font_sizes/font_size = 16
