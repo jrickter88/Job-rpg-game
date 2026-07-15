@@ -2,14 +2,14 @@
   "schemaVersion": 1,
   "id": "encounter.forest.slimes-01",
   "enemyGroup": [
-    {
-      "enemyId": "enemy.forest.green-slime",
-      "slotId": "formation.enemy.r1.c0"
-    },
-    {
-      "enemyId": "enemy.forest.green-slime",
-      "slotId": "formation.enemy.r2.c0"
-    }
+	{
+	  "enemyId": "enemy.forest.green-slime",
+	  "slotId": "formation.enemy.r1.c0"
+	},
+	{
+	  "enemyId": "enemy.forest.green-slime",
+	  "slotId": "formation.enemy.r2.c0"
+	}
   ],
   "battlefieldId": "battlefield.forest.day",
   "musicCueId": "music.battle.normal"

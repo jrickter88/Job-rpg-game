@@ -10,5 +10,5 @@ namespace RpgGame.Core.Combat;
 /// </remarks>
 public static class CombatStatisticIds
 {
-    public const string MaxHp = "stat.max-hp";
+	public const string MaxHp = "stat.max-hp";
 }

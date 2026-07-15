@@ -8,6 +8,13 @@ namespace RpgGame.Core.Combat;
 /// Resolves the abilities one party actor may use from intrinsic actor grants followed by
 /// level-eligible grants from the class selected in this campaign.
 /// </summary>
+/// <remarks>
+/// The resolver projects immutable content plus one save's <see cref="ActorProgressState"/>;
+/// it does not modify learning state or infer a class from the actor ID. Equipment grants are
+/// deliberately absent until equipment exists in campaign/runtime state. Production content
+/// is validated at startup, while the defensive checks here make failures from hand-built test
+/// or editor catalogs immediate and descriptive.
+/// </remarks>
 public sealed class AbilityAvailabilityResolver
 {
     private readonly IContentCatalog _content;
@@ -17,6 +24,14 @@ public sealed class AbilityAvailabilityResolver
         _content = content ?? throw new ArgumentNullException(nameof(content));
     }
 
+    /// <summary>
+    /// Builds the direct-Skill and Magic-container views available at the actor's current level.
+    /// </summary>
+    /// <remarks>
+    /// Authored source order is meaningful: actor-intrinsic abilities come first, followed by
+    /// eligible class unlocks. Cross-source duplicates keep the first occurrence. A learned
+    /// Magic ability becomes executable only through at least one unlocked matching discipline.
+    /// </remarks>
     public PartyAbilityAvailability ResolvePartyActor(ActorProgressState progress)
     {
         ArgumentNullException.ThrowIfNull(progress);
@@ -48,7 +63,8 @@ public sealed class AbilityAvailabilityResolver
 
         foreach (string abilityId in startingAbilityIds)
         {
-            AddValidatedAbility(abilityId, actor.Id, seenAbilities, learnedAbilities);
+            AbilityDefinition ability = GetValidatedAbility(abilityId, actor.Id);
+            AddFirstOccurrence(ability, seenAbilities, learnedAbilities);
         }
 
         foreach (AbilityUnlockDefinition unlock in unlocks)
@@ -59,9 +75,22 @@ public sealed class AbilityAvailabilityResolver
                     $"Class '{classDefinition.Id}' contains a null ability unlock.");
             }
 
+            if (unlock.Level < 1)
+            {
+                throw new InvalidDataException(
+                    $"Class '{classDefinition.Id}' unlocks ability '{unlock.AbilityId}' at "
+                    + $"invalid level {unlock.Level}; unlock levels must be at least 1.");
+            }
+
+            // Resolve every entry, including future-level entries. Production loading already
+            // validates the full table, but this defensive boundary also protects tests and
+            // editor tools that intentionally assemble an IContentCatalog by hand.
+            AbilityDefinition ability = GetValidatedAbility(
+                unlock.AbilityId,
+                classDefinition.Id);
             if (unlock.Level <= progress.Level)
             {
-                AddValidatedAbility(unlock.AbilityId, classDefinition.Id, seenAbilities, learnedAbilities);
+                AddFirstOccurrence(ability, seenAbilities, learnedAbilities);
             }
         }
 
@@ -75,13 +104,23 @@ public sealed class AbilityAvailabilityResolver
                     $"Class '{classDefinition.Id}' contains a null magic-discipline unlock.");
             }
 
+            if (unlock.Level < 1)
+            {
+                throw new InvalidDataException(
+                    $"Class '{classDefinition.Id}' unlocks magic discipline "
+                    + $"'{unlock.MagicDisciplineId}' at invalid level {unlock.Level}; unlock "
+                    + "levels must be at least 1.");
+            }
+
+            MagicDisciplineDefinition discipline = GetValidatedMagicDiscipline(
+                unlock.MagicDisciplineId,
+                classDefinition.Id);
             if (unlock.Level <= progress.Level)
             {
-                AddValidatedMagicDiscipline(
-                    unlock.MagicDisciplineId,
-                    classDefinition.Id,
-                    seenDisciplines,
-                    unlockedDisciplineIds);
+                if (seenDisciplines.Add(discipline.Id))
+                {
+                    unlockedDisciplineIds.Add(discipline.Id);
+                }
             }
         }
 
@@ -95,21 +134,17 @@ public sealed class AbilityAvailabilityResolver
         List<MagicDisciplineAvailability> magicDisciplines = BuildMagicDisciplines(
             unlockedDisciplineIds,
             learnedAbilities);
-        List<string> executableAbilityIds = BuildExecutableAbilityIds(
-            directSkillIds,
-            magicDisciplines);
 
+        // PartyAbilityAvailability derives its own flat executable view. Keeping that derived
+        // value with the structure prevents a future menu and command validator from drifting.
         return new PartyAbilityAvailability(
             directSkillIds,
-            magicDisciplines,
-            executableAbilityIds);
+            magicDisciplines);
     }
 
-    private void AddValidatedAbility(
+    private AbilityDefinition GetValidatedAbility(
         string abilityId,
-        string sourceId,
-        ISet<string> seen,
-        ICollection<AbilityDefinition> result)
+        string sourceId)
     {
         if (string.IsNullOrWhiteSpace(abilityId))
         {
@@ -118,17 +153,52 @@ public sealed class AbilityAvailabilityResolver
         }
 
         AbilityDefinition ability = _content.GetRequired<AbilityDefinition>(abilityId);
-        if (seen.Add(abilityId))
+        IReadOnlyList<string> magicDisciplineIds = ability.MagicDisciplineIds
+            ?? throw new InvalidDataException(
+                $"Ability '{ability.Id}' has a null magic-discipline list.");
+
+        switch (ability.AbilityKindId)
         {
-            result.Add(ability);
+            case AbilityKindIds.Skill when magicDisciplineIds.Count > 0:
+                throw new InvalidDataException(
+                    $"Skill ability '{ability.Id}' cannot reference magic disciplines.");
+            case AbilityKindIds.Skill:
+                break;
+            case AbilityKindIds.Magic when magicDisciplineIds.Count == 0:
+                throw new InvalidDataException(
+                    $"Magic ability '{ability.Id}' must reference at least one magic discipline.");
+            case AbilityKindIds.Magic:
+                ValidateMagicAbilityDisciplines(ability, magicDisciplineIds);
+                break;
+            default:
+                throw new InvalidDataException(
+                    $"Ability '{ability.Id}' uses unsupported ability kind "
+                    + $"'{ability.AbilityKindId}'.");
+        }
+
+        return ability;
+    }
+
+    private void ValidateMagicAbilityDisciplines(
+        AbilityDefinition ability,
+        IReadOnlyList<string> magicDisciplineIds)
+    {
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (string magicDisciplineId in magicDisciplineIds)
+        {
+            GetValidatedMagicDiscipline(magicDisciplineId, ability.Id);
+            if (!seen.Add(magicDisciplineId))
+            {
+                throw new InvalidDataException(
+                    $"Magic ability '{ability.Id}' references magic discipline "
+                    + $"'{magicDisciplineId}' more than once.");
+            }
         }
     }
 
-    private void AddValidatedMagicDiscipline(
+    private MagicDisciplineDefinition GetValidatedMagicDiscipline(
         string magicDisciplineId,
-        string sourceId,
-        ISet<string> seen,
-        ICollection<string> result)
+        string sourceId)
     {
         if (string.IsNullOrWhiteSpace(magicDisciplineId))
         {
@@ -136,10 +206,17 @@ public sealed class AbilityAvailabilityResolver
                 $"Magic discipline source '{sourceId}' contains a blank magic-discipline ID.");
         }
 
-        _content.GetRequired<MagicDisciplineDefinition>(magicDisciplineId);
-        if (seen.Add(magicDisciplineId))
+        return _content.GetRequired<MagicDisciplineDefinition>(magicDisciplineId);
+    }
+
+    private static void AddFirstOccurrence(
+        AbilityDefinition ability,
+        ISet<string> seen,
+        ICollection<AbilityDefinition> result)
+    {
+        if (seen.Add(ability.Id))
         {
-            result.Add(magicDisciplineId);
+            result.Add(ability);
         }
     }
 
@@ -167,32 +244,4 @@ public sealed class AbilityAvailabilityResolver
         return result;
     }
 
-    private static List<string> BuildExecutableAbilityIds(
-        IReadOnlyList<string> directSkillIds,
-        IReadOnlyList<MagicDisciplineAvailability> magicDisciplines)
-    {
-        var result = new List<string>();
-        var seen = new HashSet<string>(StringComparer.Ordinal);
-
-        foreach (string abilityId in directSkillIds)
-        {
-            if (seen.Add(abilityId))
-            {
-                result.Add(abilityId);
-            }
-        }
-
-        foreach (MagicDisciplineAvailability discipline in magicDisciplines)
-        {
-            foreach (string spellAbilityId in discipline.SpellAbilityIds)
-            {
-                if (seen.Add(spellAbilityId))
-                {
-                    result.Add(spellAbilityId);
-                }
-            }
-        }
-
-        return result;
-    }
 }

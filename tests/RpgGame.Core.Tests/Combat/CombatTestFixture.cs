@@ -58,8 +58,12 @@ internal static class CombatTestFixture
         Id = id,
         DisplayNameKey = $"{id}.name",
         DescriptionKey = $"{id}.description",
-        TargetingId = "target.test.single",
-        RulesetId = "rules.test.placeholder",
+        TargetingId = AbilityTargetingIds.Self,
+        RulesetId = AbilityRulesetIds.Guard,
+        NumericParameters = new Dictionary<string, decimal>(StringComparer.Ordinal)
+        {
+            [AbilityNumericParameterIds.DamageReduction] = 0.5m,
+        },
     };
 }
 

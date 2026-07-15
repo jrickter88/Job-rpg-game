@@ -138,11 +138,11 @@ public sealed class AbilityMagicFrameworkContentTests
                   "descriptionKey": "ability.test.null-disciplines.description",
                   "abilityKindId": "ability-kind.magic",
                   "magicDisciplineIds": null,
-                  "targetingId": "target.test.single",
+                  "targetingId": "target.self",
                   "costStatisticId": null,
                   "costAmount": 0,
-                  "rulesetId": "rules.test.placeholder",
-                  "numericParameters": {}
+                  "rulesetId": "rules.defense.guard",
+                  "numericParameters": { "damage-reduction": 0.5 }
                 }
                 """),
             new("classes/null-discipline-unlocks.json", """
@@ -158,6 +158,120 @@ public sealed class AbilityMagicFrameworkContentTests
 
         Assert.Equal(2, result.Problems.Count(problem => problem.Code == "value.null"));
         Assert.Null(result.Catalog);
+    }
+
+    [Fact]
+    public void AbilityExecutionContract_UnknownTargetingAndRuleset_AreRejected()
+    {
+        ContentLoadResult result = LoadMagicDocuments(
+            AbilityDocument(
+                "ability.test.unknown-targeting",
+                targetingId: "target.test.unknown"),
+            AbilityDocument(
+                "ability.test.unknown-ruleset",
+                rulesetId: "rules.test.unknown"));
+
+        AssertProblem(result, "ability.targeting-unsupported");
+        AssertProblem(result, "ability.ruleset-unsupported");
+    }
+
+    [Fact]
+    public void AbilityExecutionContract_TargetCompatibilityAndParameters_AreValidated()
+    {
+        ContentLoadResult result = LoadMagicDocuments(
+            AbilityDocument(
+                "ability.test.guard-wrong-target",
+                targetingId: AbilityTargetingIds.SingleEnemy),
+            AbilityDocument(
+                "ability.test.guard-missing-parameter",
+                numericParametersJson: "{}"),
+            AbilityDocument(
+                "ability.test.guard-extra-parameter",
+                numericParametersJson:
+                    "{ \"damage-reduction\": 0.5, \"misspelled-value\": 1 }"),
+            AbilityDocument(
+                "ability.test.physical-invalid-power",
+                targetingId: AbilityTargetingIds.SingleEnemy,
+                rulesetId: AbilityRulesetIds.PhysicalDamage,
+                numericParametersJson: "{ \"power\": 0 }"));
+
+        AssertProblem(result, "ability.ruleset-targeting-mismatch");
+        AssertProblem(result, "ability.parameter-missing");
+        AssertProblem(result, "ability.parameter-unsupported");
+        AssertProblem(result, "ability.parameter-out-of-range");
+    }
+
+    [Fact]
+    public void AbilityGrantLists_DuplicateReferences_AreRejectedConsistently()
+    {
+        const string abilityId = "ability.test.guard";
+        ContentLoadResult result = LoadMagicDocuments(
+            AbilityDocument(abilityId),
+            new("actors/duplicate-ability.json", $$"""
+                {
+                  "schemaVersion": 1,
+                  "id": "actor.test.duplicate-ability",
+                  "displayNameKey": "actor.test.duplicate-ability.name",
+                  "baseStatistics": {},
+                  "startingAbilityIds": ["{{abilityId}}", "{{abilityId}}"]
+                }
+                """),
+            new("enemies/duplicate-ability.json", $$"""
+                {
+                  "schemaVersion": 1,
+                  "id": "enemy.test.duplicate-ability",
+                  "displayNameKey": "enemy.test.duplicate-ability.name",
+                  "level": 1,
+                  "statistics": {},
+                  "abilityIds": ["{{abilityId}}", "{{abilityId}}"],
+                  "loot": []
+                }
+                """),
+            new("items/test-charm.json", """
+                {
+                  "schemaVersion": 1,
+                  "id": "item.test.charm",
+                  "displayNameKey": "item.test.charm.name",
+                  "descriptionKey": "item.test.charm.description",
+                  "buyPrice": 0,
+                  "sellPrice": 0,
+                  "maxStack": 1
+                }
+                """),
+            new("equipment/test-charm.json", $$"""
+                {
+                  "schemaVersion": 1,
+                  "id": "equipment.test.charm",
+                  "itemId": "item.test.charm",
+                  "slotId": "slot.test.charm",
+                  "statisticModifiers": {},
+                  "grantedAbilityIds": ["{{abilityId}}", "{{abilityId}}"]
+                }
+                """));
+
+        AssertProblem(result, "actor.duplicate-starting-ability");
+        AssertProblem(result, "enemy.duplicate-ability");
+        AssertProblem(result, "equipment.duplicate-granted-ability");
+    }
+
+    [Fact]
+    public void JsonRecordWithoutSchemaVersion_IsRejected()
+    {
+        ContentLoadResult result = LoadMagicDocuments(
+            new ContentDocument("abilities/missing-schema-version.json", """
+                {
+                  "id": "ability.test.missing-schema-version",
+                  "displayNameKey": "ability.test.missing-schema-version.name",
+                  "descriptionKey": "ability.test.missing-schema-version.description",
+                  "targetingId": "target.self",
+                  "costStatisticId": null,
+                  "costAmount": 0,
+                  "rulesetId": "rules.defense.guard",
+                  "numericParameters": { "damage-reduction": 0.5 }
+                }
+                """));
+
+        AssertProblem(result, "json.invalid");
     }
 
     private static ContentLoadResult LoadMagicDocuments(params ContentDocument[] documents)
@@ -204,7 +318,10 @@ public sealed class AbilityMagicFrameworkContentTests
     private static ContentDocument AbilityDocument(
         string id,
         string? abilityKindId = null,
-        IReadOnlyList<string>? magicDisciplineIds = null)
+        IReadOnlyList<string>? magicDisciplineIds = null,
+        string targetingId = AbilityTargetingIds.Self,
+        string rulesetId = AbilityRulesetIds.Guard,
+        string numericParametersJson = "{ \"damage-reduction\": 0.5 }")
     {
         string abilityKindMember = abilityKindId is null
             ? string.Empty
@@ -221,11 +338,11 @@ public sealed class AbilityMagicFrameworkContentTests
               "id": "{{id}}",
               "displayNameKey": "{{id}}.name",
               "descriptionKey": "{{id}}.description"{{abilityKindMember}}{{disciplineMember}},
-              "targetingId": "target.test.single",
+              "targetingId": "{{targetingId}}",
               "costStatisticId": null,
               "costAmount": 0,
-              "rulesetId": "rules.test.placeholder",
-              "numericParameters": {}
+              "rulesetId": "{{rulesetId}}",
+              "numericParameters": {{numericParametersJson}}
             }
             """);
     }

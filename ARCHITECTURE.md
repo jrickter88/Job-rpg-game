@@ -220,6 +220,13 @@ Explicitly identified sources feed the same loader:
 This split isolates platform IO while ensuring the editor, tests, and CI all apply the
 same deserialization and validation rules.
 
+`ContentCategoryRegistry` is the single mechanical registration point for a category's folder,
+definition type, and stable-ID prefix. It is an explicit code-owned list, not runtime type
+scanning or a mod plugin hook. Category-specific semantic rules remain in `ContentValidator`.
+This prevents a future content type from being added to one loader switch while being forgotten
+by ID/reference validation. JSON must explicitly include `schemaVersion`; the default on the
+C# base record exists only for concise hand-built test/tool definitions.
+
 `DirectoryModDiscovery` validates one strict `manifest.json` per immediate mod folder,
 checks its data-contract API version, verifies dependencies, and produces a deterministic
 topological order. `GameRoot` loads base content first and each mod's `content/` folder in
@@ -291,6 +298,24 @@ only when the actor has learned that specific ability and has access to at least
 authored discipline IDs. The discipline itself is content and menu structure, not a command
 ability ID.
 
+The two structured collections—direct Skills and Magic discipline spell lists—are authoritative.
+`PartyAbilityAvailability` derives its compatibility `ExecutableAbilityIds` view internally, so
+a future caller cannot supply a flat list that disagrees with what the menu displays. The
+resolver defensively validates all class unlock entries, including future-level entries, when
+an editor/test catalog bypasses the production loader.
+
+Ability target modes and rulesets are closed, code-owned contracts. Current JSON can select
+`target.self` with `rules.defense.guard` or `target.enemy.single` with
+`rules.damage.physical`; each ruleset has an exact required numeric-parameter shape and range.
+Unknown IDs and extra keys are errors rather than dormant behavior. This validation does not
+execute an ability. Actual state changes remain the responsibility of a future pure-core combat
+resolver, while Godot remains responsible only for presentation.
+
+`AbilityDefinitionContractValidator` owns only that ability-specific semantic table and returns
+path/code/message problems to the broader `ContentValidator`. It does not read files or resolve
+cross-record references. This keeps future ruleset additions out of the already broad category
+validator without introducing a general behavior framework.
+
 Enemy abilities are copied in their authored order, and an empty enemy ability list is valid
 initial state. Enemy discipline access and AI spellbook behavior are deferred, so an enemy's
 authored ability IDs remain a flat executable list. Every included ID is resolved through
@@ -361,7 +386,9 @@ save/load round trip. Focused combat-statistic tests cover actor-plus-class and 
 defaults, range failures, unknown IDs, ordinal enumeration, result immutability, and automatic
 participation by a newly registered statistic. Milestone 3.0 adds focused tests for initial
 identity/order, formation preservation, current HP, ability availability, defensive failures,
-and independently owned read-only snapshot collections.
+and independently owned read-only snapshot collections. Ability-framework tests additionally
+cover Skill/Magic gating, multi-discipline projection, code-owned target/ruleset parameter
+contracts, duplicate grants, required JSON schema versions, and defensive hand-built catalogs.
 
 ## Decisions intentionally deferred
 
@@ -386,7 +413,7 @@ Each should be decided against a playable use case rather than a speculative eng
 |---|---|---|
 | Engine/SDK mismatch | The Godot .NET editor and `Godot.NET.Sdk` package must remain compatible. | Pin both to 4.7.x, upgrade deliberately, and run a headless import after upgrades. |
 | ID or schema churn | Renamed content can silently break saves and cross-references. | Treat released IDs as permanent; validate all references; require explicit migrations. |
-| `rulesetId` becomes a scripting language | An open-ended parameter bag can become difficult to understand and validate. | Keep a small code-owned registry, document parameters per ruleset, and add only proven families. |
+| `rulesetId` becomes a scripting language | An open-ended parameter bag can become difficult to understand and validate. | Keep a small closed code-owned contract, reject unknown IDs/keys, document ranges per ruleset, and add only proven families. |
 | Scene coupling returns through convenience | Direct node searches and scene-owned state make transitions and tests fragile. | Compose narrow services at `GameRoot`; keep campaign truth in `GameState`; use owned signals. |
 | Save DTOs mirror runtime objects too closely | Refactors could become accidental file-format breaks. | Keep named, simple DTO fields; migrate JSON at the boundary; test historical fixtures. |
 | Hundreds of JSON files become tedious | Manual errors and bulk tuning can overwhelm one developer. | Build validation first; add focused search/bulk-edit tooling only after real authoring pain appears. |

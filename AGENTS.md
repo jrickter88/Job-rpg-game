@@ -28,6 +28,10 @@ a general-purpose RPG engine.
     current HP, or combatant ability availability.
 15. Read `ABILITY_MAGIC_FRAMEWORK_GUIDE.md` before changing Skill/Magic classification,
     magic-discipline definitions, class discipline access, or party ability projection.
+16. Read `ABILITY_AUTHORING_GUIDE.md` and `MAGIC_AUTHORING_GUIDE.md` before adding or
+    granting abilities, Skills, spells, or magic disciplines.
+17. Read `ABILITY_RULESET_DEVELOPER_GUIDE.md` before adding a target mode, ruleset ID,
+    numeric parameter contract, or executable ability behavior.
 
 When a requested feature conflicts with those documents, update the relevant design
 document in the same change or explain why the exception is temporary.
@@ -57,6 +61,8 @@ document in the same change or explain why the exception is temporary.
 - A new reference field requires validation for missing targets and invalid categories.
 - Prefer explicit fields over an open-ended behavior language. Unique mechanics may
   use a small code-owned ruleset selected by a stable `rulesetId`.
+- Ability target modes, rulesets, and numeric parameters are closed code-owned contracts.
+  Data may select and tune supported contracts; a new JSON string never creates behavior.
 - Data mods are loose JSON packages only. Do not add script, assembly, PCK, remote
   download, Workshop, or arbitrary file-loading support without a later explicit milestone.
 - A mod ID uses `mod.author.mod-name`; every record it owns uses the matching namespace

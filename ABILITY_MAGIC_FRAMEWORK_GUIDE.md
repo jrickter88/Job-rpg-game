@@ -12,12 +12,16 @@ Ability
 ├── Skill
 │   └── direct executable command
 └── Magic
-    └── executable spell shown inside one or more unlocked Magic Disciplines
+	└── executable spell shown inside one or more unlocked Magic Disciplines
 ```
 
 That means Guard can appear directly as a command, while a future spell can appear inside a
 container such as a spellbook category. The framework does not create White Magic, Black
 Magic, Cure, Fire, or any other concrete base-game school yet.
+
+For step-by-step content work, use `ABILITY_AUTHORING_GUIDE.md` for direct Skills and
+`MAGIC_AUTHORING_GUIDE.md` for spells. Use `ABILITY_RULESET_DEVELOPER_GUIDE.md` only when the
+ability needs a genuinely new trusted C# behavior.
 
 ## Content pieces
 
@@ -69,6 +73,10 @@ discipline but he has not learned Cure, the discipline container can appear empt
 The flat executable list never contains discipline IDs. A future spell command will still use
 the spell ability ID, not the discipline ID.
 
+Direct Skills and discipline spell lists are the authoritative structure. The flat executable
+view is derived inside `PartyAbilityAvailability`; callers cannot provide a third list that
+quietly disagrees with a future menu.
+
 `CombatantSnapshot.AbilityIds` remains as the compatibility flat executable list. Party
 combatants also expose `PartyAbilityAvailability`, `DirectSkillIds`, and `MagicDisciplines`.
 Enemies continue to use their authored flat `EnemyDefinition.AbilityIds`; enemy magic
@@ -82,9 +90,28 @@ The resolver preserves author intent:
 2. class `abilityUnlocks` at or below the actor's level;
 3. class `magicDisciplineUnlocks` at or below the actor's level.
 
-Duplicate ability and discipline grants keep the first occurrence using ordinal stable-ID
-comparison. A multi-discipline Magic ability appears inside every matching unlocked
-discipline, but only once in `ExecutableAbilityIds`.
+Duplicate IDs inside one actor, enemy, equipment, class, or spell list are content errors.
+When the same legal ability is granted by two different sources—such as an actor-intrinsic
+grant followed by its class—the resolver preserves the first occurrence using ordinal stable-ID
+comparison. A multi-discipline Magic ability appears inside every matching unlocked discipline,
+but only once in `ExecutableAbilityIds`.
+
+## Code-owned execution contracts
+
+Ability kind and menu organization are data-driven, but executable behavior is deliberately
+closed. Current content may select:
+
+| Targeting ID | Ruleset ID | Parameter contract |
+|---|---|---|
+| `target.self` | `rules.defense.guard` | `damage-reduction` in `(0, 1]` |
+| `target.enemy.single` | `rules.damage.physical` | `power > 0` |
+
+Unknown target/ruleset IDs and unknown, missing, or out-of-range parameters fail validation.
+This prevents a JSON typo or mod-authored method name from becoming a delayed runtime failure.
+It does not yet execute Guard or damage; command resolution remains deferred.
+
+Cost fields are also not executable yet. New abilities should use null/zero until mutable
+current resource state is implemented; `stat.max-mp` is not current MP.
 
 ## Compatibility
 
@@ -92,6 +119,10 @@ Existing ability JSON omits `abilityKindId`, so it still loads as `ability-kind.
 Existing classes omit `magicDisciplineUnlocks`, so they simply unlock no magic containers.
 No base content needs to be rewritten, no save fields are added, and the mod data API does
 not change.
+
+The follow-up contract hardening accepts the target/ruleset pairs already used by base content
+and the checked-in example mod. Arbitrary custom behavior strings were never executable mod
+hooks; they now fail early with actionable diagnostics instead of surviving until runtime.
 
 ## Validation
 
@@ -102,7 +133,10 @@ The content validator rejects:
 - Magic abilities with no discipline IDs;
 - blank, duplicate, missing, or wrong-category magic discipline references;
 - invalid magic discipline records;
-- null, duplicate, below-level-one, missing, or wrong-category class discipline unlocks.
+- null, duplicate, below-level-one, missing, or wrong-category class discipline unlocks;
+- unsupported targeting/ruleset IDs, incompatible target/ruleset pairs, and missing, extra,
+  or out-of-range ruleset parameters;
+- duplicate actor starting abilities, equipment grants, and enemy ability IDs.
 
 Validation aggregates independent problems and publishes no catalog until the full pack is
 valid.

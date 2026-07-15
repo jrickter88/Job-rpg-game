@@ -18,7 +18,15 @@ The fixed slime encounter uses canonical enemy formation anchors, and enemy reco
 declare rectangular `formationFootprint` dimensions. The checked-in green slime deliberately
 omits that optional member to prove old/base records still receive the safe `1 × 1` default.
 Existing abilities also omit `abilityKindId`, which proves they remain direct Skills through
-the compatible `ability-kind.skill` default.
+the compatible `ability-kind.skill` default. Their target, ruleset, and numeric parameters use
+the closed contracts documented in `ABILITY_AUTHORING_GUIDE.md`; arbitrary behavior strings no
+longer pass validation.
+
+Before adding content, use:
+
+- `ABILITY_AUTHORING_GUIDE.md` for a direct Skill or general ability record;
+- `MAGIC_AUTHORING_GUIDE.md` for disciplines, spells, and the two-part class unlock;
+- `ABILITY_RULESET_DEVELOPER_GUIDE.md` only when a genuinely new behavior needs C#.
 
 Run validation without opening Godot:
 

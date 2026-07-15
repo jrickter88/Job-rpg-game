@@ -21,6 +21,9 @@ accepted. Milestone 2.8 remains additive: enemy records may omit `formationFootp
 still load with the deterministic `1 × 1` default, so the data API remains version `2`.
 Milestone 3.05 is also additive: abilities that omit `abilityKindId` remain direct Skills,
 and mods only need `magic-disciplines/` records when they actually author Magic abilities.
+Ability target/ruleset strings are code-owned contracts rather than extension hooks. The
+example Temporal Guard uses the supported `target.self` + `rules.defense.guard` contract and
+its required `damage-reduction` parameter; see `ABILITY_AUTHORING_GUIDE.md` before adding more.
 
 To try discovery in a development build, copy the entire `mod.example.starter-pack` folder into
 the Godot project's `user://mods` folder. The startup output will report one enabled data mod.

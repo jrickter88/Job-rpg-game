@@ -395,6 +395,62 @@ public sealed class AbilityAvailabilityResolverTests
                 .ResolvePartyActor(Progress(actor, classDefinition)));
     }
 
+    [Fact]
+    public void ResolvePartyActor_HandBuiltCatalogWithInvalidAbilityShape_IsRejected()
+    {
+        MagicDisciplineDefinition restoration = MagicDiscipline(
+            "magic-discipline.test.restoration");
+        AbilityDefinition invalidSkill = CombatTestFixture.Ability("ability.test.invalid-skill") with
+        {
+            MagicDisciplineIds = [restoration.Id],
+        };
+        var actor = new ActorDefinition
+        {
+            Id = "actor.test.hero",
+            DisplayNameKey = "actor.test.hero.name",
+            StartingAbilityIds = [invalidSkill.Id],
+        };
+        var classDefinition = new ClassDefinition
+        {
+            Id = "class.test.job",
+            DisplayNameKey = "class.test.job.name",
+        };
+        var resolver = new AbilityAvailabilityResolver(
+            new TestCatalog(restoration, invalidSkill, actor, classDefinition));
+
+        InvalidDataException exception = Assert.Throws<InvalidDataException>(() =>
+            resolver.ResolvePartyActor(Progress(actor, classDefinition)));
+
+        Assert.Contains(invalidSkill.Id, exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ResolvePartyActor_InvalidFutureUnlock_IsRejectedBeforeRequiredLevel()
+    {
+        var actor = new ActorDefinition
+        {
+            Id = "actor.test.hero",
+            DisplayNameKey = "actor.test.hero.name",
+        };
+        var classDefinition = new ClassDefinition
+        {
+            Id = "class.test.job",
+            DisplayNameKey = "class.test.job.name",
+            AbilityUnlocks =
+            [
+                new AbilityUnlockDefinition
+                {
+                    Level = 99,
+                    AbilityId = "ability.test.missing",
+                },
+            ],
+        };
+        var resolver = new AbilityAvailabilityResolver(new TestCatalog(actor, classDefinition));
+
+        Assert.Throws<KeyNotFoundException>(() =>
+            resolver.ResolvePartyActor(Progress(actor, classDefinition)));
+    }
+
     private static ActorProgressState Progress(
         ActorDefinition actor,
         ClassDefinition classDefinition,

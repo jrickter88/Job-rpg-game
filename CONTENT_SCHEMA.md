@@ -16,7 +16,7 @@ Every top-level record contains:
 
 | Field | Type | Rule |
 |---|---|---|
-| `schemaVersion` | integer | Starts at `1`; increment only when this record category needs migration. |
+| `schemaVersion` | integer | Required explicitly in JSON. Starts at `1`; increment only when this record category needs migration. |
 | `id` | string | Permanent, globally unique, stable ID. |
 
 The initial directory-to-type mapping is:
@@ -123,14 +123,14 @@ Vanguard in one save and a White Mage in another without changing `actor.hero.ja
 ```json
 {
   "schemaVersion": 1,
-  "id": "class.magic.black-mage",
-  "displayNameKey": "class.black-mage.name",
-  "baseStatisticBonuses": { "stat.magic": 4 },
+  "id": "class.magic.white-mage",
+  "displayNameKey": "class.white-mage.name",
+  "baseStatisticBonuses": { "stat.max-mp": 8, "stat.defense": 1 },
   "abilityUnlocks": [
-    { "level": 1, "abilityId": "ability.black-magic.fire" }
+    { "level": 1, "abilityId": "ability.restoration.aegis" }
   ],
   "magicDisciplineUnlocks": [
-    { "level": 1, "magicDisciplineId": "magic-discipline.black" }
+    { "level": 1, "magicDisciplineId": "magic-discipline.restoration" }
   ]
 }
 ```
@@ -274,31 +274,44 @@ This keeps common inventory/shop data in exactly one place.
 | `displayNameKey`, `descriptionKey` | string | Localization keys. |
 | `abilityKindId` | ID | Optional; defaults to `ability-kind.skill`. Supported values are `ability-kind.skill` and `ability-kind.magic`. |
 | `magicDisciplineIds` | ID array | Empty for Skills; required and nonempty for Magic. References `magic-disciplines/`. |
-| `targetingId` | ID | Code-owned targeting rule. |
+| `targetingId` | ID | Closed code-owned target contract; currently `target.self` or `target.enemy.single`. |
 | `costStatisticId` | ID or null | Statistic/resource spent, if any. |
 | `costAmount` | integer | Nonnegative. |
-| `rulesetId` | ID | Selects one small code-owned behavior. |
-| `numericParameters` | object of string → number | Values consumed by that ruleset and explicitly validated. |
+| `rulesetId` | ID | Selects one supported code-owned behavior; currently `rules.defense.guard` or `rules.damage.physical`. |
+| `numericParameters` | object of string → number | Exact required keys and ranges are owned by the selected ruleset. Extra keys are errors. |
 
 ```json
 {
   "schemaVersion": 1,
-  "id": "ability.black-magic.fire",
-  "displayNameKey": "ability.fire.name",
-  "descriptionKey": "ability.fire.description",
+  "id": "ability.restoration.aegis",
+  "displayNameKey": "ability.aegis.name",
+  "descriptionKey": "ability.aegis.description",
   "abilityKindId": "ability-kind.magic",
-  "magicDisciplineIds": ["magic-discipline.black"],
-  "targetingId": "target.enemy.single",
-  "costStatisticId": "stat.mp",
-  "costAmount": 4,
-  "rulesetId": "rules.damage.magic",
-  "numericParameters": { "power": 18 }
+  "magicDisciplineIds": ["magic-discipline.restoration"],
+  "targetingId": "target.self",
+  "costStatisticId": null,
+  "costAmount": 0,
+  "rulesetId": "rules.defense.guard",
+  "numericParameters": { "damage-reduction": 0.35 }
 }
 ```
 
 `rulesetId` is a constrained escape hatch for game rules, not a generic scripting
-language. Add a ruleset only for a demonstrated family of abilities, and validate its
-known parameters.
+language. JSON may select and tune only a contract implemented by the current build. A new
+string cannot create behavior. Add a ruleset only for a demonstrated family of abilities,
+then add its stable constants, target compatibility, exact parameter validation, core behavior,
+and focused tests together. See `ABILITY_RULESET_DEVELOPER_GUIDE.md`.
+
+Current authored contracts are:
+
+| Targeting ID | Ruleset ID | Required numeric parameters |
+|---|---|---|
+| `target.self` | `rules.defense.guard` | `damage-reduction` greater than `0` and at most `1` |
+| `target.enemy.single` | `rules.damage.physical` | `power` greater than `0` |
+
+Cost fields remain part of the early DTO, but current resource spending is not implemented.
+New content should use null/zero until mutable current MP/resource ownership is defined. In
+particular, `stat.max-mp` is a maximum statistic and must not be treated as current MP.
 
 An omitted `abilityKindId` remains compatible and means `ability-kind.skill`. Skills appear
 directly as executable commands and must not list magic disciplines. Magic abilities are
@@ -315,9 +328,9 @@ are never submitted as `CombatCommand.AbilityId`.
 ```json
 {
   "schemaVersion": 1,
-  "id": "magic-discipline.black",
-  "displayNameKey": "magic-discipline.black.name",
-  "descriptionKey": "magic-discipline.black.description"
+  "id": "magic-discipline.restoration",
+  "displayNameKey": "magic-discipline.restoration.name",
+  "descriptionKey": "magic-discipline.restoration.description"
 }
 ```
 
@@ -428,7 +441,8 @@ The content validator milestone must report the file and JSON path for:
 - null, nonpositive, or oversized enemy footprints, malformed encounter anchors,
   footprints outside the grid, overlapping placements, or
   quest objective IDs duplicated within a quest;
-- unknown rulesets, targeting modes, parameters, slots, and flags where registries exist;
+- unknown ability rulesets/targeting modes, missing or extra ruleset parameters, and
+  unsupported slots/flags where their registries exist;
 - orphaned equipment records and duplicate equipment for one `itemId`.
 
 Warnings should be reserved for suspicious but legal values. Anything that would crash
@@ -459,3 +473,7 @@ removed. The canonical encounter-slot restriction is instead a public data-contr
 so Milestone 2.75 raises the mod `gameApiVersion` to `2`; it does not alter record schema or
 save format. Never infer identity from filename changes. Status effects, shops, dialogue,
 and cutscene schemas will be added only when their first playable use case is built.
+
+Every JSON record must write `schemaVersion` even when it is `1`. The C# default exists for
+hand-built tests and tools only; accepting a missing JSON version would make future migrations
+unable to distinguish old content from an authoring omission.

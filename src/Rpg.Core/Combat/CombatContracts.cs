@@ -12,7 +12,7 @@ namespace RpgGame.Core.Combat;
 /// </remarks>
 public interface ICombatResolver
 {
-    CombatResolution Resolve(CombatSnapshot current, CombatCommand command);
+	CombatResolution Resolve(CombatSnapshot current, CombatCommand command);
 }
 
 /// <summary>
@@ -21,7 +21,7 @@ public interface ICombatResolver
 /// </summary>
 public interface IRandomSource
 {
-    int Next(int minInclusive, int maxExclusive);
+	int Next(int minInclusive, int maxExclusive);
 }
 
 /// <summary>
@@ -33,27 +33,27 @@ public interface IRandomSource
 /// </remarks>
 public sealed record CombatSnapshot
 {
-    public CombatSnapshot(int round, IReadOnlyList<CombatantSnapshot> combatants)
-    {
-        if (round < 1)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(round),
-                round,
-                "A combat round number must be at least 1.");
-        }
+	public CombatSnapshot(int round, IReadOnlyList<CombatantSnapshot> combatants)
+	{
+		if (round < 1)
+		{
+			throw new ArgumentOutOfRangeException(
+				nameof(round),
+				round,
+				"A combat round number must be at least 1.");
+		}
 
-        ArgumentNullException.ThrowIfNull(combatants);
-        if (combatants.Any(combatant => combatant is null))
-        {
-            throw new ArgumentException(
-                "A combat snapshot cannot contain a null combatant.",
-                nameof(combatants));
-        }
+		ArgumentNullException.ThrowIfNull(combatants);
+		if (combatants.Any(combatant => combatant is null))
+		{
+			throw new ArgumentException(
+				"A combat snapshot cannot contain a null combatant.",
+				nameof(combatants));
+		}
 
-        Round = round;
+		Round = round;
 
-        // Copy before wrapping. A ReadOnlyCollection over the caller's original List would
+		// Copy before wrapping. A ReadOnlyCollection over the caller's original List would
         // still change if that caller later edited the list.
         Combatants = Array.AsReadOnly(combatants.ToArray());
     }
@@ -75,7 +75,7 @@ public sealed record CombatSnapshot
                 instanceId,
                 StringComparison.Ordinal))
             ?? throw new KeyNotFoundException(
-                $"Combatant instance '{instanceId}' does not exist in this battle snapshot.");
+				$"Combatant instance '{instanceId}' does not exist in this battle snapshot.");
     }
 }
 
@@ -141,16 +141,16 @@ public sealed record CombatantSnapshot
         if (!statistics.TryGetValue(CombatStatisticIds.MaxHp, out int maximumHp))
         {
             throw new ArgumentException(
-                $"Combatant '{placement.InstanceId}' is missing required statistic "
-                + $"'{CombatStatisticIds.MaxHp}'.",
+				$"Combatant '{placement.InstanceId}' is missing required statistic "
+				+ $"'{CombatStatisticIds.MaxHp}'.",
                 nameof(statistics));
         }
 
         if (maximumHp <= 0)
         {
             throw new ArgumentException(
-                $"Combatant '{placement.InstanceId}' must have a positive "
-                + $"'{CombatStatisticIds.MaxHp}' statistic, but resolved {maximumHp}.",
+				$"Combatant '{placement.InstanceId}' must have a positive "
+				+ $"'{CombatStatisticIds.MaxHp}' statistic, but resolved {maximumHp}.",
                 nameof(statistics));
         }
 
@@ -159,14 +159,14 @@ public sealed record CombatantSnapshot
             throw new ArgumentOutOfRangeException(
                 nameof(currentHp),
                 currentHp,
-                $"Initial current HP for '{placement.InstanceId}' must be within "
+				$"Initial current HP for '{placement.InstanceId}' must be within "
                 + $"1..{maximumHp}.");
         }
 
         if (abilityIds.Any(string.IsNullOrWhiteSpace))
         {
             throw new ArgumentException(
-                $"Combatant '{placement.InstanceId}' ability IDs cannot be blank.",
+				$"Combatant '{placement.InstanceId}' ability IDs cannot be blank.",
                 nameof(abilityIds));
         }
 

@@ -74,6 +74,12 @@ edition of the Godot editor; standard editor builds cannot compile C# projects.
   recruitment, menus, or combat code.
 - Resolve new-game class choices through `StartingClassPool`; never hard-code availability
   on an actor, infer it from filenames, or depend on content/mod enumeration order.
+- Add supported ability target/ruleset/parameter IDs through `AbilityContentIds.cs` and
+  extend production validation in the same change. Reject unknown parameters instead of
+  ignoring them, and never map JSON strings to methods or runtime types through reflection.
+- Keep `PartyAbilityAvailability` as the authoritative structured party projection. Its flat
+  executable list must be derived from direct Skills and discipline spell lists, not maintained
+  as a separate caller-supplied collection.
 - Treat a mod manifest ID and version as a compatibility contract. Never derive either
   from display text or silently rewrite it during discovery.
 - Data mods contain JSON definitions only. Do not deserialize type names, invoke authored

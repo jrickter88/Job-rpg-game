@@ -29,8 +29,12 @@ public sealed record AbilityDefinition : ContentDefinition
     public List<string> MagicDisciplineIds { get; init; } = [];
 
     /// <summary>
-    /// Stable key selecting a code-owned targeting rule, such as one enemy or all allies.
+    /// Stable key selecting a code-owned targeting rule.
     /// </summary>
+    /// <remarks>
+    /// Use a value from <see cref="AbilityTargetingIds"/>. A new string in JSON cannot create
+    /// targeting behavior; a new mode needs trusted core code and validation first.
+    /// </remarks>
     public required string TargetingId { get; init; }
 
     /// <summary>
@@ -44,11 +48,16 @@ public sealed record AbilityDefinition : ContentDefinition
     /// <summary>
     /// Identifies a small, code-owned rules implementation; this is not a scripting DSL.
     /// </summary>
+    /// <remarks>
+    /// Use a value from <see cref="AbilityRulesetIds"/>. The content validator checks the
+    /// ruleset's target compatibility and exact numeric-parameter contract.
+    /// </remarks>
     public required string RulesetId { get; init; }
 
     /// <summary>
     /// Ruleset-specific tuning values, such as power or accuracy. Each known ruleset must
-    /// validate its accepted keys so this dictionary does not become an accidental DSL.
+    /// validate its required keys, accepted keys, and legal ranges so this dictionary does
+    /// not become an accidental DSL or a bag of silently ignored typos.
     /// Decimal values make authored percentages/factors explicit and deterministic.
     /// </summary>
     public Dictionary<string, decimal> NumericParameters { get; init; } = [];

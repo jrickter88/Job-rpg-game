@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace RpgGame.Core.Content;
 
 /// <summary>
@@ -16,6 +18,12 @@ public abstract record ContentDefinition
     /// Version of this category's JSON shape, used if authored content needs migration.
     /// This is deliberately separate from the save-file format version.
     /// </summary>
+    /// <remarks>
+    /// The default keeps hand-built test/tool definitions concise. <see cref="JsonRequiredAttribute"/>
+    /// still requires JSON authors to write the field explicitly, because silently treating a
+    /// forgotten version as version 1 would make a later schema migration ambiguous.
+    /// </remarks>
+    [JsonRequired]
     public int SchemaVersion { get; init; } = 1;
 
     /// <summary>

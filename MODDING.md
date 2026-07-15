@@ -196,16 +196,16 @@ Mods may define `magic-disciplines/` records and Magic abilities:
 ```json
 {
   "schemaVersion": 1,
-  "id": "ability.example.starter-pack.rune-spark",
-  "displayNameKey": "ability.example.starter-pack.rune-spark.name",
-  "descriptionKey": "ability.example.starter-pack.rune-spark.description",
+  "id": "ability.example.starter-pack.rune-ward",
+  "displayNameKey": "ability.example.starter-pack.rune-ward.name",
+  "descriptionKey": "ability.example.starter-pack.rune-ward.description",
   "abilityKindId": "ability-kind.magic",
   "magicDisciplineIds": ["magic-discipline.example.starter-pack.runes"],
-  "targetingId": "target.enemy.single",
+  "targetingId": "target.self",
   "costStatisticId": null,
   "costAmount": 0,
-  "rulesetId": "rules.test.placeholder",
-  "numericParameters": {}
+  "rulesetId": "rules.defense.guard",
+  "numericParameters": { "damage-reduction": 0.25 }
 }
 ```
 
@@ -215,9 +215,22 @@ a Magic ability: the class/actor must learn the spell and the class must unlock 
 discipline listed by that spell. Unlocking a discipline does not automatically grant every
 spell in that discipline.
 
+Targeting and rulesets are closed code-owned contracts. Mods may reuse and tune the supported
+combinations documented in `ABILITY_AUTHORING_GUIDE.md`; they cannot create behavior by
+inventing a `target.*`, `rules.*`, or numeric-parameter key. Unknown IDs, missing parameters,
+extra parameters, and illegal ranges prevent catalog publication. Executable scripts and
+assemblies remain outside the data-mod boundary.
+
+Current additive mods also cannot patch a vanilla class's `abilityUnlocks` or
+`magicDisciplineUnlocks`. A mod that distributes a spell should grant it from a class owned by
+that mod. Extending vanilla progression needs a future explicit composition contract rather
+than order-dependent JSON replacement.
+
 This remains data-only. It does not add scripts, spell effects, MP, battle menus, enemy
 spellbook AI, or save data. Because omitted ability kinds remain Skills and the new category
 is additive, this does not change `gameApiVersion`, the manifest schema, or the save format.
+The stricter ruleset validation does not make previously unsupported custom behavior executable;
+it reports those unusable IDs at load time instead of allowing a later runtime failure.
 
 ## Changing the new-game class pool
 

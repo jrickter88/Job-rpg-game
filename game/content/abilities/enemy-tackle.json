@@ -8,6 +8,6 @@
   "costAmount": 0,
   "rulesetId": "rules.damage.physical",
   "numericParameters": {
-    "power": 10
+	"power": 10
   }
 }

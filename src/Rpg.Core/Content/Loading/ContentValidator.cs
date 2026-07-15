@@ -110,13 +110,12 @@ internal sealed class ContentValidator
             item,
             "$.startingAbilityIds",
             actor.StartingAbilityIds);
-        for (int index = 0; index < startingAbilityIds.Count; index++)
-        {
-            RequireReference<AbilityDefinition>(
-                item,
-                $"$.startingAbilityIds[{index}]",
-                startingAbilityIds[index]);
-        }
+        ValidateUniqueReferences<AbilityDefinition>(
+            item,
+            "$.startingAbilityIds",
+            startingAbilityIds,
+            "actor.duplicate-starting-ability",
+            "Starting ability");
     }
 
     private void ValidateMagicDiscipline(
@@ -295,13 +294,12 @@ internal sealed class ContentValidator
             item,
             "$.grantedAbilityIds",
             equipment.GrantedAbilityIds);
-        for (int index = 0; index < grantedAbilityIds.Count; index++)
-        {
-            RequireReference<AbilityDefinition>(
-                item,
-                $"$.grantedAbilityIds[{index}]",
-                grantedAbilityIds[index]);
-        }
+        ValidateUniqueReferences<AbilityDefinition>(
+            item,
+            "$.grantedAbilityIds",
+            grantedAbilityIds,
+            "equipment.duplicate-granted-ability",
+            "Granted ability");
     }
 
     private void ValidateAbility(LoadedContent item, AbilityDefinition ability)
@@ -355,6 +353,12 @@ internal sealed class ContentValidator
                     $"Numeric parameter '{parameterName}' must use lowercase kebab-case.");
             }
         }
+
+        foreach (AbilityContractProblem problem in
+                 AbilityDefinitionContractValidator.Validate(ability, numericParameters))
+        {
+            Add(item, problem.JsonPath, problem.Code, problem.Message);
+        }
     }
 
     private void ValidateAbilityMagicDisciplines(
@@ -399,10 +403,12 @@ internal sealed class ContentValidator
             RequireMap(item, "$.statistics", enemy.Statistics));
 
         IReadOnlyList<string> abilityIds = RequireList(item, "$.abilityIds", enemy.AbilityIds);
-        for (int index = 0; index < abilityIds.Count; index++)
-        {
-            RequireReference<AbilityDefinition>(item, $"$.abilityIds[{index}]", abilityIds[index]);
-        }
+        ValidateUniqueReferences<AbilityDefinition>(
+            item,
+            "$.abilityIds",
+            abilityIds,
+            "enemy.duplicate-ability",
+            "Enemy ability");
 
         ValidateEnemyFootprint(item, enemy);
 
@@ -767,7 +773,7 @@ internal sealed class ContentValidator
             return null;
         }
 
-        string expectedPrefix = ExpectedPrefix<TDefinition>();
+        string expectedPrefix = ContentCategoryRegistry.GetRequiredIdPrefix<TDefinition>();
         if (!id.StartsWith(expectedPrefix, StringComparison.Ordinal))
         {
             Add(item, jsonPath, "reference.wrong-category",
@@ -785,6 +791,37 @@ internal sealed class ContentValidator
         Add(item, jsonPath, "reference.missing",
             $"Referenced {typeof(TDefinition).Name} '{id}' does not exist.");
         return null;
+    }
+
+    /// <summary>
+    /// Validates a simple ordered list of typed content references and reports repeated IDs.
+    /// </summary>
+    /// <remarks>
+    /// Keeping this rule in one place prevents actor, equipment, and enemy ability lists from
+    /// drifting into subtly different behavior. Order is preserved, but repeating the same ID
+    /// is rejected instead of being silently collapsed by one consumer and duplicated by another.
+    /// </remarks>
+    private void ValidateUniqueReferences<TDefinition>(
+        LoadedContent item,
+        string collectionPath,
+        IReadOnlyList<string> ids,
+        string duplicateProblemCode,
+        string referenceDescription)
+        where TDefinition : ContentDefinition
+    {
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        for (int index = 0; index < ids.Count; index++)
+        {
+            string id = ids[index];
+            string path = $"{collectionPath}[{index}]";
+            RequireReference<TDefinition>(item, path, id);
+
+            if (!seen.Add(id))
+            {
+                Add(item, path, duplicateProblemCode,
+                    $"{referenceDescription} '{id}' is listed more than once.");
+            }
+        }
     }
 
     private void ValidateModDependency(LoadedContent item, string jsonPath, string targetId)
@@ -810,25 +847,6 @@ internal sealed class ContentValidator
                 + $"listed in mod '{item.SourceId}' dependencies.");
         }
     }
-
-    private static string ExpectedPrefix<TDefinition>()
-        where TDefinition : ContentDefinition => typeof(TDefinition) switch
-        {
-            Type type when type == typeof(AbilityDefinition) => "ability.",
-            Type type when type == typeof(ActorDefinition) => "actor.",
-            Type type when type == typeof(ClassDefinition) => "class.",
-            Type type when type == typeof(DialogueDefinition) => "dialogue.",
-            Type type when type == typeof(EncounterDefinition) => "encounter.",
-            Type type when type == typeof(EnemyDefinition) => "enemy.",
-            Type type when type == typeof(EquipmentDefinition) => "equipment.",
-            Type type when type == typeof(ItemDefinition) => "item.",
-            Type type when type == typeof(MagicDisciplineDefinition) => "magic-discipline.",
-            Type type when type == typeof(QuestDefinition) => "quest.",
-            Type type when type == typeof(StartingClassRuleDefinition) => "newgame.class-rule.",
-            Type type when type == typeof(StatisticDefinition) => "stat.",
-            _ => throw new InvalidOperationException(
-                $"No content ID prefix is registered for {typeof(TDefinition).Name}."),
-        };
 
     private void RequireStableKey(
         LoadedContent item,

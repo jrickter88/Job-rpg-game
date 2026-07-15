@@ -1,6 +1,5 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using RpgGame.Core.Content.Definitions;
 using RpgGame.Core.Mods;
 
 namespace RpgGame.Core.Content.Loading;
@@ -111,15 +110,29 @@ public sealed class JsonContentLoader
             string diagnosticPath = $"{sourceDocument.SourceId}/{relativePath}";
             string category = relativePath.Split('/', 2)[0];
 
-            if (!TryDeserialize(category, document.Json, out ContentDefinition? definition, out JsonException? error))
+            if (!ContentCategoryRegistry.TryGetByFolder(
+                    category,
+                    out ContentCategoryDescriptor? categoryDescriptor))
             {
-                string message = error is null
-                    ? $"Unknown content category folder '{category}'."
-                    : error.Message;
-                string code = error is null ? "category.unknown" : "json.invalid";
-                string jsonPath = error?.Path ?? "$";
+                problems.Add(new ContentProblem(
+                    diagnosticPath,
+                    "$",
+                    "category.unknown",
+                    $"Unknown content category folder '{category}'."));
+                continue;
+            }
 
-                problems.Add(new ContentProblem(diagnosticPath, jsonPath, code, message));
+            if (!TryDeserialize(
+                    categoryDescriptor,
+                    document.Json,
+                    out ContentDefinition? definition,
+                    out JsonException? error))
+            {
+                problems.Add(new ContentProblem(
+                    diagnosticPath,
+                    error?.Path ?? "$",
+                    "json.invalid",
+                    error?.Message ?? "The content record could not be deserialized."));
                 continue;
             }
 
@@ -135,7 +148,7 @@ public sealed class JsonContentLoader
 
             ValidateIdentity(
                 definition,
-                category,
+                categoryDescriptor,
                 sourceDocument.SourceId,
                 diagnosticPath,
                 problems);
@@ -181,32 +194,17 @@ public sealed class JsonContentLoader
     }
 
     private static bool TryDeserialize(
-        string category,
+        ContentCategoryDescriptor category,
         string json,
         out ContentDefinition? definition,
         out JsonException? error)
     {
         try
         {
-            definition = category switch
-            {
-                "abilities" => JsonSerializer.Deserialize<AbilityDefinition>(json, SerializerOptions),
-                "actors" => JsonSerializer.Deserialize<ActorDefinition>(json, SerializerOptions),
-                "classes" => JsonSerializer.Deserialize<ClassDefinition>(json, SerializerOptions),
-                "dialogues" => JsonSerializer.Deserialize<DialogueDefinition>(json, SerializerOptions),
-                "encounters" => JsonSerializer.Deserialize<EncounterDefinition>(json, SerializerOptions),
-                "enemies" => JsonSerializer.Deserialize<EnemyDefinition>(json, SerializerOptions),
-                "equipment" => JsonSerializer.Deserialize<EquipmentDefinition>(json, SerializerOptions),
-                "items" => JsonSerializer.Deserialize<ItemDefinition>(json, SerializerOptions),
-                "magic-disciplines" => JsonSerializer.Deserialize<MagicDisciplineDefinition>(json, SerializerOptions),
-                "quests" => JsonSerializer.Deserialize<QuestDefinition>(json, SerializerOptions),
-                "starting-class-rules" => JsonSerializer.Deserialize<StartingClassRuleDefinition>(json, SerializerOptions),
-                "statistics" => JsonSerializer.Deserialize<StatisticDefinition>(json, SerializerOptions),
-                _ => null,
-            };
+            definition = category.Deserialize(json, SerializerOptions);
 
             error = null;
-            return IsKnownCategory(category);
+            return true;
         }
         catch (JsonException exception)
         {
@@ -218,7 +216,7 @@ public sealed class JsonContentLoader
 
     private static void ValidateIdentity(
         ContentDefinition definition,
-        string category,
+        ContentCategoryDescriptor category,
         string sourceId,
         string diagnosticPath,
         ICollection<ContentProblem> problems)
@@ -242,22 +240,7 @@ public sealed class JsonContentLoader
             return;
         }
 
-        string expectedPrefix = category switch
-        {
-            "abilities" => "ability.",
-            "actors" => "actor.",
-            "classes" => "class.",
-            "dialogues" => "dialogue.",
-            "encounters" => "encounter.",
-            "enemies" => "enemy.",
-            "equipment" => "equipment.",
-            "items" => "item.",
-            "magic-disciplines" => "magic-discipline.",
-            "quests" => "quest.",
-            "starting-class-rules" => "newgame.class-rule.",
-            "statistics" => "stat.",
-            _ => string.Empty,
-        };
+        string expectedPrefix = category.IdPrefix;
 
         if (!definition.Id.StartsWith(expectedPrefix, StringComparison.Ordinal))
         {
@@ -265,7 +248,8 @@ public sealed class JsonContentLoader
                 diagnosticPath,
                 "$.id",
                 "id.wrong-category",
-                $"ID '{definition.Id}' must begin with '{expectedPrefix}' in {category}/."));
+                $"ID '{definition.Id}' must begin with '{expectedPrefix}' in "
+                + $"{category.FolderName}/."));
             return;
         }
 
@@ -280,7 +264,8 @@ public sealed class JsonContentLoader
                     diagnosticPath,
                     "$.id",
                     "id.wrong-namespace",
-                    $"Mod '{sourceId}' must declare {category} IDs beginning with '{requiredPrefix}'."));
+                    $"Mod '{sourceId}' must declare {category.FolderName} IDs beginning with "
+                    + $"'{requiredPrefix}'."));
             }
         }
     }
@@ -288,20 +273,6 @@ public sealed class JsonContentLoader
     private static bool IsValidSourceId(string? sourceId) =>
         string.Equals(sourceId, ContentSourceIds.Base, StringComparison.Ordinal)
         || ModIdentity.IsValidId(sourceId);
-
-    private static bool IsKnownCategory(string category) => category is
-        "abilities" or
-        "actors" or
-        "classes" or
-        "dialogues" or
-        "encounters" or
-        "enemies" or
-        "equipment" or
-        "items" or
-        "magic-disciplines" or
-        "quests" or
-        "starting-class-rules" or
-        "statistics";
 
     private static string NormalizePath(string relativePath) =>
         relativePath.Replace('\\', '/').TrimStart('/');

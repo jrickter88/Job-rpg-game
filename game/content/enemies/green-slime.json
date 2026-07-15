@@ -4,20 +4,20 @@
   "displayNameKey": "enemy.green-slime.name",
   "level": 1,
   "statistics": {
-    "stat.max-hp": 22,
-    "stat.strength": 3,
-    "stat.defense": 2,
-    "stat.speed": 2
+	"stat.max-hp": 22,
+	"stat.strength": 3,
+	"stat.defense": 2,
+	"stat.speed": 2
   },
   "abilityIds": [
     "ability.enemy.tackle"
   ],
   "loot": [
-    {
-      "itemId": "item.consumable.potion",
-      "chance": 0.125,
-      "minQuantity": 1,
-      "maxQuantity": 1
-    }
+	{
+	  "itemId": "item.consumable.potion",
+	  "chance": 0.125,
+	  "minQuantity": 1,
+	  "maxQuantity": 1
+	}
   ]
 }

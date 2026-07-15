@@ -3,8 +3,8 @@
   "id": "class.magic.white-mage",
   "displayNameKey": "class.white-mage.name",
   "baseStatisticBonuses": {
-    "stat.max-mp": 8,
-    "stat.defense": 1
+	"stat.max-mp": 8,
+	"stat.defense": 1
   },
   "abilityUnlocks": []
 }

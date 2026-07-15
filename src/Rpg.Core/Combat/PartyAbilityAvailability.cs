@@ -10,14 +10,21 @@ namespace RpgGame.Core.Combat;
 /// </remarks>
 public sealed record PartyAbilityAvailability
 {
-    public PartyAbilityAvailability(
+    /// <summary>
+    /// Creates one internally consistent projection from its two authoritative menu shapes.
+    /// </summary>
+    /// <remarks>
+    /// Construction is internal because callers should ask <see cref="AbilityAvailabilityResolver"/>
+    /// to apply learning and discipline rules. The flat executable list is deliberately derived
+    /// here instead of supplied as a third argument; otherwise it could disagree with the Skill
+    /// and Magic collections that a future menu displays.
+    /// </remarks>
+    internal PartyAbilityAvailability(
         IReadOnlyList<string> directSkillIds,
-        IReadOnlyList<MagicDisciplineAvailability> magicDisciplines,
-        IReadOnlyList<string> executableAbilityIds)
+        IReadOnlyList<MagicDisciplineAvailability> magicDisciplines)
     {
         ArgumentNullException.ThrowIfNull(directSkillIds);
         ArgumentNullException.ThrowIfNull(magicDisciplines);
-        ArgumentNullException.ThrowIfNull(executableAbilityIds);
 
         if (directSkillIds.Any(string.IsNullOrWhiteSpace))
         {
@@ -31,16 +38,28 @@ public sealed record PartyAbilityAvailability
                 nameof(magicDisciplines));
         }
 
-        if (executableAbilityIds.Any(string.IsNullOrWhiteSpace))
+        if (directSkillIds.Count != directSkillIds.Distinct(StringComparer.Ordinal).Count())
         {
             throw new ArgumentException(
-                "Executable ability IDs cannot be blank.",
-                nameof(executableAbilityIds));
+                "Direct Skill IDs cannot contain duplicates.",
+                nameof(directSkillIds));
+        }
+
+        if (magicDisciplines.Count != magicDisciplines
+                .Select(discipline => discipline.MagicDisciplineId)
+                .Distinct(StringComparer.Ordinal)
+                .Count())
+        {
+            throw new ArgumentException(
+                "Magic discipline availability cannot contain duplicate discipline IDs.",
+                nameof(magicDisciplines));
         }
 
         DirectSkillIds = Array.AsReadOnly(directSkillIds.ToArray());
         MagicDisciplines = Array.AsReadOnly(magicDisciplines.ToArray());
-        ExecutableAbilityIds = Array.AsReadOnly(executableAbilityIds.ToArray());
+        ExecutableAbilityIds = Array.AsReadOnly(BuildExecutableAbilityIds(
+            DirectSkillIds,
+            MagicDisciplines));
     }
 
     /// <summary>Learned Skill abilities shown directly as commands.</summary>
@@ -53,12 +72,45 @@ public sealed record PartyAbilityAvailability
     /// Every executable ability ID in command-validation order. Discipline IDs are excluded.
     /// </summary>
     public IReadOnlyList<string> ExecutableAbilityIds { get; }
+
+    private static string[] BuildExecutableAbilityIds(
+        IReadOnlyList<string> directSkillIds,
+        IReadOnlyList<MagicDisciplineAvailability> magicDisciplines)
+    {
+        var result = new List<string>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (string abilityId in directSkillIds)
+        {
+            if (seen.Add(abilityId))
+            {
+                result.Add(abilityId);
+            }
+        }
+
+        // One spell may belong to several unlocked disciplines. It should appear in each
+        // relevant submenu, but command validation needs only one executable stable ID.
+        foreach (MagicDisciplineAvailability discipline in magicDisciplines)
+        {
+            foreach (string spellAbilityId in discipline.SpellAbilityIds)
+            {
+                if (seen.Add(spellAbilityId))
+                {
+                    result.Add(spellAbilityId);
+                }
+            }
+        }
+
+        return result.ToArray();
+    }
 }
 
 /// <summary>One unlocked magic container and the learned Magic abilities it can show.</summary>
 public sealed record MagicDisciplineAvailability
 {
-    public MagicDisciplineAvailability(string magicDisciplineId, IReadOnlyList<string> spellAbilityIds)
+    internal MagicDisciplineAvailability(
+        string magicDisciplineId,
+        IReadOnlyList<string> spellAbilityIds)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(magicDisciplineId);
         ArgumentNullException.ThrowIfNull(spellAbilityIds);
@@ -66,6 +118,13 @@ public sealed record MagicDisciplineAvailability
         {
             throw new ArgumentException(
                 "Spell ability IDs cannot be blank.",
+                nameof(spellAbilityIds));
+        }
+
+        if (spellAbilityIds.Count != spellAbilityIds.Distinct(StringComparer.Ordinal).Count())
+        {
+            throw new ArgumentException(
+                "Spell ability IDs cannot contain duplicates.",
                 nameof(spellAbilityIds));
         }
 
