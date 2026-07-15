@@ -145,12 +145,17 @@ public sealed class CombatSnapshotFactory
             IReadOnlyDictionary<string, int> statistics =
                 _statisticResolver.ResolveEnemy(enemy.Id);
             int maximumHp = RequirePositiveMaximumHp(placement.InstanceId, statistics);
+            IReadOnlyDictionary<string, int> damageTypePercentModifiers =
+                enemy.DamageTypePercentModifiers
+                ?? throw new InvalidDataException(
+                    $"Enemy '{enemy.Id}' has a null damage-type modifier map.");
 
             combatants.Add(new CombatantSnapshot(
                 placement,
                 statistics,
                 enemyAbilityIds,
-                maximumHp));
+                maximumHp,
+                damageTypePercentModifiers));
         }
 
         ValidateFormationRules(partyPlacements, enemyPlacements);

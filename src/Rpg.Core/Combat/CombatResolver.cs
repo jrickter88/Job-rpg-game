@@ -120,13 +120,20 @@ public sealed class CombatResolver : ICombatResolver
         }
 
         decimal power = RequirePositivePower(ability);
+        string damageTypeId = RequireDamageTypeId(ability);
         int strength = RequireStatistic(actor.Value, CombatStatisticIds.Strength);
         int defense = RequireStatistic(target.Value, CombatStatisticIds.Defense);
+        int damagePercentModifier = target.Value.DamageTypePercentModifiers.TryGetValue(
+            damageTypeId,
+            out int authoredModifier)
+            ? authoredModifier
+            : 0;
         int appliedDamage = CalculateAppliedDamage(
             strength,
             power,
             defense,
-            target.Value.CurrentHp);
+            target.Value.CurrentHp,
+            damagePercentModifier);
         int nextHp = target.Value.CurrentHp - appliedDamage;
 
         // Copy the ordered collection and replace exactly the target's slot. Every unaffected
@@ -142,6 +149,8 @@ public sealed class CombatResolver : ICombatResolver
                 actor.Value.InstanceId,
                 target.Value.InstanceId,
                 ability.Id,
+                damageTypeId,
+                damagePercentModifier,
                 appliedDamage,
                 target.Value.CurrentHp,
                 nextHp),
@@ -229,25 +238,54 @@ public sealed class CombatResolver : ICombatResolver
         return power;
     }
 
+    private static string RequireDamageTypeId(AbilityDefinition ability)
+    {
+        string damageTypeId = ability.DamageTypeId ?? DamageTypeIds.Energy;
+        if (!DamageTypeIds.IsSupported(damageTypeId))
+        {
+            throw new InvalidDataException(
+                $"Physical-damage ability '{ability.Id}' has unsupported damage type "
+                + $"'{damageTypeId}'.");
+        }
+
+        return damageTypeId;
+    }
+
     private static int CalculateAppliedDamage(
         int attackerStrength,
         decimal authoredPower,
         int defenderDefense,
-        int remainingHp)
+        int remainingHp,
+        int damagePercentModifier)
     {
-        // The authored contract permits decimal power while HP is integer. Calculate in decimal,
-        // apply the minimum, then round down explicitly. Before adding, compare against the amount
-        // needed for defeat; this also makes decimal.MaxValue power safe from overflow.
+        if (damagePercentModifier < -100)
+        {
+            throw new InvalidDataException(
+                $"Damage modifier {damagePercentModifier} is below the -100 immunity floor.");
+        }
+
+        if (damagePercentModifier == -100)
+        {
+            return 0;
+        }
+
+        // Apply the signed percentage after Strength, power, Defense, and the base minimum, then
+        // round down once. A positive but heavily resisted hit still deals one damage. Comparing
+        // against the amount needed for defeat first keeps decimal.MaxValue power overflow-safe.
+        decimal multiplier = (100m + damagePercentModifier) / 100m;
         decimal statisticDifference = (decimal)attackerStrength - defenderDefense;
-        decimal powerNeededToDefeat = remainingHp - statisticDifference;
+        decimal baseDamageNeededToDefeat = remainingHp / multiplier;
+        decimal powerNeededToDefeat = baseDamageNeededToDefeat - statisticDifference;
         if (authoredPower >= powerNeededToDefeat)
         {
             return remainingHp;
         }
 
         decimal rawDamage = authoredPower + statisticDifference;
-        decimal minimumApplied = Math.Max(1m, rawDamage);
-        int roundedDamage = decimal.ToInt32(decimal.Floor(minimumApplied));
+        decimal modifiedDamage = Math.Max(1m, rawDamage) * multiplier;
+        int roundedDamage = Math.Max(
+            1,
+            decimal.ToInt32(decimal.Floor(modifiedDamage)));
         return Math.Min(roundedDamage, remainingHp);
     }
 

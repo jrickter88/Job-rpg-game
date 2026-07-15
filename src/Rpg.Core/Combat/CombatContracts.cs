@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using RpgGame.Core.Combat.Formation;
+using RpgGame.Core.Content.Definitions;
 
 namespace RpgGame.Core.Combat;
 
@@ -175,8 +176,15 @@ public sealed record CombatantSnapshot
         FormationPlacement placement,
         IReadOnlyDictionary<string, int> statistics,
         IReadOnlyList<string> abilityIds,
-        int currentHp)
-        : this(placement, statistics, abilityIds, currentHp, partyAbilityAvailability: null)
+        int currentHp,
+        IReadOnlyDictionary<string, int>? damageTypePercentModifiers = null)
+        : this(
+            placement,
+            statistics,
+            abilityIds,
+            currentHp,
+            partyAbilityAvailability: null,
+            damageTypePercentModifiers)
     {
     }
 
@@ -184,14 +192,16 @@ public sealed record CombatantSnapshot
         FormationPlacement placement,
         IReadOnlyDictionary<string, int> statistics,
         PartyAbilityAvailability partyAbilityAvailability,
-        int currentHp)
+        int currentHp,
+        IReadOnlyDictionary<string, int>? damageTypePercentModifiers = null)
         : this(
             placement,
             statistics,
             partyAbilityAvailability?.ExecutableAbilityIds
                 ?? throw new ArgumentNullException(nameof(partyAbilityAvailability)),
             currentHp,
-            partyAbilityAvailability)
+            partyAbilityAvailability,
+            damageTypePercentModifiers)
     {
     }
 
@@ -200,7 +210,8 @@ public sealed record CombatantSnapshot
         IReadOnlyDictionary<string, int> statistics,
         IReadOnlyList<string> abilityIds,
         int currentHp,
-        PartyAbilityAvailability? partyAbilityAvailability)
+        PartyAbilityAvailability? partyAbilityAvailability,
+        IReadOnlyDictionary<string, int>? damageTypePercentModifiers)
     {
         ArgumentNullException.ThrowIfNull(placement);
         ArgumentNullException.ThrowIfNull(statistics);
@@ -260,9 +271,36 @@ public sealed record CombatantSnapshot
             statisticCopy.Add(statisticId, value);
         }
 
+        var damageModifierCopy = new SortedDictionary<string, int>(StringComparer.Ordinal);
+        if (damageTypePercentModifiers is not null)
+        {
+            foreach ((string damageTypeId, int modifier) in damageTypePercentModifiers)
+            {
+                if (!DamageTypeIds.IsSupported(damageTypeId))
+                {
+                    throw new ArgumentException(
+                        $"Combatant '{placement.InstanceId}' has unsupported damage type "
+                        + $"'{damageTypeId}'.",
+                        nameof(damageTypePercentModifiers));
+                }
+
+                if (modifier < -100)
+                {
+                    throw new ArgumentOutOfRangeException(
+                        nameof(damageTypePercentModifiers),
+                        modifier,
+                        $"Combatant '{placement.InstanceId}' damage modifier for "
+                        + $"'{damageTypeId}' cannot be below -100.");
+                }
+
+                damageModifierCopy.Add(damageTypeId, modifier);
+            }
+        }
+
         Placement = placement;
         Statistics = new ReadOnlyDictionary<string, int>(statisticCopy);
         AbilityIds = Array.AsReadOnly(abilityIds.ToArray());
+        DamageTypePercentModifiers = new ReadOnlyDictionary<string, int>(damageModifierCopy);
         PartyAbilityAvailability = partyAbilityAvailability;
         CurrentHp = currentHp;
     }
@@ -272,6 +310,12 @@ public sealed record CombatantSnapshot
     public IReadOnlyDictionary<string, int> Statistics { get; }
 
     public IReadOnlyList<string> AbilityIds { get; }
+
+    /// <summary>
+    /// Signed whole-percent adjustments copied into battle state. Positive values increase
+    /// matching damage, negative values reduce it, and omitted types are neutral.
+    /// </summary>
+    public IReadOnlyDictionary<string, int> DamageTypePercentModifiers { get; }
 
     /// <summary>
     /// Structured party command projection for future menus. This is null for enemies because
@@ -311,8 +355,18 @@ public sealed record CombatantSnapshot
     /// </remarks>
     public CombatantSnapshot WithCurrentHp(int currentHp) =>
         PartyAbilityAvailability is null
-            ? new CombatantSnapshot(Placement, Statistics, AbilityIds, currentHp)
-            : new CombatantSnapshot(Placement, Statistics, PartyAbilityAvailability, currentHp);
+            ? new CombatantSnapshot(
+                Placement,
+                Statistics,
+                AbilityIds,
+                currentHp,
+                DamageTypePercentModifiers)
+            : new CombatantSnapshot(
+                Placement,
+                Statistics,
+                PartyAbilityAvailability,
+                currentHp,
+                DamageTypePercentModifiers);
 }
 
 /// <summary>

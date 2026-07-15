@@ -244,6 +244,7 @@ This keeps common inventory/shop data in exactly one place.
 | `itemId` | ID | Unique reference to its item record. |
 | `slotId` | ID | Stable game-owned equipment slot. |
 | `statisticModifiers` | object of ID → integer | Keys reference statistics. |
+| `weaponDamagePercentages` | object of damage-type ID → integer | Optional. A nonempty profile is legal only for `slot.weapon.*`; every value is positive and the total is exactly `100`. |
 | `grantedAbilityIds` | ID array | References abilities. |
 
 ```json
@@ -265,9 +266,14 @@ This keeps common inventory/shop data in exactly one place.
   "itemId": "item.equipment.iron-sword",
   "slotId": "slot.weapon.main-hand",
   "statisticModifiers": { "stat.strength": 3 },
+  "weaponDamagePercentages": { "damage-type.slash": 100 },
   "grantedAbilityIds": []
 }
 ```
+
+Weapon profiles may mix Slash, Energy, Fire, Ice, and Lightning. They are validated authoring
+data only until persistent equipment and active weapon selection exist. Omission remains
+compatible and reserves an Energy fallback for that later integration.
 
 ### Loot table
 
@@ -320,6 +326,7 @@ See `LOOT_TABLE_AUTHORING_GUIDE.md`.
 | `costStatisticId` | ID or null | Statistic/resource spent, if any. |
 | `costAmount` | integer | Nonnegative. |
 | `rulesetId` | ID | Selects one supported code-owned behavior; currently `rules.defense.guard` or `rules.damage.physical`. |
+| `damageTypeId` | ID or null | Optional code-owned type for a damage ruleset: `damage-type.slash`, `damage-type.energy`, `damage-type.fire`, `damage-type.ice`, or `damage-type.lightning`. Omitted legacy physical damage defaults to Energy. |
 | `numericParameters` | object of string → number | Exact required keys and ranges are owned by the selected ruleset. Extra keys are errors. |
 
 ```json
@@ -356,11 +363,16 @@ Milestone 3.10 executes only the free `target.enemy.single` plus
 
 ```text
 rawDamage = max(1, attacker Strength + authored power - defender Defense)
-roundedDamage = floor(rawDamage)
+typedDamage = modifier == -100
+    ? 0
+    : max(1, floor(rawDamage * (100 + modifier) / 100))
+roundedDamage = typedDamage
 appliedDamage = min(roundedDamage, target CurrentHp)
 ```
 
-The floor is relevant only when content authors choose decimal power. Reaching zero current HP
+The signed target modifier is read from the matching enemy damage type: positive values are
+weaknesses, negative values are resistances, omitted values are neutral, and `-100` is
+immunity. Reaching zero current HP
 marks the transient combatant defeated. Current HP is runtime combat state, not an ability or
 save/content field. Guard and resource costs remain validated authoring contracts but are not
 executed yet.
@@ -407,6 +419,7 @@ the category but intentionally adds no concrete base-game disciplines or spells.
 | `level` | integer | At least `1`. |
 | `statistics` | object of ID → integer | Keys reference statistics. |
 | `abilityIds` | ID array | References abilities. |
+| `damageTypePercentModifiers` | object of damage-type ID → integer | Optional sparse signed percentages. Positive is weakness, negative is resistance, `-100` is immunity, and omission is neutral. Values below `-100` are invalid. |
 | `formationFootprint` | object | Optional rectangular `rows` and `columns`; omitted means `1 × 1`, but explicit `null` is invalid. |
 | `lootTableId` | ID or null | Required member in enemy schema 2; references `loot-tables/`, or explicit null means no item drops. |
 
@@ -418,6 +431,7 @@ the category but intentionally adds no concrete base-game disciplines or spells.
   "level": 1,
   "statistics": { "stat.max-hp": 22, "stat.strength": 3 },
   "abilityIds": ["ability.enemy.tackle"],
+  "damageTypePercentModifiers": { "damage-type.fire": 50 },
   "lootTableId": "loot-table.forest.green-slime"
 }
 ```
@@ -435,6 +449,9 @@ This prevents a forgotten property from silently becoming a no-loot enemy. The r
 schema-1 `loot` array is not accepted; its entries move unchanged into a standalone schema-1
 loot-table record. Loot tables are reusable definition data and never become per-battle or
 save state.
+
+Damage types are closed code-owned IDs, not a new content category. See
+`MILESTONE_4_3_GUIDE.md` for formula, weapon-profile, and compatibility details.
 
 ### Encounter
 
@@ -542,6 +559,10 @@ formats into future gameplay. It changes neither `SaveFormatVersion` nor existin
 state because definitions and unrolled drop possibilities are not save data. Never infer
 identity from filename changes. Status effects, shops, dialogue, and cutscene schemas will be
 added only when their first playable use case is built.
+
+Milestone 4.3 adds optional damage-type fields without changing schema versions or mod API 3.
+Omitted enemy modifier maps are neutral, omitted weapon profiles remain compatible, and
+omitted legacy physical-ability types resolve as Energy. Explicit null maps are invalid.
 
 Every JSON record must write `schemaVersion` even when it is `1`. The C# default exists for
 hand-built tests and tools only; accepting a missing JSON version would make future migrations

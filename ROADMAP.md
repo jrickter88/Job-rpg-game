@@ -363,6 +363,22 @@ Explicitly excluded: experience, gold, inventory UI, item use, equipment, shops,
 reward animation, overflow-resolution UI, and loot-table schema changes. See
 `MILESTONE_4_2_GUIDE.md`.
 
+### Milestone 4.3 - Typed damage and percentage affinities
+
+- Add code-owned Slash, Energy, Fire, Ice, and Lightning damage IDs.
+- Let damage abilities select one type and enemies author sparse signed percentage modifiers.
+- Copy enemy affinities into immutable battle snapshots and apply them deterministically.
+- Include authoritative type/reaction facts in damage events and the battle log.
+- Validate mixed weapon damage profiles while equipment activation remains deferred.
+
+Exit criteria: headless tests prove neutral damage, variable weakness and resistance values,
+immunity, final rounding, immutable snapshot projection, explicit compatibility defaults, and
+weapon profiles composed from supported types totaling exactly 100.
+
+Explicitly excluded: equipment ownership or activation, weapon attack splitting, magical
+statistics, statuses, affinity inspection UI, critical hits, absorption, reflection, and
+mod-defined damage types. See `MILESTONE_4_3_GUIDE.md`.
+
 Remaining vertical-slice work will then:
 
 - Add a three-character party shell, equipment, item rewards, a shop, and one short quest.

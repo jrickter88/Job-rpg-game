@@ -47,6 +47,8 @@ public sealed class CombatResolverTests
         Assert.Equal("party-0", damage.ActingCombatantId);
         Assert.Equal("enemy-0", damage.TargetCombatantId);
         Assert.Equal(CombatTestFixture.AttackId, damage.AbilityId);
+        Assert.Equal(DamageTypeIds.Slash, damage.DamageTypeId);
+        Assert.Equal(0, damage.DamagePercentModifier);
         Assert.Equal(11, damage.Amount);
         Assert.Equal(22, damage.PreviousHp);
         Assert.Equal(11, damage.CurrentHp);
@@ -226,6 +228,105 @@ public sealed class CombatResolverTests
 
         DamageApplied damage = Assert.IsType<DamageApplied>(Assert.Single(resolution.Events));
         Assert.Equal(11, damage.Amount);
+    }
+
+    [Theory]
+    [InlineData(DamageTypeIds.Fire, 50, 16)]
+    [InlineData(DamageTypeIds.Fire, -75, 2)]
+    [InlineData(DamageTypeIds.Slash, 20, 13)]
+    [InlineData(DamageTypeIds.Ice, -99, 1)]
+    public void Resolve_DamageTypeModifierAppliesSignedPercentageAfterBaseFormula(
+        string damageTypeId,
+        int modifier,
+        int expectedDamage)
+    {
+        FixedBattle battle = CombatTestFixture.CreateFixedBattle();
+        AbilityDefinition attack = PhysicalAbility(
+            CombatTestFixture.AttackId,
+            4m,
+            damageTypeId);
+        CombatSnapshot typedTarget = ReplaceCombatant(
+            battle.Snapshot,
+            "enemy-0",
+            combatant => WithDamageTypeModifiers(
+                combatant,
+                new Dictionary<string, int>(StringComparer.Ordinal)
+                {
+                    [damageTypeId] = modifier,
+                }));
+
+        CombatResolution resolution = new CombatResolver(new TestCatalog(attack)).Resolve(
+            typedTarget,
+            Attack("party-0", "enemy-0"));
+
+        DamageApplied damage = Assert.IsType<DamageApplied>(Assert.Single(resolution.Events));
+        Assert.Equal(damageTypeId, damage.DamageTypeId);
+        Assert.Equal(modifier, damage.DamagePercentModifier);
+        Assert.Equal(expectedDamage, damage.Amount);
+        Assert.Equal(22 - expectedDamage, resolution.Next
+            .GetRequiredCombatant("enemy-0").CurrentHp);
+    }
+
+    [Fact]
+    public void Resolve_DamageTypeImmunityDealsZeroWithoutDefeatingOrMutatingInput()
+    {
+        FixedBattle battle = CombatTestFixture.CreateFixedBattle();
+        AbilityDefinition attack = PhysicalAbility(
+            CombatTestFixture.AttackId,
+            4m,
+            DamageTypeIds.Lightning);
+        CombatSnapshot immuneTarget = ReplaceCombatant(
+            battle.Snapshot,
+            "enemy-0",
+            combatant => WithDamageTypeModifiers(
+                combatant,
+                new Dictionary<string, int>(StringComparer.Ordinal)
+                {
+                    [DamageTypeIds.Lightning] = -100,
+                }));
+
+        CombatResolution resolution = new CombatResolver(new TestCatalog(attack)).Resolve(
+            immuneTarget,
+            Attack("party-0", "enemy-0"));
+
+        DamageApplied damage = Assert.IsType<DamageApplied>(Assert.Single(resolution.Events));
+        Assert.Equal(0, damage.Amount);
+        Assert.Equal(-100, damage.DamagePercentModifier);
+        Assert.Equal(22, immuneTarget.GetRequiredCombatant("enemy-0").CurrentHp);
+        Assert.Equal(22, resolution.Next.GetRequiredCombatant("enemy-0").CurrentHp);
+    }
+
+    [Fact]
+    public void Resolve_OmittedLegacyDamageTypeDefaultsToEnergy()
+    {
+        FixedBattle battle = CombatTestFixture.CreateFixedBattle();
+        AbilityDefinition legacyAttack = PhysicalAbility(CombatTestFixture.AttackId, 4m);
+
+        CombatResolution resolution = new CombatResolver(new TestCatalog(legacyAttack)).Resolve(
+            battle.Snapshot,
+            Attack("party-0", "enemy-0"));
+
+        DamageApplied damage = Assert.IsType<DamageApplied>(Assert.Single(resolution.Events));
+        Assert.Equal(DamageTypeIds.Energy, damage.DamageTypeId);
+        Assert.Equal(0, damage.DamagePercentModifier);
+        Assert.Equal(11, damage.Amount);
+    }
+
+    [Fact]
+    public void Resolve_UnsupportedDamageTypeInHandBuiltCatalogFailsClearly()
+    {
+        FixedBattle battle = CombatTestFixture.CreateFixedBattle();
+        AbilityDefinition malformed = PhysicalAbility(
+            CombatTestFixture.AttackId,
+            4m,
+            "damage-type.poison");
+
+        InvalidDataException exception = Assert.Throws<InvalidDataException>(() =>
+            new CombatResolver(new TestCatalog(malformed)).Resolve(
+                battle.Snapshot,
+                Attack("party-0", "enemy-0")));
+
+        Assert.Contains("damage-type.poison", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -437,7 +538,10 @@ public sealed class CombatResolverTests
         CombatTestFixture.AttackId,
         [targetId]);
 
-    private static AbilityDefinition PhysicalAbility(string id, decimal power) => new()
+    private static AbilityDefinition PhysicalAbility(
+        string id,
+        decimal power,
+        string? damageTypeId = null) => new()
     {
         Id = id,
         DisplayNameKey = $"{id}.name",
@@ -445,6 +549,7 @@ public sealed class CombatResolverTests
         AbilityKindId = AbilityKindIds.Skill,
         TargetingId = AbilityTargetingIds.SingleEnemy,
         RulesetId = AbilityRulesetIds.PhysicalDamage,
+        DamageTypeId = damageTypeId,
         NumericParameters = new Dictionary<string, decimal>(StringComparer.Ordinal)
         {
             [AbilityNumericParameterIds.Power] = power,
@@ -496,11 +601,30 @@ public sealed class CombatResolverTests
                 source.Placement,
                 statistics,
                 source.AbilityIds,
-                source.CurrentHp)
+                source.CurrentHp,
+                source.DamageTypePercentModifiers)
             : new CombatantSnapshot(
                 source.Placement,
                 statistics,
                 source.PartyAbilityAvailability,
-                source.CurrentHp);
+                source.CurrentHp,
+                source.DamageTypePercentModifiers);
     }
+
+    private static CombatantSnapshot WithDamageTypeModifiers(
+        CombatantSnapshot source,
+        IReadOnlyDictionary<string, int> damageTypePercentModifiers) =>
+        source.PartyAbilityAvailability is null
+            ? new CombatantSnapshot(
+                source.Placement,
+                source.Statistics,
+                source.AbilityIds,
+                source.CurrentHp,
+                damageTypePercentModifiers)
+            : new CombatantSnapshot(
+                source.Placement,
+                source.Statistics,
+                source.PartyAbilityAvailability,
+                source.CurrentHp,
+                damageTypePercentModifiers);
 }

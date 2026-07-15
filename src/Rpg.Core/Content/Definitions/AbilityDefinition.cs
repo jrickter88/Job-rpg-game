@@ -55,6 +55,15 @@ public sealed record AbilityDefinition : ContentDefinition
     public required string RulesetId { get; init; }
 
     /// <summary>
+    /// Stable code-owned damage type used by a damage ruleset, or null for non-damage rulesets.
+    /// </summary>
+    /// <remarks>
+    /// Omitted legacy physical-damage content resolves as <see cref="DamageTypeIds.Energy"/>.
+    /// New damage abilities should author this field explicitly.
+    /// </remarks>
+    public string? DamageTypeId { get; init; }
+
+    /// <summary>
     /// Ruleset-specific tuning values, such as power or accuracy. Each known ruleset must
     /// validate its required keys, accepted keys, and legal ranges so this dictionary does
     /// not become an accidental DSL or a bag of silently ignored typos.

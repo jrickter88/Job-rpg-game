@@ -13,10 +13,11 @@ This separation supports replayable class builds and multi-discipline spells wit
 a discipline into an executable command. Unlocking a discipline never teaches every spell in
 it, and learning a spell without a matching discipline does not make it executable.
 
-The current code validates and resolves this structure. Milestone 3.10 can execute a learned,
-cost-free Magic ability only when it reuses the same single-enemy physical-damage contract as
-Attack. It still does not implement a magical-damage family, Guard effects, healing, MP
-spending, or a visible Magic menu.
+The current code validates and resolves this structure. A learned, cost-free Magic ability can
+reuse the same single-enemy damage formula as Attack and assign Fire, Ice, Lightning, Slash, or
+Energy through `damageTypeId`. It still uses Strength and Defense until a dedicated magical
+stat formula is designed. Guard effects, healing, MP spending, and a visible Magic menu remain
+deferred.
 
 ## Step 1: create a magic discipline
 
@@ -64,6 +65,12 @@ This example creates a free defensive spell using the Guard-style ruleset:
 Do not write `rules.damage.magic`, `target.ally.single`, or another plausible-looking ID until
 that behavior is implemented and registered in C#. Strict rejection now prevents content that
 looks valid but has no executable meaning later.
+
+An elemental attack spell may currently reuse `target.enemy.single` plus
+`rules.damage.physical`, include a positive `power`, and set `damageTypeId` to
+`damage-type.fire`, `damage-type.ice`, or `damage-type.lightning`. The damage type controls
+enemy affinity; it does not change the Strength/Defense formula. See
+`MILESTONE_4_3_GUIDE.md`.
 
 Do not charge `stat.max-mp`. Maximum MP is definition/statistic data, while current MP will be
 mutable battle state. Leave cost null/zero until the resource milestone defines that boundary.

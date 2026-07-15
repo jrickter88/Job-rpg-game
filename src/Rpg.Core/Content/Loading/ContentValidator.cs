@@ -293,6 +293,12 @@ internal sealed class ContentValidator
             "$.statisticModifiers",
             RequireMap(item, "$.statisticModifiers", equipment.StatisticModifiers));
 
+        IReadOnlyDictionary<string, int> weaponDamagePercentages = RequireMap(
+            item,
+            "$.weaponDamagePercentages",
+            equipment.WeaponDamagePercentages);
+        ValidateWeaponDamagePercentages(item, equipment, weaponDamagePercentages);
+
         IReadOnlyList<string> grantedAbilityIds = RequireList(
             item,
             "$.grantedAbilityIds",
@@ -312,6 +318,16 @@ internal sealed class ContentValidator
         RequireStableKey(item, "$.targetingId", ability.TargetingId, "target.");
         RequireStableKey(item, "$.rulesetId", ability.RulesetId, "rules.");
         RequireAtLeast(item, "$.costAmount", ability.CostAmount, 0);
+
+        if (ability.DamageTypeId is not null)
+        {
+            ValidateDamageTypeId(item, "$.damageTypeId", ability.DamageTypeId);
+            if (ability.RulesetId != AbilityRulesetIds.PhysicalDamage)
+            {
+                Add(item, "$.damageTypeId", "ability.damage-type-unused",
+                    $"Ruleset '{ability.RulesetId}' does not consume a damage type.");
+            }
+        }
 
         if (string.IsNullOrWhiteSpace(ability.AbilityKindId))
         {
@@ -413,11 +429,78 @@ internal sealed class ContentValidator
             "enemy.duplicate-ability",
             "Enemy ability");
 
+        IReadOnlyDictionary<string, int> damageTypePercentModifiers = RequireMap(
+            item,
+            "$.damageTypePercentModifiers",
+            enemy.DamageTypePercentModifiers);
+        foreach ((string damageTypeId, int modifier) in damageTypePercentModifiers)
+        {
+            string path = $"$.damageTypePercentModifiers.{damageTypeId}";
+            ValidateDamageTypeId(item, path, damageTypeId);
+            if (modifier < -100)
+            {
+                Add(item, path, "enemy.damage-modifier-below-immunity",
+                    $"Damage modifier {modifier} is below -100; -100 already represents "
+                    + "complete immunity.");
+            }
+        }
+
         ValidateEnemyFootprint(item, enemy);
 
         if (enemy.LootTableId is not null)
         {
             RequireReference<LootTableDefinition>(item, "$.lootTableId", enemy.LootTableId);
+        }
+    }
+
+    private void ValidateWeaponDamagePercentages(
+        LoadedContent item,
+        EquipmentDefinition equipment,
+        IReadOnlyDictionary<string, int> weaponDamagePercentages)
+    {
+        if (weaponDamagePercentages.Count == 0)
+        {
+            return;
+        }
+
+        if (!equipment.SlotId.StartsWith("slot.weapon.", StringComparison.Ordinal))
+        {
+            Add(item, "$.weaponDamagePercentages", "equipment.weapon-damage-on-nonweapon",
+                "Only equipment in a 'slot.weapon.' slot may declare weapon damage.");
+        }
+
+        long total = 0;
+        foreach ((string damageTypeId, int percentage) in weaponDamagePercentages)
+        {
+            string path = $"$.weaponDamagePercentages.{damageTypeId}";
+            ValidateDamageTypeId(item, path, damageTypeId);
+            if (percentage <= 0)
+            {
+                Add(item, path, "equipment.weapon-damage-percentage-invalid",
+                    $"Weapon damage percentage must be positive; received {percentage}.");
+            }
+
+            total += percentage;
+        }
+
+        if (total != 100)
+        {
+            Add(item, "$.weaponDamagePercentages", "equipment.weapon-damage-total-invalid",
+                $"Weapon damage percentages must total exactly 100; received {total}.");
+        }
+    }
+
+    private void ValidateDamageTypeId(
+        LoadedContent item,
+        string jsonPath,
+        string damageTypeId)
+    {
+        RequireStableKey(item, jsonPath, damageTypeId, "damage-type.");
+        if (ContentId.IsValid(damageTypeId) && !DamageTypeIds.IsSupported(damageTypeId))
+        {
+            Add(item, jsonPath, "damage-type.unsupported",
+                $"Unsupported damage type '{damageTypeId}'. Supported values are "
+                + $"{string.Join(", ", DamageTypeIds.Supported.Select(id => $"'{id}'"))}.");
         }
     }
 

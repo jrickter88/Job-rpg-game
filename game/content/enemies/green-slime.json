@@ -12,5 +12,6 @@
   "abilityIds": [
     "ability.enemy.tackle"
   ],
+  "damageTypePercentModifiers": {},
   "lootTableId": "loot-table.forest.green-slime"
 }

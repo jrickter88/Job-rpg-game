@@ -378,10 +378,18 @@ public partial class BattleController : Control
             switch (combatEvent)
             {
                 case DamageApplied damage:
+                    string reaction = damage.DamagePercentModifier switch
+                    {
+                        -100 => " (immune)",
+                        < 0 => $" ({-(long)damage.DamagePercentModifier}% resisted)",
+                        > 0 => $" ({damage.DamagePercentModifier}% weakness)",
+                        _ => string.Empty,
+                    };
                     AppendLog(
                         $"{DisplayName(damage.ActingCombatantId)} used "
                         + $"{ShortDefinitionName(damage.AbilityId)} on "
-                        + $"{DisplayName(damage.TargetCombatantId)}: {damage.Amount} damage "
+                        + $"{DisplayName(damage.TargetCombatantId)}: {damage.Amount} "
+                        + $"{ShortDefinitionName(damage.DamageTypeId)} damage{reaction} "
                         + $"({damage.PreviousHp} → {damage.CurrentHp} HP).");
                     break;
 

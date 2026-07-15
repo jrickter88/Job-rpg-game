@@ -14,8 +14,9 @@ from ability JSON. That boundary keeps community data deterministic, testable, a
 
 | Concern | Owner |
 |---|---|
-| Ability name, kind, cost declaration, ruleset choice, and numeric tuning | `AbilityDefinition` JSON |
+| Ability name, kind, cost declaration, ruleset/type choice, and numeric tuning | `AbilityDefinition` JSON |
 | Supported stable target/ruleset/parameter IDs | `AbilityContentIds.cs` |
+| Supported stable damage-type IDs | `DamageTypeIds.cs` |
 | Content contract and actionable diagnostics | `ContentValidator` |
 | Learned Skill/Magic availability | `AbilityAvailabilityResolver` |
 | State changes and domain events | Plain .NET `CombatResolver` |
@@ -25,6 +26,11 @@ from ability JSON. That boundary keeps community data deterministic, testable, a
 | Animation, sound, menus, and target highlights | Godot presentation under `src/Rpg.Game` |
 
 Do not make a Godot node calculate damage or let a ruleset locate scene objects.
+
+Changing only whether existing damage is Slash, Energy, Fire, Ice, or Lightning does not
+require a new ruleset. Select a supported `damageTypeId`. Add a new permanent damage-type
+constant only when it uses the existing percentage-affinity math; add a ruleset when the
+effect or formula itself differs.
 
 ## Implementation sequence
 

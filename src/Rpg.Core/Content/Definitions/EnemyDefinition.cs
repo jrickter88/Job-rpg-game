@@ -25,6 +25,13 @@ public sealed record EnemyDefinition : ContentDefinition
     public List<string> AbilityIds { get; init; } = [];
 
     /// <summary>
+    /// Signed whole-percent damage adjustments keyed by code-owned damage type ID.
+    /// Positive values are weaknesses, negative values are resistances, and -100 is immunity.
+    /// Omitted entries are neutral.
+    /// </summary>
+    public Dictionary<string, int> DamageTypePercentModifiers { get; init; } = [];
+
+    /// <summary>
     /// Authored rectangular size on the 4 × 4 enemy formation. Omission remains compatible
     /// and means one cell; explicit JSON null is rejected by content validation.
     /// </summary>

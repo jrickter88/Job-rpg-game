@@ -22,15 +22,28 @@ The game accepts only code-owned target and ruleset contracts that it understand
 | `target.enemy.single` | `rules.damage.physical` | `power` | Greater than `0`; executable now only when cost-free |
 
 For example, `0.25` means a 25% reduction. The Guard authoring contract is validated now so
-bad data cannot reach its future resolver. Physical damage currently uses
-`max(1, Strength + power - Defense)`, floors a decimal result, and clamps applied damage to the
-target's remaining HP.
+bad data cannot reach its future resolver. A physical-damage ability also selects one supported
+`damageTypeId`: Slash, Energy, Fire, Ice, or Lightning. The resolver calculates
+`max(1, Strength + power - Defense)`, applies the target's signed percentage modifier for that
+type, floors once, and clamps applied damage to remaining HP. New damage abilities should
+author the type explicitly; omitted legacy definitions use Energy.
 
 A new ability may reuse one of these rows and choose new tuning values. A new target mode or a
-genuinely different effect—healing, poison, fire damage, stealing, resurrection, and so on—
+genuinely different effect—healing, poison status, stealing, resurrection, and so on—
 requires a small trusted C# implementation and tests. Do not invent a JSON string such as
-`rules.damage.fire`; the validator rejects unsupported behavior IDs on purpose. See
+`rules.damage.fire`; Fire is a `damageTypeId`, while the ruleset owns the formula. The validator
+rejects unsupported behavior IDs on purpose. See
 `ABILITY_RULESET_DEVELOPER_GUIDE.md` for that workflow.
+
+Example damage members:
+
+```json
+"rulesetId": "rules.damage.physical",
+"damageTypeId": "damage-type.slash",
+"numericParameters": { "power": 4 }
+```
+
+See `MILESTONE_4_3_GUIDE.md` for affinity percentages and rounding.
 
 ## Add one direct Skill
 

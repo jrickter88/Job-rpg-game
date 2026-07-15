@@ -6,5 +6,8 @@
   "statisticModifiers": {
 	"stat.strength": 3
   },
+  "weaponDamagePercentages": {
+	"damage-type.slash": 100
+  },
   "grantedAbilityIds": []
 }

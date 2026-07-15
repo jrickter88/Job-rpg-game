@@ -6,12 +6,15 @@ namespace RpgGame.Core.Combat;
 /// <remarks>
 /// Presentation can animate from <see cref="PreviousHp"/> to <see cref="CurrentHp"/> without
 /// repeating the damage formula. <see cref="Amount"/> is applied damage after remaining-HP
-/// clamping, so it never reports more damage than the target actually lost.
+/// clamping, so it never reports more damage than the target actually lost. The selected damage
+/// type and target modifier are included so presentation can report affinity without deriving it.
 /// </remarks>
 public sealed record DamageApplied(
     string ActingCombatantId,
     string TargetCombatantId,
     string AbilityId,
+    string DamageTypeId,
+    int DamagePercentModifier,
     int Amount,
     int PreviousHp,
     int CurrentHp) : CombatEvent;

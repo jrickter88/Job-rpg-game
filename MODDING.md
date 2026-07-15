@@ -281,6 +281,14 @@ contract and granted through the normal actor/class availability rules receives 
 deterministic behavior. Cost-bearing abilities, Guard, and new effect strings remain
 non-executable; data still cannot supply code.
 
+Damage abilities may select the code-owned `damage-type.slash`, `damage-type.energy`,
+`damage-type.fire`, `damage-type.ice`, or `damage-type.lightning` ID. Mod enemies may author
+sparse signed `damageTypePercentModifiers`; positive values are weaknesses, negative values are
+resistances, and `-100` is immunity. Mod weapon equipment may author positive
+`weaponDamagePercentages` totaling exactly 100, but weapon profiles are not applied until
+equipment activation exists. These optional fields retain mod API 3 compatibility. Mods cannot
+define additional damage types or formulas. See `MILESTONE_4_3_GUIDE.md`.
+
 Milestone 3.12's basic enemy planner reads a mod enemy's existing `abilityIds` in authored
 order and chooses the first entry the current resolver can execute. It then targets the living
 party combatant with the lowest absolute current HP, breaking ties by battle-local instance

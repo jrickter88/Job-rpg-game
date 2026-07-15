@@ -44,6 +44,8 @@ a general-purpose RPG engine.
     selection, HP presentation, event-log playback, or terminal confirmation.
 23. Read `MILESTONE_3_15_GUIDE.md` before changing the fixed encounter-clearance flag,
     victory/defeat scene handoff, trigger suppression, or clearance persistence.
+24. Read `MILESTONE_4_3_GUIDE.md` before changing damage-type IDs, percentage affinities,
+    weapon damage profiles, typed damage calculation, or damage-event presentation.
 24. Read `MILESTONE_4_0_GUIDE.md` before changing persistent inventory ownership, item
     stack limits, inventory mutations, session inventory publication, or inventory saves.
 25. Read `MILESTONE_4_1_GUIDE.md` before changing deterministic loot resolution, loot award

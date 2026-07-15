@@ -44,6 +44,7 @@ The base record `ability.command.attack` is a direct Skill using:
 |---|---|
 | Target | `target.enemy.single` |
 | Ruleset | `rules.damage.physical` |
+| Damage type | `damage-type.slash` |
 | Cost | none |
 | `power` | `4` |
 
@@ -92,19 +93,24 @@ The implemented deterministic formula is:
 
 ```text
 rawDamage = max(1, attacker Strength + authored power - defender Defense)
-roundedDamage = floor(rawDamage)
+typedDamage = modifier == -100
+    ? 0
+    : max(1, floor(rawDamage * (100 + modifier) / 100))
+roundedDamage = typedDamage
 appliedDamage = min(roundedDamage, target CurrentHp)
 nextHp = target CurrentHp - appliedDamage
 ```
 
 Authored numeric parameters use `decimal`, while HP is integer. Flooring is explicit so the
-same fractional-power content produces the same integer result on every platform. The final
-clamp means HP reaches zero but never becomes negative, and `DamageApplied.Amount` reports only
-the HP actually removed.
+same fractional-power and percentage-affinity content produces the same integer result on every
+platform. A modifier of `-100` is immunity; any other modifier preserves a one-damage minimum.
+The final clamp means HP reaches zero but never becomes negative, and `DamageApplied.Amount`
+reports only the HP actually removed. Milestone 4.3 adds this typed percentage step without
+changing command legality or snapshot lifetime; see `MILESTONE_4_3_GUIDE.md`.
 
-The current formula has no randomness, critical hits, elements, equipment modifiers, row
-bonuses, variance, or level scaling. Those mechanics should be added only through later
-gameplay decisions and focused tests.
+The current formula has no randomness, critical hits, active equipment modifiers, row bonuses,
+variance, or level scaling. Those mechanics should be added only through later gameplay
+decisions and focused tests.
 
 ## Immutable result and event order
 
@@ -140,8 +146,8 @@ nonfinal combatant still emits no `BattleEnded`; see `MILESTONE_3_13_GUIDE.md`.
 ## Compatibility
 
 - No save fields or save migration were added; combat snapshots remain transient.
-- No content schema or mod data-API version changed; Attack uses an already supported ability
-  contract.
+- Milestone 4.3 later added optional content fields without changing schema versions or the mod
+  data-API; omitted legacy damage ability types resolve as Energy.
 - Existing saves gain James's intrinsic Attack when content is resolved, just as other authored
   actor/class abilities are resolved from the current catalog.
 - Vanilla classes currently grant no abilities. The generic class-unlock and defensive
@@ -157,7 +163,8 @@ Focused tests prove:
 - zero runtime HP is valid and reports defeated;
 - negative HP and HP above maximum are rejected;
 - initial snapshot creation still begins at positive maximum HP;
-- Attack follows the formula, minimum, decimal rounding, remaining-HP clamp, and defeat event;
+- Attack follows the formula, damage type, signed affinity percentage, minimum, immunity,
+  decimal rounding, remaining-HP clamp, and defeat event;
 - party and enemy physical abilities can target the opposing side;
 - missing/defeated actors, unowned/missing abilities, invalid target counts, missing/defeated/
   same-side targets, unsupported contracts, and costs are rejected with stable codes;

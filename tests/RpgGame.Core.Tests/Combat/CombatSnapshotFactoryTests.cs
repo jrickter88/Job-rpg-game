@@ -91,6 +91,29 @@ public sealed class CombatSnapshotFactoryTests
     }
 
     [Fact]
+    public void Create_EnemyDamageTypeModifiersAreCopiedIntoEachSnapshot()
+    {
+        FixedBattle battle = CombatTestFixture.CreateFixedBattle();
+        EnemyDefinition enemy = battle.Content.GetRequired<EnemyDefinition>(
+            CombatTestFixture.GreenSlimeId);
+        enemy.DamageTypePercentModifiers[DamageTypeIds.Fire] = 50;
+
+        CombatSnapshot snapshot = new CombatSnapshotFactory(battle.Content).Create(
+            battle.Campaign,
+            battle.Encounter,
+            battle.EnemyPlacements,
+            battle.PartyPlacements);
+        enemy.DamageTypePercentModifiers[DamageTypeIds.Fire] = 0;
+
+        Assert.Empty(snapshot.GetRequiredCombatant("party-0").DamageTypePercentModifiers);
+        Assert.All(
+            snapshot.Combatants.Where(combatant => combatant.Side == BattleSide.Enemy),
+            combatant => Assert.Equal(
+                50,
+                combatant.DamageTypePercentModifiers[DamageTypeIds.Fire]));
+    }
+
+    [Fact]
     public void Create_EnemyAbilities_PreserveAuthoredOrder()
     {
         FixedBattle battle = CombatTestFixture.CreateFixedBattle();
@@ -477,6 +500,72 @@ public sealed class CombatSnapshotFactoryTests
             },
             [],
             currentHp));
+    }
+
+    [Fact]
+    public void CombatantSnapshot_DamageModifiersAreImmutableAndPreservedByHpReplacement()
+    {
+        var placement = new FormationPlacement(
+            "enemy-0",
+            CombatTestFixture.GreenSlimeId,
+            new FormationCell(BattleSide.Enemy, 0, 0),
+            FormationFootprint.SingleCell);
+        var authored = new Dictionary<string, int>(StringComparer.Ordinal)
+        {
+            [DamageTypeIds.Fire] = 50,
+            [DamageTypeIds.Slash] = -75,
+        };
+        var combatant = new CombatantSnapshot(
+            placement,
+            new Dictionary<string, int>(StringComparer.Ordinal)
+            {
+                [CombatStatisticIds.MaxHp] = 10,
+            },
+            [],
+            currentHp: 10,
+            damageTypePercentModifiers: authored);
+        authored[DamageTypeIds.Fire] = 0;
+
+        CombatantSnapshot damaged = combatant.WithCurrentHp(4);
+
+        Assert.Equal(50, combatant.DamageTypePercentModifiers[DamageTypeIds.Fire]);
+        Assert.Equal(
+            combatant.DamageTypePercentModifiers.ToArray(),
+            damaged.DamageTypePercentModifiers.ToArray());
+        Assert.Throws<NotSupportedException>(() =>
+            ((IDictionary<string, int>)combatant.DamageTypePercentModifiers).Add(
+                DamageTypeIds.Ice,
+                20));
+    }
+
+    [Theory]
+    [InlineData("damage-type.poison", 20, typeof(ArgumentException))]
+    [InlineData(DamageTypeIds.Fire, -101, typeof(ArgumentOutOfRangeException))]
+    public void CombatantSnapshot_InvalidDamageModifierIsRejected(
+        string damageTypeId,
+        int modifier,
+        Type exceptionType)
+    {
+        var placement = new FormationPlacement(
+            "enemy-0",
+            CombatTestFixture.GreenSlimeId,
+            new FormationCell(BattleSide.Enemy, 0, 0),
+            FormationFootprint.SingleCell);
+
+        Exception exception = Record.Exception(() => new CombatantSnapshot(
+            placement,
+            new Dictionary<string, int>(StringComparer.Ordinal)
+            {
+                [CombatStatisticIds.MaxHp] = 10,
+            },
+            [],
+            currentHp: 10,
+            damageTypePercentModifiers: new Dictionary<string, int>(StringComparer.Ordinal)
+            {
+                [damageTypeId] = modifier,
+            }))!;
+
+        Assert.IsType(exceptionType, exception);
     }
 
     private static SnapshotInput CreateInMemoryInput(

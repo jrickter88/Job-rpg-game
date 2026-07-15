@@ -439,11 +439,13 @@ flowchart TD
 ```
 
 Physical damage uses decimal authored power and integer statistics. The formula takes a
-minimum of one, rounds the final decimal down explicitly, and clamps applied damage to the
-target's remaining integer HP. Only the target slot is replaced; round number, combatant
-order, formation, statistics, abilities, unrelated HP, and the input snapshot are preserved.
-`DamageApplied` reports the authoritative before/after values so presentation never repeats
-the calculation. `CombatantDefeated` reports one combatant reaching zero. Milestone 3.13 adds
+minimum of one, applies the target snapshot's signed whole-percent modifier for the ability's
+code-owned damage type, rounds the final decimal down explicitly, and clamps applied damage to
+the target's remaining integer HP. `-100` is immunity; omitted types are neutral. Only the
+target slot is replaced; round number, combatant order, formation, statistics, abilities,
+damage affinities, unrelated HP, and the input snapshot are preserved. `DamageApplied` reports
+the authoritative type, modifier, and before/after values so presentation never repeats the
+calculation. `CombatantDefeated` reports one combatant reaching zero. Milestone 3.13 adds
 a separate `BattleEnded` fact only when that defeat removes the final living member of a side.
 
 Invalid runtime intent raises `CombatCommandValidationException` with a stable problem code
@@ -613,7 +615,8 @@ ability/target policy.
 - status-effect stacking and timing;
 - dialogue choices, conditions, cutscene commands, and localization;
 - general map transitions and random/scalable encounter triggering details;
-- item use, equipment ownership, and equipment slot rules;
+- item use, equipment ownership, active equipment slots, and application of authored weapon
+  damage profiles;
 - advanced AI profiles, scoring, and authored behavior differences;
 - final save-slot UI and platform paths;
 - content hot reload and custom editor tooling;
