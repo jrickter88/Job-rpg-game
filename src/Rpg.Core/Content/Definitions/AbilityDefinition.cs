@@ -17,6 +17,18 @@ public sealed record AbilityDefinition : ContentDefinition
     public required string DescriptionKey { get; init; }
 
     /// <summary>
+    /// Code-owned category for how this ability appears to a future battle command UI.
+    /// Omitted JSON defaults to a direct Skill for compatibility with existing content.
+    /// </summary>
+    public string AbilityKindId { get; init; } = AbilityKindIds.Skill;
+
+    /// <summary>
+    /// Stable IDs of non-executable spellbook containers that can display this ability.
+    /// This must be empty for Skills and nonempty for Magic abilities.
+    /// </summary>
+    public List<string> MagicDisciplineIds { get; init; } = [];
+
+    /// <summary>
     /// Stable key selecting a code-owned targeting rule, such as one enemy or all allies.
     /// </summary>
     public required string TargetingId { get; init; }
@@ -40,4 +52,18 @@ public sealed record AbilityDefinition : ContentDefinition
     /// Decimal values make authored percentages/factors explicit and deterministic.
     /// </summary>
     public Dictionary<string, decimal> NumericParameters { get; init; } = [];
+}
+
+/// <summary>
+/// Stable authored IDs for the supported ability categories.
+/// </summary>
+/// <remarks>
+/// These remain strings rather than a JSON enum so content and mods keep stable IDs that can
+/// be extended later without changing save data or serialized enum names.
+/// </remarks>
+public static class AbilityKindIds
+{
+    public const string Skill = "ability-kind.skill";
+
+    public const string Magic = "ability-kind.magic";
 }

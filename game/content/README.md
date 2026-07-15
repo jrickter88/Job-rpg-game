@@ -8,7 +8,8 @@ The records here are a deliberately tiny fixture pack, not production content. T
 they exercise every implemented category, cross-record references, new-game creation,
 and save/load tests. They should remain small as real content is introduced separately.
 
-The base pack currently contains 19 definitions. James is class-neutral; the
+The base pack currently contains 19 definitions and no concrete magic-discipline records yet.
+James is class-neutral; the
 `starting-class-rules/default.json` record makes Vanguard, Black Mage, and White Mage legal
 new-game choices. Until a class-selection screen exists, the bootstrap selects the first
 stable ID in the resolved pool solely so the nonvisual startup demonstration can run.
@@ -16,6 +17,8 @@ The additional dialogue record supplies the two placeholder lines used by the te
 The fixed slime encounter uses canonical enemy formation anchors, and enemy records may
 declare rectangular `formationFootprint` dimensions. The checked-in green slime deliberately
 omits that optional member to prove old/base records still receive the safe `1 × 1` default.
+Existing abilities also omit `abilityKindId`, which proves they remain direct Skills through
+the compatible `ability-kind.skill` default.
 
 Run validation without opening Godot:
 

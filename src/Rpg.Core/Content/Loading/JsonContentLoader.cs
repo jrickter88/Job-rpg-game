@@ -198,6 +198,7 @@ public sealed class JsonContentLoader
                 "enemies" => JsonSerializer.Deserialize<EnemyDefinition>(json, SerializerOptions),
                 "equipment" => JsonSerializer.Deserialize<EquipmentDefinition>(json, SerializerOptions),
                 "items" => JsonSerializer.Deserialize<ItemDefinition>(json, SerializerOptions),
+                "magic-disciplines" => JsonSerializer.Deserialize<MagicDisciplineDefinition>(json, SerializerOptions),
                 "quests" => JsonSerializer.Deserialize<QuestDefinition>(json, SerializerOptions),
                 "starting-class-rules" => JsonSerializer.Deserialize<StartingClassRuleDefinition>(json, SerializerOptions),
                 "statistics" => JsonSerializer.Deserialize<StatisticDefinition>(json, SerializerOptions),
@@ -251,6 +252,7 @@ public sealed class JsonContentLoader
             "enemies" => "enemy.",
             "equipment" => "equipment.",
             "items" => "item.",
+            "magic-disciplines" => "magic-discipline.",
             "quests" => "quest.",
             "starting-class-rules" => "newgame.class-rule.",
             "statistics" => "stat.",
@@ -296,6 +298,7 @@ public sealed class JsonContentLoader
         "enemies" or
         "equipment" or
         "items" or
+        "magic-disciplines" or
         "quests" or
         "starting-class-rules" or
         "statistics";

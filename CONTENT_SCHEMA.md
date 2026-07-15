@@ -30,6 +30,7 @@ The initial directory-to-type mapping is:
 | `items/` | `ItemDefinition` |
 | `equipment/` | `EquipmentDefinition` |
 | `abilities/` | `AbilityDefinition` |
+| `magic-disciplines/` | `MagicDisciplineDefinition` |
 | `enemies/` | `EnemyDefinition` |
 | `encounters/` | `EncounterDefinition` |
 | `quests/` | `QuestDefinition` |
@@ -40,7 +41,7 @@ The initial directory-to-type mapping is:
 Canonical IDs match:
 
 ```regex
-^[a-z][a-z0-9]*(\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*)+$
+^[a-z][a-z0-9]*(?:-[a-z0-9]+)*(\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*)+$
 ```
 
 Use a category followed by useful namespaces and a specific name:
@@ -53,6 +54,7 @@ stat.max-hp
 item.consumable.potion
 equipment.weapon.iron-sword
 ability.black-magic.fire
+magic-discipline.black
 enemy.forest.green-slime
 encounter.forest.slimes-01
 quest.prologue.first-steps
@@ -116,6 +118,7 @@ Vanguard in one save and a White Mage in another without changing `actor.hero.ja
 | `displayNameKey` | string | Localization key. |
 | `baseStatisticBonuses` | object of ID → integer | Additive bonuses; keys reference statistics. |
 | `abilityUnlocks` | array | Entries contain `level` and `abilityId`. |
+| `magicDisciplineUnlocks` | array | Entries contain `level` and `magicDisciplineId`. Grants container access, not spells. |
 
 ```json
 {
@@ -125,9 +128,16 @@ Vanguard in one save and a White Mage in another without changing `actor.hero.ja
   "baseStatisticBonuses": { "stat.magic": 4 },
   "abilityUnlocks": [
     { "level": 1, "abilityId": "ability.black-magic.fire" }
+  ],
+  "magicDisciplineUnlocks": [
+    { "level": 1, "magicDisciplineId": "magic-discipline.black" }
   ]
 }
 ```
+
+`abilityUnlocks` grants individual executable abilities. `magicDisciplineUnlocks` grants
+access to non-executable Magic containers. A class does not learn every spell in a discipline
+just because it can open that container.
 
 ### Starting-class rule
 
@@ -262,6 +272,8 @@ This keeps common inventory/shop data in exactly one place.
 | Field | Type | Notes |
 |---|---|---|
 | `displayNameKey`, `descriptionKey` | string | Localization keys. |
+| `abilityKindId` | ID | Optional; defaults to `ability-kind.skill`. Supported values are `ability-kind.skill` and `ability-kind.magic`. |
+| `magicDisciplineIds` | ID array | Empty for Skills; required and nonempty for Magic. References `magic-disciplines/`. |
 | `targetingId` | ID | Code-owned targeting rule. |
 | `costStatisticId` | ID or null | Statistic/resource spent, if any. |
 | `costAmount` | integer | Nonnegative. |
@@ -274,6 +286,8 @@ This keeps common inventory/shop data in exactly one place.
   "id": "ability.black-magic.fire",
   "displayNameKey": "ability.fire.name",
   "descriptionKey": "ability.fire.description",
+  "abilityKindId": "ability-kind.magic",
+  "magicDisciplineIds": ["magic-discipline.black"],
   "targetingId": "target.enemy.single",
   "costStatisticId": "stat.mp",
   "costAmount": 4,
@@ -285,6 +299,31 @@ This keeps common inventory/shop data in exactly one place.
 `rulesetId` is a constrained escape hatch for game rules, not a generic scripting
 language. Add a ruleset only for a demonstrated family of abilities, and validate its
 known parameters.
+
+An omitted `abilityKindId` remains compatible and means `ability-kind.skill`. Skills appear
+directly as executable commands and must not list magic disciplines. Magic abilities are
+ordinary executable ability IDs, but a party actor may use one only when the actor has learned
+that specific ability and has access to at least one listed magic discipline. Discipline IDs
+are never submitted as `CombatCommand.AbilityId`.
+
+### Magic discipline
+
+| Field | Type | Notes |
+|---|---|---|
+| `displayNameKey`, `descriptionKey` | string | Localization keys for the future menu container. |
+
+```json
+{
+  "schemaVersion": 1,
+  "id": "magic-discipline.black",
+  "displayNameKey": "magic-discipline.black.name",
+  "descriptionKey": "magic-discipline.black.description"
+}
+```
+
+A magic discipline is a non-executable authored container such as a future spellbook category.
+It has no targeting rule, cost, ruleset, effect, or command behavior. Milestone 3.05 defines
+the category but intentionally adds no concrete base-game disciplines or spells.
 
 ### Enemy
 

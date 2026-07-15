@@ -25,6 +25,7 @@ public sealed class ContentLoadingTests
         Assert.Equal(2, catalog.GetAll<ItemDefinition>().Count);
         Assert.Single(catalog.GetAll<EquipmentDefinition>());
         Assert.Equal(2, catalog.GetAll<AbilityDefinition>().Count);
+        Assert.Empty(catalog.GetAll<MagicDisciplineDefinition>());
         Assert.Single(catalog.GetAll<EnemyDefinition>());
         Assert.Single(catalog.GetAll<EncounterDefinition>());
         Assert.Single(catalog.GetAll<QuestDefinition>());

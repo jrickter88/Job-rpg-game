@@ -199,6 +199,21 @@ and both green-slime instances with starting HP, statistics, abilities, and form
 Explicitly excluded: damage, targeting, commands, Guard resolution, enemy AI, turn order,
 victory, defeat, rewards, battle UI, and campaign result handling.
 
+### Milestone 3.05 — Ability and magic framework (implementation review pending)
+
+- Distinguish direct Skills from Magic abilities.
+- Add authored magic-discipline containers and class discipline access.
+- Project party availability into direct Skills, discipline spell lists,
+  and executable ability IDs.
+- Preserve existing abilities as Skills through an additive default.
+
+Exit criteria: focused tests prove that Skills remain direct commands, Magic requires
+both individual learning and matching discipline access, multi-discipline spells are
+supported, and existing base content remains compatible without defining concrete magic schools.
+
+Explicitly excluded: concrete spell content, battle menus, MP, spell execution,
+Silence, Reflect, Hybrid abilities, and combination recipes.
+
 ### Remaining first-playable work
 
 - Implement one deterministic battle resolver with Attack, Guard, HP, speed-based turn

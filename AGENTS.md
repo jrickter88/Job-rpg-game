@@ -26,6 +26,8 @@ a general-purpose RPG engine.
     or future target ranking.
 14. Read `MILESTONE_3_0_GUIDE.md` before changing initial combat snapshots, starting
     current HP, or combatant ability availability.
+15. Read `ABILITY_MAGIC_FRAMEWORK_GUIDE.md` before changing Skill/Magic classification,
+    magic-discipline definitions, class discipline access, or party ability projection.
 
 When a requested feature conflicts with those documents, update the relevant design
 document in the same change or explain why the exception is temporary.

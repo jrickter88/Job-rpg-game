@@ -65,6 +65,18 @@ public sealed class CombatSnapshotFactoryTests
     }
 
     [Fact]
+    public void Create_FixedEncounter_PreservesStructuredPartyAbilityAvailability()
+    {
+        CombatantSnapshot james = CombatTestFixture.CreateFixedBattle()
+            .Snapshot.GetRequiredCombatant("party-0");
+
+        Assert.NotNull(james.PartyAbilityAvailability);
+        Assert.Equal([CombatTestFixture.GuardId], james.DirectSkillIds);
+        Assert.Empty(james.MagicDisciplines);
+        Assert.Equal(james.PartyAbilityAvailability!.ExecutableAbilityIds, james.AbilityIds);
+    }
+
+    [Fact]
     public void Create_FixedEncounter_BothSlimesCurrentHpEqualsResolvedMaximumHp()
     {
         CombatSnapshot snapshot = CombatTestFixture.CreateFixedBattle().Snapshot;
@@ -367,6 +379,8 @@ public sealed class CombatSnapshotFactoryTests
         Assert.Throws<NotSupportedException>(() =>
             ((IList<string>)enemy.AbilityIds).Add("ability.test.cheat"));
         Assert.Throws<NotSupportedException>(() =>
+            ((IList<string>)james.DirectSkillIds).Add("ability.test.cheat"));
+        Assert.Throws<NotSupportedException>(() =>
             ((IList<CombatantSnapshot>)battle.Snapshot.Combatants).Clear());
 
         battle.Content.GetRequired<EnemyDefinition>(
@@ -402,6 +416,13 @@ public sealed class CombatSnapshotFactoryTests
             Assert.NotSame(first.Combatants[index], second.Combatants[index]);
             Assert.NotSame(first.Combatants[index].Statistics, second.Combatants[index].Statistics);
             Assert.NotSame(first.Combatants[index].AbilityIds, second.Combatants[index].AbilityIds);
+            if (first.Combatants[index].PartyAbilityAvailability is not null)
+            {
+                Assert.NotSame(
+                    first.Combatants[index].PartyAbilityAvailability,
+                    second.Combatants[index].PartyAbilityAvailability);
+            }
+
             Assert.Equal(
                 first.Combatants[index].Statistics.ToArray(),
                 second.Combatants[index].Statistics.ToArray());

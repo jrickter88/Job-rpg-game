@@ -89,8 +89,9 @@ When a test campaign explicitly selects Vanguard at level one, James receives Va
 `ability.vanguard.guard`. A Black Mage James does not receive Guard, and the resolver does
 not invent a fallback Attack.
 
-Learned abilities, secondary classes, equipment grants, magic schools, Skill/Magic/Hybrid
-categories, and ability fusion are later design work.
+Milestone 3.05 evolves this flat list into a structured party projection with direct Skills
+and Magic discipline containers. The compatibility `AbilityIds` view still means the complete
+executable ability-ID list.
 
 ## Enemy ability availability
 

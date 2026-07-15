@@ -285,8 +285,16 @@ separate encounter value, so later damage will not rewrite maximum HP or authore
 
 Party ability availability is actor `startingAbilityIds` followed by current-class unlocks at
 or below the actor's level. Authored order is preserved and duplicates keep their first
-occurrence. Enemy abilities are copied in their authored order, and an empty enemy ability
-list is valid initial state. Every included ID is resolved through `IContentCatalog`.
+occurrence. Milestone 3.05 splits the party projection into direct Skills, unlocked Magic
+discipline containers, and a flat executable ability-ID list. A Magic ability is executable
+only when the actor has learned that specific ability and has access to at least one of its
+authored discipline IDs. The discipline itself is content and menu structure, not a command
+ability ID.
+
+Enemy abilities are copied in their authored order, and an empty enemy ability list is valid
+initial state. Enemy discipline access and AI spellbook behavior are deferred, so an enemy's
+authored ability IDs remain a flat executable list. Every included ID is resolved through
+`IContentCatalog`.
 
 The factory preserves supplied party order followed by supplied enemy order and starts the
 snapshot at round one. It rejects wrong-side/category placements, duplicate battle-local IDs,

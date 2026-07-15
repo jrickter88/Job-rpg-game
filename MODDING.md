@@ -2,10 +2,11 @@
 
 ## Scope of Milestone 1.5
 
-The game supports **data-only, loose-folder mods**. A mod may add records in the eleven
-JSON categories as the base game: actors, classes, statistics, items, equipment, abilities,
-enemies, encounters, quests, dialogues, and starting-class rules. Those definitions enter the
-same typed catalog and pass the same strict validation as built-in content.
+The game supports **data-only, loose-folder mods**. A mod may add records in the same JSON
+categories as the base game: actors, classes, statistics, items, equipment, abilities,
+magic disciplines, enemies, encounters, quests, dialogues, and starting-class rules. Those
+definitions enter the same typed catalog and pass the same strict validation as built-in
+content.
 
 This milestone does **not** load C# assemblies, native libraries, GDScript, executable hooks,
 PCK/ZIP packages, Steam Workshop items, URLs, or arbitrary behavior expressions. It does not
@@ -98,6 +99,7 @@ class.example.starter-pack.chronoguard
 ability.example.starter-pack.temporal-guard
 item.example.starter-pack.time-shard
 enemy.example.starter-pack.clockwork-slime
+magic-discipline.example.starter-pack.runes
 ```
 
 A mod cannot declare `item.consumable.potion` or otherwise replace base content. It also
@@ -173,6 +175,49 @@ Future data-authored AI targeting may refer to statistic IDs—for example, a co
 milestone defines no AI-profile record, targeting behavior, or executable hook. Community
 scripts, assemblies, reflection-selected methods, and unrestricted expressions remain
 unsupported.
+
+## Ability and magic framework
+
+Milestone 3.05 adds an additive ability classification. Existing abilities and mods that omit
+`abilityKindId` still load as `ability-kind.skill`, so records such as Guard, Tackle, and
+older mod abilities remain direct executable commands.
+
+Mods may define `magic-disciplines/` records and Magic abilities:
+
+```json
+{
+  "schemaVersion": 1,
+  "id": "magic-discipline.example.starter-pack.runes",
+  "displayNameKey": "magic-discipline.example.starter-pack.runes.name",
+  "descriptionKey": "magic-discipline.example.starter-pack.runes.description"
+}
+```
+
+```json
+{
+  "schemaVersion": 1,
+  "id": "ability.example.starter-pack.rune-spark",
+  "displayNameKey": "ability.example.starter-pack.rune-spark.name",
+  "descriptionKey": "ability.example.starter-pack.rune-spark.description",
+  "abilityKindId": "ability-kind.magic",
+  "magicDisciplineIds": ["magic-discipline.example.starter-pack.runes"],
+  "targetingId": "target.enemy.single",
+  "costStatisticId": null,
+  "costAmount": 0,
+  "rulesetId": "rules.test.placeholder",
+  "numericParameters": {}
+}
+```
+
+Classes grant individual abilities through `abilityUnlocks` and grant access to magic
+containers through `magicDisciplineUnlocks`. Both are required for a player character to use
+a Magic ability: the class/actor must learn the spell and the class must unlock at least one
+discipline listed by that spell. Unlocking a discipline does not automatically grant every
+spell in that discipline.
+
+This remains data-only. It does not add scripts, spell effects, MP, battle menus, enemy
+spellbook AI, or save data. Because omitted ability kinds remain Skills and the new category
+is additive, this does not change `gameApiVersion`, the manifest schema, or the save format.
 
 ## Changing the new-game class pool
 

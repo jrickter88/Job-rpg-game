@@ -17,7 +17,7 @@ public sealed class AbilityAvailabilityResolver
         _content = content ?? throw new ArgumentNullException(nameof(content));
     }
 
-    public IReadOnlyList<string> ResolvePartyActor(ActorProgressState progress)
+    public PartyAbilityAvailability ResolvePartyActor(ActorProgressState progress)
     {
         ArgumentNullException.ThrowIfNull(progress);
         ArgumentException.ThrowIfNullOrWhiteSpace(progress.ActorId);
@@ -38,13 +38,17 @@ public sealed class AbilityAvailabilityResolver
         IReadOnlyList<AbilityUnlockDefinition> unlocks = classDefinition.AbilityUnlocks
             ?? throw new InvalidDataException(
                 $"Class '{classDefinition.Id}' has a null ability-unlock list.");
+        IReadOnlyList<MagicDisciplineUnlockDefinition> disciplineUnlocks =
+            classDefinition.MagicDisciplineUnlocks
+            ?? throw new InvalidDataException(
+                $"Class '{classDefinition.Id}' has a null magic-discipline-unlock list.");
 
-        var result = new List<string>();
-        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var learnedAbilities = new List<AbilityDefinition>();
+        var seenAbilities = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (string abilityId in startingAbilityIds)
         {
-            AddValidatedAbility(abilityId, actor.Id, seen, result);
+            AddValidatedAbility(abilityId, actor.Id, seenAbilities, learnedAbilities);
         }
 
         foreach (AbilityUnlockDefinition unlock in unlocks)
@@ -57,18 +61,55 @@ public sealed class AbilityAvailabilityResolver
 
             if (unlock.Level <= progress.Level)
             {
-                AddValidatedAbility(unlock.AbilityId, classDefinition.Id, seen, result);
+                AddValidatedAbility(unlock.AbilityId, classDefinition.Id, seenAbilities, learnedAbilities);
             }
         }
 
-        return Array.AsReadOnly(result.ToArray());
+        var unlockedDisciplineIds = new List<string>();
+        var seenDisciplines = new HashSet<string>(StringComparer.Ordinal);
+        foreach (MagicDisciplineUnlockDefinition unlock in disciplineUnlocks)
+        {
+            if (unlock is null)
+            {
+                throw new InvalidDataException(
+                    $"Class '{classDefinition.Id}' contains a null magic-discipline unlock.");
+            }
+
+            if (unlock.Level <= progress.Level)
+            {
+                AddValidatedMagicDiscipline(
+                    unlock.MagicDisciplineId,
+                    classDefinition.Id,
+                    seenDisciplines,
+                    unlockedDisciplineIds);
+            }
+        }
+
+        List<string> directSkillIds = learnedAbilities
+            .Where(ability => string.Equals(
+                ability.AbilityKindId,
+                AbilityKindIds.Skill,
+                StringComparison.Ordinal))
+            .Select(ability => ability.Id)
+            .ToList();
+        List<MagicDisciplineAvailability> magicDisciplines = BuildMagicDisciplines(
+            unlockedDisciplineIds,
+            learnedAbilities);
+        List<string> executableAbilityIds = BuildExecutableAbilityIds(
+            directSkillIds,
+            magicDisciplines);
+
+        return new PartyAbilityAvailability(
+            directSkillIds,
+            magicDisciplines,
+            executableAbilityIds);
     }
 
     private void AddValidatedAbility(
         string abilityId,
         string sourceId,
         ISet<string> seen,
-        ICollection<string> result)
+        ICollection<AbilityDefinition> result)
     {
         if (string.IsNullOrWhiteSpace(abilityId))
         {
@@ -76,10 +117,82 @@ public sealed class AbilityAvailabilityResolver
                 $"Ability source '{sourceId}' contains a blank ability ID.");
         }
 
-        _content.GetRequired<AbilityDefinition>(abilityId);
+        AbilityDefinition ability = _content.GetRequired<AbilityDefinition>(abilityId);
         if (seen.Add(abilityId))
         {
-            result.Add(abilityId);
+            result.Add(ability);
         }
+    }
+
+    private void AddValidatedMagicDiscipline(
+        string magicDisciplineId,
+        string sourceId,
+        ISet<string> seen,
+        ICollection<string> result)
+    {
+        if (string.IsNullOrWhiteSpace(magicDisciplineId))
+        {
+            throw new InvalidDataException(
+                $"Magic discipline source '{sourceId}' contains a blank magic-discipline ID.");
+        }
+
+        _content.GetRequired<MagicDisciplineDefinition>(magicDisciplineId);
+        if (seen.Add(magicDisciplineId))
+        {
+            result.Add(magicDisciplineId);
+        }
+    }
+
+    private static List<MagicDisciplineAvailability> BuildMagicDisciplines(
+        IReadOnlyList<string> unlockedDisciplineIds,
+        IReadOnlyList<AbilityDefinition> learnedAbilities)
+    {
+        var result = new List<MagicDisciplineAvailability>();
+        foreach (string disciplineId in unlockedDisciplineIds)
+        {
+            List<string> spellIds = learnedAbilities
+                .Where(ability => string.Equals(
+                    ability.AbilityKindId,
+                    AbilityKindIds.Magic,
+                    StringComparison.Ordinal))
+                .Where(ability => ability.MagicDisciplineIds.Contains(
+                    disciplineId,
+                    StringComparer.Ordinal))
+                .Select(ability => ability.Id)
+                .ToList();
+
+            result.Add(new MagicDisciplineAvailability(disciplineId, spellIds));
+        }
+
+        return result;
+    }
+
+    private static List<string> BuildExecutableAbilityIds(
+        IReadOnlyList<string> directSkillIds,
+        IReadOnlyList<MagicDisciplineAvailability> magicDisciplines)
+    {
+        var result = new List<string>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (string abilityId in directSkillIds)
+        {
+            if (seen.Add(abilityId))
+            {
+                result.Add(abilityId);
+            }
+        }
+
+        foreach (MagicDisciplineAvailability discipline in magicDisciplines)
+        {
+            foreach (string spellAbilityId in discipline.SpellAbilityIds)
+            {
+                if (seen.Add(spellAbilityId))
+                {
+                    result.Add(spellAbilityId);
+                }
+            }
+        }
+
+        return result;
     }
 }

@@ -95,12 +95,13 @@ public sealed class CombatSnapshotFactory
             IReadOnlyDictionary<string, int> statistics =
                 _statisticResolver.ResolvePartyActor(progress);
             int maximumHp = RequirePositiveMaximumHp(placement.InstanceId, statistics);
-            IReadOnlyList<string> abilityIds = _abilityResolver.ResolvePartyActor(progress);
+            PartyAbilityAvailability abilityAvailability =
+                _abilityResolver.ResolvePartyActor(progress);
 
             combatants.Add(new CombatantSnapshot(
                 placement,
                 statistics,
-                abilityIds,
+                abilityAvailability,
                 maximumHp));
         }
 

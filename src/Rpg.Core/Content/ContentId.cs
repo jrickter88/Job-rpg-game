@@ -43,7 +43,7 @@ public static partial class ContentId
     // GeneratedRegex avoids repeatedly parsing the expression at runtime. The pattern
     // requires lowercase dot-separated segments and allows kebab-case within a segment.
     [GeneratedRegex(
-        "^[a-z][a-z0-9]*(?:\\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*)+$",
+        "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:\\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*)+$",
         RegexOptions.CultureInvariant)]
     private static partial Regex ContentIdPattern();
 }

@@ -19,6 +19,8 @@ The manifest uses data API `2`. This version requires encounter mods to use cano
 anchors such as `formation.enemy.r1.c0`; API `1` abstract formation names are no longer
 accepted. Milestone 2.8 remains additive: enemy records may omit `formationFootprint` and
 still load with the deterministic `1 × 1` default, so the data API remains version `2`.
+Milestone 3.05 is also additive: abilities that omit `abilityKindId` remain direct Skills,
+and mods only need `magic-disciplines/` records when they actually author Magic abilities.
 
 To try discovery in a development build, copy the entire `mod.example.starter-pack` folder into
 the Godot project's `user://mods` folder. The startup output will report one enabled data mod.

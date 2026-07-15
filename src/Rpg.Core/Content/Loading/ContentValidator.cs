@@ -79,6 +79,9 @@ internal sealed class ContentValidator
                 case ItemDefinition itemDefinition:
                     ValidateItem(item, itemDefinition);
                     break;
+                case MagicDisciplineDefinition magicDiscipline:
+                    ValidateMagicDiscipline(item, magicDiscipline);
+                    break;
                 case QuestDefinition quest:
                     ValidateQuest(item, quest);
                     break;
@@ -114,6 +117,14 @@ internal sealed class ContentValidator
                 $"$.startingAbilityIds[{index}]",
                 startingAbilityIds[index]);
         }
+    }
+
+    private void ValidateMagicDiscipline(
+        LoadedContent item,
+        MagicDisciplineDefinition magicDiscipline)
+    {
+        RequireNonBlank(item, "$.displayNameKey", magicDiscipline.DisplayNameKey);
+        RequireNonBlank(item, "$.descriptionKey", magicDiscipline.DescriptionKey);
     }
 
     /// <summary>
@@ -197,6 +208,34 @@ internal sealed class ContentValidator
                     $"Ability '{unlock.AbilityId}' is unlocked more than once by this class.");
             }
         }
+
+        var seenMagicDisciplines = new HashSet<string>(StringComparer.Ordinal);
+        IReadOnlyList<MagicDisciplineUnlockDefinition> magicDisciplineUnlocks = RequireList(
+            item,
+            "$.magicDisciplineUnlocks",
+            classDefinition.MagicDisciplineUnlocks);
+        for (int index = 0; index < magicDisciplineUnlocks.Count; index++)
+        {
+            string path = $"$.magicDisciplineUnlocks[{index}]";
+            MagicDisciplineUnlockDefinition? unlock = magicDisciplineUnlocks[index];
+            if (unlock is null)
+            {
+                Add(item, path, "value.null", "Array entries cannot be null.");
+                continue;
+            }
+
+            RequireAtLeast(item, $"{path}.level", unlock.Level, 1);
+            RequireReference<MagicDisciplineDefinition>(
+                item,
+                $"{path}.magicDisciplineId",
+                unlock.MagicDisciplineId);
+
+            if (!seenMagicDisciplines.Add(unlock.MagicDisciplineId))
+            {
+                Add(item, $"{path}.magicDisciplineId", "class.duplicate-magic-discipline",
+                    $"Magic discipline '{unlock.MagicDisciplineId}' is unlocked more than once by this class.");
+            }
+        }
     }
 
     private void ValidateDialogue(LoadedContent item, DialogueDefinition dialogue)
@@ -273,6 +312,24 @@ internal sealed class ContentValidator
         RequireStableKey(item, "$.rulesetId", ability.RulesetId, "rules.");
         RequireAtLeast(item, "$.costAmount", ability.CostAmount, 0);
 
+        if (string.IsNullOrWhiteSpace(ability.AbilityKindId))
+        {
+            Add(item, "$.abilityKindId", "ability.kind-invalid",
+                "abilityKindId must be a supported nonblank ability-kind ID.");
+        }
+        else if (ability.AbilityKindId is not AbilityKindIds.Skill and not AbilityKindIds.Magic)
+        {
+            Add(item, "$.abilityKindId", "ability.kind-unsupported",
+                $"Unsupported ability kind '{ability.AbilityKindId}'. Supported values are "
+                + $"'{AbilityKindIds.Skill}' and '{AbilityKindIds.Magic}'.");
+        }
+
+        IReadOnlyList<string> magicDisciplineIds = RequireList(
+            item,
+            "$.magicDisciplineIds",
+            ability.MagicDisciplineIds);
+        ValidateAbilityMagicDisciplines(item, ability, magicDisciplineIds);
+
         if (ability.CostStatisticId is not null)
         {
             RequireReference<StatisticDefinition>(
@@ -296,6 +353,38 @@ internal sealed class ContentValidator
             {
                 Add(item, $"$.numericParameters.{parameterName}", "parameter.invalid-name",
                     $"Numeric parameter '{parameterName}' must use lowercase kebab-case.");
+            }
+        }
+    }
+
+    private void ValidateAbilityMagicDisciplines(
+        LoadedContent item,
+        AbilityDefinition ability,
+        IReadOnlyList<string> magicDisciplineIds)
+    {
+        if (ability.AbilityKindId == AbilityKindIds.Skill && magicDisciplineIds.Count > 0)
+        {
+            Add(item, "$.magicDisciplineIds", "ability.skill-has-magic-disciplines",
+                "A Skill ability must not reference magic disciplines.");
+        }
+
+        if (ability.AbilityKindId == AbilityKindIds.Magic && magicDisciplineIds.Count == 0)
+        {
+            Add(item, "$.magicDisciplineIds", "ability.magic-missing-disciplines",
+                "A Magic ability must reference at least one magic discipline.");
+        }
+
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        for (int index = 0; index < magicDisciplineIds.Count; index++)
+        {
+            string disciplineId = magicDisciplineIds[index];
+            string path = $"$.magicDisciplineIds[{index}]";
+            RequireReference<MagicDisciplineDefinition>(item, path, disciplineId);
+
+            if (!seen.Add(disciplineId))
+            {
+                Add(item, path, "ability.duplicate-magic-discipline",
+                    $"Magic discipline '{disciplineId}' is listed more than once by this ability.");
             }
         }
     }
@@ -733,6 +822,7 @@ internal sealed class ContentValidator
             Type type when type == typeof(EnemyDefinition) => "enemy.",
             Type type when type == typeof(EquipmentDefinition) => "equipment.",
             Type type when type == typeof(ItemDefinition) => "item.",
+            Type type when type == typeof(MagicDisciplineDefinition) => "magic-discipline.",
             Type type when type == typeof(QuestDefinition) => "quest.",
             Type type when type == typeof(StartingClassRuleDefinition) => "newgame.class-rule.",
             Type type when type == typeof(StatisticDefinition) => "stat.",
