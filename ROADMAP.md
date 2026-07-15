@@ -284,18 +284,38 @@ Explicitly excluded: Godot battle presentation, campaign flags, encounter cleari
 loot rolls, experience, gold, battle saves, new abilities, Guard, current MP, statuses, and
 changes to content or save schemas. See `MILESTONE_3_13_GUIDE.md`.
 
-### Remaining first-playable work
+### Milestone 3.14 — Godot playable battle (implementation review pending)
 
-- Connect party command collection to the pure round resolver and translate `BattleEnded`
-  into a narrow application result.
-- Keep the existing hero, starting classes, abilities, enemy, and fixed encounter as the small
-  first-playable content set.
-- Add a minimal command menu and battle presentation that consumes domain events.
-- Return battle outcome to the campaign session and set one victory flag.
-- Add deterministic rules tests, including boundary and defeat cases.
+- Replace the return-only formation placeholder with a playable `BattleController` scene.
+- Display authoritative current/maximum HP for James and both slimes.
+- Collect James's existing `ability.command.attack` and an explicit living enemy target.
+- Use `EnemyCommandPlanner` and `CombatRoundResolver` for every resolved round.
+- Present typed damage, defeat, and battle-ended events in a readable event log.
+- Require confirmation after `PartyVictory` or `PartyDefeat` before leaving battle.
 
-Exit criteria: exploration can enter a battle, complete it, return to the map, and
-retain the result after save/load.
+Exit criteria: the player can select Attack, choose either living slime, watch HP and the event
+log update from core results, and reach a confirmed terminal outcome without Godot calculating
+damage, initiative, defeat, or victory.
+
+Explicitly excluded: Guard, class abilities, magic, items, escape, rewards, animation, sound,
+current MP, status effects, battle save/resume, controller support, and polished visuals. See
+`MILESTONE_3_14_GUIDE.md`.
+
+### Milestone 3.15 — Campaign handoff (implementation review pending)
+
+- Translate the confirmed terminal battle request at `GameRoot`, not inside the battle scene.
+- On victory, set `flag.encounter.forest.slimes-01.cleared` and reconstruct exploration.
+- Hide and suppress the fixed marker whenever that authoritative flag is true.
+- On defeat, reconstruct exploration without setting the clearance flag.
+- Preserve the clearance fact through the existing save/load pipeline.
+
+Exit criteria: victory returns James to the test room and permanently suppresses the fixed
+encounter through reconstruction and save/load; defeat returns without clearing it and permits
+a deliberate retry after stepping off and back onto the marker.
+
+Explicitly excluded: generic encounter-progress records, random encounters, rewards, loot
+resolution, experience, gold, inventory mutation, map navigation, and battle persistence. See
+`MILESTONE_3_15_GUIDE.md`.
 
 ## Milestone 4 — Small vertical slice
 

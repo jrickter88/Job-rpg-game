@@ -13,8 +13,10 @@ flowchart TD
     Resolve --> Next["Terminal state or round N + 1"]
 ```
 
-This milestone does not add a battle screen. The existing Godot formation placeholder remains
-unchanged. All new behavior lives in plain .NET and is exercised headlessly.
+At the time of this milestone, it did not add a battle screen. The Godot formation placeholder
+remained unchanged and all new behavior lived in plain .NET. Milestone 3.14 now supplies the
+command collector; the pure round rules documented here remain the sole owner of ordering and
+resolution.
 
 ## Who owns each decision
 

@@ -3,7 +3,7 @@ using RpgGame.Core.Combat.Formation;
 
 namespace RpgGame.Encounters;
 
-/// <summary>Converts validated core formation coordinates into placeholder screen geometry.</summary>
+/// <summary>Converts validated core formation coordinates into battle-screen geometry.</summary>
 /// <remarks>
 /// Core defines rows, side-relative depth, footprints, bounds, and overlap. This disposable
 /// Control only mirrors those logical cells onto the screen and draws them. It does not parse
@@ -12,9 +12,9 @@ namespace RpgGame.Encounters;
 public partial class BattleFormationView : Control
 {
     private const float CellWidth = 104.0f;
-    private const float CellHeight = 52.0f;
-    private const float GridTop = 70.0f;
-    // These offsets center both grids inside the placeholder's 1080-pixel content width.
+    private const float CellHeight = 42.0f;
+    private const float GridTop = 56.0f;
+    // These offsets center both grids inside the battle scene's 1080-pixel content width.
     private const float EnemyLeft = 168.0f;
     private const float FormationGap = 112.0f;
     private const float PartyLeft =
@@ -87,6 +87,28 @@ public partial class BattleFormationView : Control
         {
             DrawPlacement(placement, new Color(0.18f, 0.45f, 0.78f));
         }
+    }
+
+    /// <summary>
+    /// Returns the presentation-only label assigned during initialization.
+    /// </summary>
+    /// <remarks>
+    /// Battle rules continue using stable instance IDs. Sharing this view-owned label mapping
+    /// lets HP rows, target buttons, and the event log say the same friendly name without making
+    /// display text part of core identity or duplicating occurrence numbering in several controls.
+    /// </remarks>
+    public string GetDisplayLabel(string instanceId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(instanceId);
+        if (!_initialized)
+        {
+            throw new InvalidOperationException("BattleFormationView is not initialized.");
+        }
+
+        return _labelByInstanceId.TryGetValue(instanceId, out string? label)
+            ? label
+            : throw new KeyNotFoundException(
+                $"Formation view has no combatant instance '{instanceId}'.");
     }
 
     private static Rect2 GetCellRectangle(FormationCell cell)
@@ -162,22 +184,22 @@ public partial class BattleFormationView : Control
         float partyWidth = BattleFormationRules.PartyColumnCount * CellWidth;
         AddLabel(
             "ENEMY FORMATION — 4 ROWS × 4 COLUMNS",
-            new Rect2(new Vector2(EnemyLeft, 0.0f), new Vector2(enemyWidth, 28.0f)),
+            new Rect2(new Vector2(EnemyLeft, 0.0f), new Vector2(enemyWidth, 24.0f)),
             17,
             new Color(1.0f, 0.72f, 0.72f));
         AddLabel(
             "rear c3   ← depth →   front c0  →",
-            new Rect2(new Vector2(EnemyLeft, 30.0f), new Vector2(enemyWidth, 28.0f)),
+            new Rect2(new Vector2(EnemyLeft, 24.0f), new Vector2(enemyWidth, 24.0f)),
             14,
             new Color(0.76f, 0.82f, 0.94f));
         AddLabel(
             "PARTY FORMATION — 4 ROWS × 2 COLUMNS",
-            new Rect2(new Vector2(PartyLeft, 0.0f), new Vector2(partyWidth, 28.0f)),
+            new Rect2(new Vector2(PartyLeft, 0.0f), new Vector2(partyWidth, 24.0f)),
             17,
             new Color(0.66f, 0.82f, 1.0f));
         AddLabel(
             "←  front c0   →   rear c1",
-            new Rect2(new Vector2(PartyLeft, 30.0f), new Vector2(partyWidth, 28.0f)),
+            new Rect2(new Vector2(PartyLeft, 24.0f), new Vector2(partyWidth, 24.0f)),
             14,
             new Color(0.76f, 0.82f, 0.94f));
 
@@ -266,9 +288,17 @@ public partial class BattleFormationView : Control
     private static string ShortDefinitionName(string definitionId)
     {
         int start = definitionId.LastIndexOf('.') + 1;
-        return start <= 0 || start >= definitionId.Length
+        string shortName = start <= 0 || start >= definitionId.Length
             ? definitionId
             : definitionId[start..];
+
+        // Localization is not part of this gray-box milestone. Turn the stable final ID segment
+        // into readable placeholder text without treating that text as identity. When a real
+        // localization presenter arrives, it can replace this one display-only conversion.
+        return string.Join(
+            " ",
+            shortName.Split('-', StringSplitOptions.RemoveEmptyEntries)
+                .Select(part => char.ToUpperInvariant(part[0]) + part[1..]));
     }
 
     private void AddLabel(string text, Rect2 rectangle, int fontSize, Color color)

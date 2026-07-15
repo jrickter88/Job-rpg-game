@@ -1,3 +1,5 @@
+using RpgGame.Core.Combat;
+
 namespace RpgGame.Encounters;
 
 /// <summary>
@@ -22,19 +24,41 @@ public sealed class EncounterLaunchRequestedEventArgs : EventArgs
     public EncounterLaunchRequest Request { get; }
 }
 
-/// <summary>
-/// Transient request to leave the placeholder for the encounter currently being shown.
-/// </summary>
-public sealed record EncounterReturnRequest(string EncounterId);
-
-/// <summary>Typed event payload raised when the placeholder asks its owner to return.</summary>
-public sealed class EncounterReturnRequestedEventArgs : EventArgs
+/// <summary>Terminal battle result crossing from disposable presentation to its owner.</summary>
+/// <remarks>
+/// The battle scene reports only stable encounter identity and the core-authored outcome.
+/// GameRoot decides whether that result changes campaign state and which scene appears next.
+/// </remarks>
+public sealed record BattleCompletionRequest
 {
-    public EncounterReturnRequestedEventArgs(EncounterReturnRequest request)
+    public BattleCompletionRequest(string encounterId, BattleOutcome outcome)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(encounterId);
+        if (outcome == BattleOutcome.InProgress || !Enum.IsDefined(outcome))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(outcome),
+                outcome,
+                "A battle completion request requires PartyVictory or PartyDefeat.");
+        }
+
+        EncounterId = encounterId;
+        Outcome = outcome;
+    }
+
+    public string EncounterId { get; }
+
+    public BattleOutcome Outcome { get; }
+}
+
+/// <summary>Typed event payload raised after the player confirms a terminal battle result.</summary>
+public sealed class BattleCompletionRequestedEventArgs : EventArgs
+{
+    public BattleCompletionRequestedEventArgs(BattleCompletionRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
         Request = request;
     }
 
-    public EncounterReturnRequest Request { get; }
+    public BattleCompletionRequest Request { get; }
 }

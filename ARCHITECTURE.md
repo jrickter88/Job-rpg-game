@@ -99,28 +99,25 @@ publishes James's destination and facing through `IGameSession.UpdateLocation`, 
 typed `EncounterLaunchRequest`. It never locates or replaces another Node itself.
 
 `GameRoot` resolves that ID as an `EncounterDefinition` and builds its transient enemy/party
-formations before removing exploration. It then shows `BattlePlaceholderController`, which
-receives the definition, placements, and existing input-binding service but deliberately
-receives no `IGameSession`; the placeholder can display the formation and request a return,
-but it cannot mutate campaign progress. A typed return
-request makes `GameRoot` instantiate a fresh test room with the same content, session,
-development commands, and controls. The new room reconstructs location and flags solely from
-`Session.Current`.
+formations before removing exploration. Milestones 3.14 and 3.15 now extend the original
+handoff: `GameRoot` constructs the initial `CombatSnapshot`, pure action/round resolvers, and
+enemy planner, then injects them into `BattleController`. The battle still receives no
+`IGameSession`; it can report a typed confirmed terminal result but cannot mutate campaign
+progress itself.
 
 The trigger check exists only on the accepted-movement path, after the session update. Scene
-construction, `StateChanged`, R reconstruction, quick-load, and placeholder return only apply
-authoritative state to presentation. Consequently James can return standing on the marker
-without an immediate second transition; stepping off and deliberately stepping back on creates
-a new movement edge and requests it again. There is no saved current/pending encounter and no
-cleared flag because this milestone has no battle outcome.
+construction, `StateChanged`, R reconstruction, quick-load, and battle return only apply
+authoritative state to presentation. After defeat, James can return standing on the marker
+without an immediate transition; stepping off and deliberately stepping back creates a retry.
+After victory, the persistent clearance flag makes the room hide and ignore that marker.
 
-These two private composition methods—show exploration and show the battle placeholder—are not
+These two private composition methods—show exploration and show battle—are not
 a general navigator, scene stack, route registry, or transition state machine. A reusable map
 navigation design still waits for a second actual map.
 
 ### Battle formation foundation
 
-Milestone 2.75 gives the placeholder a real logical battlefield without making it a combat
+Milestone 2.75 first gave the placeholder a real logical battlefield without making it a combat
 scene. Plain .NET types beneath `Rpg.Core/Combat/Formation` define a 4 × 4 enemy grid and a
 4 × 2 party grid. On both sides, rows increase downward and side-relative column `0` means
 front. `FormationSlotId` is the single parser/formatter for canonical encounter anchors;
@@ -141,7 +138,7 @@ flowchart TD
 `enemy-0`, `enemy-1`, and so on. `PartyFormationBuilder` reads the current ordered party and
 temporarily places its members down party column `0`; it delegates the four-member maximum to
 `PartyRules`. Neither result is written to `GameState`. There is no persistent front/back
-choice yet, and entering or leaving the placeholder still cannot change campaign state.
+choice yet. The later playable scene reuses these placements unchanged.
 
 `BattleFormationView` receives only already built core placements. It owns pixel sizes,
 mirrors the enemy and party columns so both front columns face each other, and draws each
@@ -187,9 +184,10 @@ not content or data-mod records. `ControlsPanel` receives the service directly f
 exploration scene and exposes only binding selection/reset behavior; no autoload, service
 locator, or global input event bus was introduced.
 
-The battle-formation placeholder reuses the same `game.interact` and `game.menu` actions to return. It
-asks `InputBindingService` to format the current bindings, so remapped controls work and the
-screen never duplicates default-key knowledge.
+The playable battle reuses `game.interact`, `game.menu`, and the four movement actions for
+command confirmation, target cancellation, and target cycling. It asks `InputBindingService`
+to format current bindings, so remapped controls work and the screen never duplicates concrete
+key knowledge.
 
 ## System communication
 
@@ -355,9 +353,9 @@ missing or duplicate actor progress, inactive party actors, missing abilities, a
 maximum HP rather than silently skipping or repairing a combatant.
 
 This snapshot belongs only to a battle's lifetime. It is not added to `GameState`,
-`SaveEnvelope`, content JSON, or a Godot node. Milestone 3.0 does not connect it to
-`GameRoot`; the running project intentionally continues to show the Milestone 2.75
-non-combat formation placeholder.
+`SaveEnvelope`, or content JSON. Milestone 3.14 now gives the current snapshot to one disposable
+Godot battle controller, but the controller replaces that snapshot only with core results and
+never serializes it as campaign state.
 
 ### Single-action physical resolution
 
@@ -422,9 +420,9 @@ instance ID. `CombatAbilityExecutionSupport` is the one small shared description
 the planner and action resolver, preventing AI from selecting a command the resolver does not
 support without creating a ruleset registry or general AI framework.
 
-Round coordination and planning remain pure .NET and transient. They are not connected to the
-current Godot battle placeholder, do not modify saves, and do not reintroduce Guard or vanilla
-class abilities. See `MILESTONE_3_12_GUIDE.md`.
+Round coordination and planning remain pure .NET and transient. Milestone 3.14 consumes them
+from Godot without moving their decisions into the scene and does not reintroduce Guard or
+vanilla class abilities. See `MILESTONE_3_12_GUIDE.md`.
 
 ### Battle outcome
 
@@ -448,10 +446,39 @@ A snapshot in which both sides are defeated is rejected as malformed state becau
 current single-target rules cannot produce it and the requested three-value outcome has no
 draw result.
 
-Outcome remains encounter-lifetime data. `PartyVictory` does not grant items, roll a loot
-table, clear an encounter, set a `GameState` flag, or save a battle. A later application/Godot
-slice will consume `BattleEnded` and explicitly decide those campaign and presentation
-effects. See `MILESTONE_3_13_GUIDE.md`.
+Outcome remains encounter-lifetime data. `PartyVictory` does not itself grant items, roll a
+loot table, clear an encounter, set a `GameState` flag, or save a battle. Milestone 3.15 adds
+one explicit game-specific handoff that consumes the confirmed outcome and sets exactly one
+clearance flag; the reusable combat rule still has no campaign dependency. See
+`MILESTONE_3_13_GUIDE.md`.
+
+### Playable battle presentation and campaign handoff
+
+`BattleController` receives the initial snapshot plus `ICombatRoundResolver` and
+`IEnemyCommandPlanner`. It displays HP by reading combatant snapshots, submits James's existing
+Attack with the selected battle-local enemy ID, and submits planner-produced commands for each
+living slime. It renders `DamageApplied`, `CombatantDefeated`, and `BattleEnded`; it never
+repeats the physical formula, Speed ordering, HP mutation, or terminal-side query.
+
+```mermaid
+flowchart TD
+    UI["Attack + target"] --> Commands["Party and enemy commands"]
+    Commands --> Core["Pure round resolver"]
+    Core --> Present["Snapshot + typed events"]
+    Present --> Handoff["Confirmed terminal request"]
+```
+
+`GameRoot` owns the application transition. A confirmed `PartyVictory` is passed to the narrow
+game-specific `TestRoomEncounterProgress` mapping, which sets
+`flag.encounter.forest.slimes-01.cleared` through `IGameSession`. `PartyDefeat` intentionally
+does not mutate the session. `TestRoomView` receives the derived cleared boolean during every
+state application, so scene reconstruction and quick-load both redraw and suppress the marker
+from `GameState`, never from a remembered Node field.
+
+The battle snapshot is still not saved. Only the clearance fact is persistent, and the existing
+named-field save format already preserves event flags without a format-version change. There is
+still one fixed encounter and no general encounter-progress schema, reward handoff, or scene
+navigator. See `MILESTONE_3_14_GUIDE.md` and `MILESTONE_3_15_GUIDE.md`.
 
 ## Save and load
 

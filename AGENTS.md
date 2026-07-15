@@ -40,6 +40,10 @@ a general-purpose RPG engine.
     Speed ordering, defeated-actor skipping, terminal-side detection, or enemy planning.
 21. Read `MILESTONE_3_13_GUIDE.md` before changing battle outcome derivation, terminal
     command rejection, or the typed battle-ended event.
+22. Read `MILESTONE_3_14_GUIDE.md` before changing playable battle command input, target
+    selection, HP presentation, event-log playback, or terminal confirmation.
+23. Read `MILESTONE_3_15_GUIDE.md` before changing the fixed encounter-clearance flag,
+    victory/defeat scene handoff, trigger suppression, or clearance persistence.
 
 When a requested feature conflicts with those documents, update the relevant design
 document in the same change or explain why the exception is temporary.

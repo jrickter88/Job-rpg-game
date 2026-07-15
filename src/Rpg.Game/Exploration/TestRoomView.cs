@@ -1,4 +1,5 @@
 using Godot;
+using RpgGame.Encounters;
 
 namespace RpgGame.Exploration;
 
@@ -15,7 +16,7 @@ public partial class TestRoomView : Node2D
     public const int TileSize = 48;
     public const int WidthInTiles = 12;
     public const int HeightInTiles = 9;
-    public const string EncounterId = "encounter.forest.slimes-01";
+    public const string EncounterId = TestRoomEncounterProgress.EncounterId;
 
     /// <summary>
     /// Game-specific location of the one fixed encounter marker. It is intentionally not
@@ -38,6 +39,8 @@ public partial class TestRoomView : Node2D
         new Vector2I(9, 6),
     ];
 
+    private bool _encounterCleared;
+
     /// <summary>Converts persistent grid coordinates to this scene's pixel center.</summary>
     public Vector2 TileToWorld(Vector2I tile) => DrawingOrigin + new Vector2(
         (tile.X + 0.5f) * TileSize,
@@ -45,6 +48,20 @@ public partial class TestRoomView : Node2D
 
     /// <summary>True when a logical tile is inside the room and is not a wall.</summary>
     public bool IsWalkable(Vector2I tile) => IsInside(tile) && !IsWall(tile);
+
+    /// <summary>
+    /// Applies the campaign-owned clearance fact to this disposable room presentation.
+    /// </summary>
+    public void SetEncounterCleared(bool cleared)
+    {
+        if (_encounterCleared == cleared)
+        {
+            return;
+        }
+
+        _encounterCleared = cleared;
+        QueueRedraw();
+    }
 
     /// <summary>
     /// Answers the one map-specific encounter lookup needed by Milestone 2.5.
@@ -55,7 +72,7 @@ public partial class TestRoomView : Node2D
     /// </remarks>
     public bool TryGetEncounterAt(Vector2I tile, out string encounterId)
     {
-        if (tile == EncounterTile)
+        if (!_encounterCleared && tile == EncounterTile)
         {
             encounterId = EncounterId;
             return true;
@@ -88,7 +105,12 @@ public partial class TestRoomView : Node2D
             }
         }
 
-        // A bright inset diamond makes the trigger obvious in the gray-box room while the
+        if (_encounterCleared)
+        {
+            return;
+        }
+
+        // A bright inset diamond makes the uncleared trigger obvious in the gray-box room while the
         // underlying floor tile stays walkable. Production art remains deliberately deferred.
         Vector2 center = TileToWorld(EncounterTile);
         Vector2[] diamond =

@@ -8,8 +8,8 @@ namespace RpgGame.Core.Tests.Persistence;
 public sealed class SaveRoundTripTests
 {
     /// <summary>
-    /// Covers the Milestone 1 round trip and Milestone 2 exploration proof: moved location
-    /// and NPC flag survive a real file, while a later write still preserves a backup.
+    /// Covers the complete persistent exploration proof: moved location, NPC progress, and the
+    /// fixed encounter-clearance flag survive a real file, while a later write preserves backup.
     /// </summary>
     [Fact]
     public async Task FixtureContent_NewGame_SaveAndLoad_PreservesEquivalentState()
@@ -47,6 +47,7 @@ public sealed class SaveRoundTripTests
                 Facing = "east",
             });
             session.SetEventFlag("flag.test-room.npc-spoken-to");
+            session.SetEventFlag("flag.encounter.forest.slimes-01.cleared");
             GameState original = session.Current;
 
             var serializer = new SaveJsonSerializer();
@@ -61,6 +62,7 @@ public sealed class SaveRoundTripTests
             Assert.Equal((6, 4, "east"),
                 (loaded.Location.X, loaded.Location.Y, loaded.Location.Facing));
             Assert.True(loaded.EventFlags["flag.test-room.npc-spoken-to"]);
+            Assert.True(loaded.EventFlags["flag.encounter.forest.slimes-01.cleared"]);
 
             // A second successful write copies the old primary to slot_1.json.bak before
             // replacing it, providing a last-known-good recovery file.

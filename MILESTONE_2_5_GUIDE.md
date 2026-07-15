@@ -1,5 +1,9 @@
 # Milestone 2.5 guide: fixed encounter handoff
 
+> Historical note: this guide documents the original non-combat handoff proof. Milestones 3.14
+> and 3.15 replaced the placeholder with a playable battle and persistent victory clearance.
+> See `MILESTONE_3_14_GUIDE.md` and `MILESTONE_3_15_GUIDE.md` for current behavior.
+
 Milestone 2.5 proves that exploration can hand control to a second gameplay presentation and
 return without making either scene the owner of the campaign. It adds one visible fixed
 encounter marker and a temporary information screen. It does **not** simulate a battle.

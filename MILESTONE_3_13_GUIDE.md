@@ -17,9 +17,9 @@ The closed values are:
 | `PartyVictory` | The party has a living combatant and the enemy side has none. |
 | `PartyDefeat` | The enemy side has a living combatant and the party has none. |
 
-This remains headless functionality. Running Godot still shows the Milestone 2.75 formation
-placeholder; no battle menu, HP display, event animation, or return-on-victory behavior was
-added.
+This milestone itself was headless functionality. Milestone 3.14 now presents the derived
+outcome in Godot, and Milestone 3.15 translates a confirmed victory into one campaign flag.
+The outcome rules documented here remain pure core behavior.
 
 ## Why outcome is derived
 
@@ -135,8 +135,8 @@ if ($LASTEXITCODE -ne 0) {
 }
 ```
 
-Each command must finish with exit code `0`. There is no new manual Godot gameplay behavior to
-test in this milestone because the battle presentation remains deliberately deferred.
+Each command must finish with exit code `0`. The later playable-battle manual checks are listed
+in `MILESTONE_3_14_GUIDE.md` and `MILESTONE_3_15_GUIDE.md`.
 
 ## Explicitly deferred
 

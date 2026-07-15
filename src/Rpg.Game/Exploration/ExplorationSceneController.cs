@@ -219,7 +219,7 @@ public partial class ExplorationSceneController : Node2D
         });
 
         // Trigger only on the edge created by a successful step. ApplyAuthoritativeState,
-        // save/load, R reconstruction, and returning from the placeholder merely render the
+        // save/load, R reconstruction, and returning from battle merely render the
         // saved tile and never call this code, so standing on the marker cannot auto-launch.
         if (!moved
             || _encounterTransitionRequested
@@ -297,6 +297,9 @@ public partial class ExplorationSceneController : Node2D
         _player.SetFacing(location.Facing);
         _guide.Position = _room.TileToWorld(_guide.TilePosition);
         _guide.RefreshFromState(session);
+        _room.SetEncounterCleared(TestRoomEncounterProgress.IsCleared(
+            session,
+            TestRoomView.EncounterId));
     }
 
     private static bool TryGetMovement(

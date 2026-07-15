@@ -84,7 +84,7 @@ public sealed class InputBindingService
     /// Formats every current key for one logical action for player-facing instructions.
     /// </summary>
     /// <remarks>
-    /// Both exploration and the battle placeholder use this method so presentation never
+    /// Both exploration and the playable battle use this method so presentation never
     /// duplicates knowledge of concrete keys or silently shows stale defaults after a rebind.
     /// </remarks>
     public string FormatBindings(string actionId) =>

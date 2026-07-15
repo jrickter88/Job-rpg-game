@@ -21,10 +21,11 @@ quick-load. They are deliberately unavailable in the remapping screen so one key
 trigger both gameplay and a developer command. Those shortcuts will disappear when their
 manual proof role is no longer needed.
 
-The Milestone 2.75 battle-formation placeholder accepts either the current
-**Interact / Confirm** or **Menu / Cancel** action to return to exploration. It does not add
-a separate return key, so any player remapping is honored automatically. The placeholder
-prints the current bindings on screen using the same formatting method as the exploration HUD.
+The Milestone 3.14 battle screen reuses the same logical actions. **Interact / Confirm** opens
+Attack, confirms a selected enemy, and confirms the final victory/defeat message. Movement
+actions cycle through living targets. **Menu / Cancel** returns from target selection to the
+command step; it cannot abandon a battle. The battle screen prints the relevant current
+bindings, so remapped keys are honored without a battle-specific key table.
 
 ## How a player changes controls
 
@@ -70,8 +71,8 @@ next launch.
 3. `ControlsPanel` edits the service through its narrow rebind/reset methods.
 4. `ExplorationSceneController` calls `InputEvent.IsActionPressed` with stable action IDs.
 5. Accepted movement still updates `GameSession`; controls never become campaign state.
-6. `BattlePlaceholderController` reads the existing Interact/Menu actions and raises a typed
-   return request; it never compares a concrete keycode.
+6. `BattleController` reads the existing movement, Interact, and Menu actions while collecting
+   Attack and target intent; it never compares a concrete gameplay keycode.
 
 `GameInputActions.Definitions` is intentionally a short explicit catalog. When a real new
 action arrives—such as opening an inventory menu—add its stable ID, display name, and defaults

@@ -5,6 +5,10 @@ formation model. The enemy side has 4 rows × 4 columns, the party side has 4 ro
 columns, and both are built from plain .NET values before Godot draws them. There are still
 no attacks, HP, turns, targets, victory, rewards, or other combat results.
 
+> Historical note: Milestone 3.14 now uses this same formation view inside the playable battle.
+> The geometry rules below remain current; placeholder controls and manual-return steps describe
+> the earlier proof and are superseded by `MILESTONE_3_14_GUIDE.md`.
+
 ## What appears in the running game
 
 Step onto the red encounter marker at test-room tile `(3, 4)`. The placeholder shows:

@@ -1,5 +1,6 @@
 using Godot;
 using RpgGame.Adapters.Content;
+using RpgGame.Core.Combat;
 using RpgGame.Core.Combat.Formation;
 using RpgGame.Core.Content;
 using RpgGame.Core.Content.Definitions;
@@ -30,10 +31,9 @@ namespace RpgGame.Bootstrap;
 /// </remarks>
 public partial class GameRoot : Node, IExplorationDevelopmentCommands
 {
-    private const string GameVersion = "0.2.75-battle-formation";
+    private const string GameVersion = "0.3.15-campaign-handoff";
     private const string TestRoomScenePath = "res://game/scenes/exploration/TestRoom.tscn";
-    private const string BattlePlaceholderScenePath =
-        "res://game/scenes/encounters/BattlePlaceholder.tscn";
+    private const string BattleScenePath = "res://game/scenes/encounters/Battle.tscn";
     private const string DevelopmentQuickSlotId = "slot_1";
 
     // Exactly one transient gameplay presentation is active at a time. Campaign truth is
@@ -73,7 +73,7 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
             InitializeApplicationServices();
             ShowExploration();
             GD.Print(
-                $"Milestone 2.75 ready: loaded {Content.Count} definitions "
+                $"Milestone 3.15 ready: loaded {Content.Count} definitions "
                 + $"with {EnabledMods.Count} data mod(s); "
                 + $"new game {Session.Current.SaveId} starts at {Session.Current.Location.MapId}.");
         }
@@ -225,7 +225,7 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
     /// Presents a newly instantiated test room reconstructed entirely from GameState.
     /// </summary>
     /// <remarks>
-    /// This and <see cref="ShowBattlePlaceholder(EncounterLaunchRequest)"/> are two direct,
+    /// This and <see cref="ShowBattle(EncounterLaunchRequest)"/> are two direct,
     /// feature-specific handoff methods—not a route registry or an API for navigating to
     /// arbitrary scene strings.
     /// </remarks>
@@ -259,26 +259,44 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
     }
 
     /// <summary>
-    /// Resolves an encounter request before replacing exploration, then shows the temporary
-    /// non-combat presentation for that exact definition.
+    /// Resolves the fixed encounter and constructs its transient battle before replacing
+    /// exploration.
     /// </summary>
-    private void ShowBattlePlaceholder(EncounterLaunchRequest request)
+    private void ShowBattle(EncounterLaunchRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        // This typed lookup is intentionally performed before removing exploration. A bad ID
-        // therefore produces ContentCatalog's actionable category-aware error instead of a
-        // blank or unrelated placeholder. Enemy references were already validated at startup.
+        // Exploration already suppresses the cleared marker, but the composition boundary
+        // repeats this persistent check so a stale or duplicated launch request cannot reopen a
+        // completed encounter.
+        if (TestRoomEncounterProgress.IsCleared(Session, request.EncounterId))
+        {
+            ShowExploration("That encounter has already been cleared.");
+            return;
+        }
+
+        // All lookups and snapshot construction occur before exploration is removed. A bad ID
+        // or malformed battle therefore leaves the current scene intact and produces the core's
+        // actionable error rather than a blank presentation.
         EncounterDefinition encounter = Content.GetRequired<EncounterDefinition>(
             request.EncounterId);
         IReadOnlyList<FormationPlacement> enemyPlacements =
             new EncounterFormationBuilder(Content).Build(encounter);
         IReadOnlyList<FormationPlacement> partyPlacements = PartyFormationBuilder.Build(
             Session.Current.ActivePartyActorIds);
-        PackedScene packedScene = ResourceLoader.Load<PackedScene>(BattlePlaceholderScenePath)
+        CombatSnapshot initialSnapshot = new CombatSnapshotFactory(Content).Create(
+            Session.Current,
+            encounter,
+            enemyPlacements,
+            partyPlacements);
+        var actionResolver = new CombatResolver(Content);
+        var roundResolver = new CombatRoundResolver(actionResolver);
+        var enemyPlanner = new EnemyCommandPlanner(Content);
+
+        PackedScene packedScene = ResourceLoader.Load<PackedScene>(BattleScenePath)
             ?? throw new InvalidOperationException(
-                $"Could not load encounter placeholder scene '{BattlePlaceholderScenePath}'.");
-        var scene = packedScene.Instantiate<BattlePlaceholderController>();
+                $"Could not load battle scene '{BattleScenePath}'.");
+        var scene = packedScene.Instantiate<BattleController>();
 
         RemoveActiveGameplayScene();
         AddChild(scene);
@@ -286,10 +304,11 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
         {
             scene.Initialize(
                 encounter,
-                enemyPlacements,
-                partyPlacements,
+                initialSnapshot,
+                roundResolver,
+                enemyPlanner,
                 InputBindings);
-            scene.ReturnRequested += OnEncounterReturnRequested;
+            scene.CompletionRequested += OnBattleCompletionRequested;
             _activeGameplayScene = scene;
         }
         catch
@@ -315,9 +334,9 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
             exploration.ReloadRequested -= OnExplorationReloadRequested;
             exploration.EncounterRequested -= OnEncounterRequested;
         }
-        else if (_activeGameplayScene is BattlePlaceholderController placeholder)
+        else if (_activeGameplayScene is BattleController battle)
         {
-            placeholder.ReturnRequested -= OnEncounterReturnRequested;
+            battle.CompletionRequested -= OnBattleCompletionRequested;
         }
 
         RemoveChild(_activeGameplayScene);
@@ -328,12 +347,22 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
     private void OnEncounterRequested(
         object? sender,
         EncounterLaunchRequestedEventArgs eventArgs) =>
-        ShowBattlePlaceholder(eventArgs.Request);
+        ShowBattle(eventArgs.Request);
 
-    private void OnEncounterReturnRequested(
+    private void OnBattleCompletionRequested(
         object? sender,
-        EncounterReturnRequestedEventArgs eventArgs) =>
-        ShowExploration($"Returned from {eventArgs.Request.EncounterId} placeholder.");
+        BattleCompletionRequestedEventArgs eventArgs)
+    {
+        TestRoomEncounterProgress.ApplyOutcome(
+            Session,
+            eventArgs.Request.EncounterId,
+            eventArgs.Request.Outcome);
+
+        string status = eventArgs.Request.Outcome == BattleOutcome.PartyVictory
+            ? $"Victory: cleared {eventArgs.Request.EncounterId}."
+            : $"Defeat: {eventArgs.Request.EncounterId} remains uncleared.";
+        ShowExploration(status);
+    }
 
     private void OnExplorationReloadRequested(object? sender, EventArgs eventArgs) =>
         ShowExploration("Room reconstructed from in-memory GameState.");

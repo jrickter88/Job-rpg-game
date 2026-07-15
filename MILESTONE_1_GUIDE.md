@@ -23,7 +23,7 @@ sequenceDiagram
     Loader-->>Root: Validated ContentCatalog
     Root->>Session: ReplaceState(new game)
     Root->>Saves: Configure user://saves
-    Root-->>Godot: Print Milestone 2.75 ready
+    Root-->>Godot: Print current milestone ready
 ```
 
 `game/scenes/bootstrap/GameRoot.tscn` is a small composition root. Milestone 2 now has it
