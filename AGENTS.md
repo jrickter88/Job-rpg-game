@@ -32,6 +32,8 @@ a general-purpose RPG engine.
     granting abilities, Skills, spells, or magic disciplines.
 17. Read `ABILITY_RULESET_DEVELOPER_GUIDE.md` before adding a target mode, ruleset ID,
     numeric parameter contract, or executable ability behavior.
+18. Read `LOOT_TABLE_AUTHORING_GUIDE.md` before adding enemy drops, loot-table records,
+    or future reward-resolution behavior.
 
 When a requested feature conflicts with those documents, update the relevant design
 document in the same change or explain why the exception is temporary.
@@ -67,6 +69,8 @@ document in the same change or explain why the exception is temporary.
   download, Workshop, or arbitrary file-loading support without a later explicit milestone.
 - A mod ID uses `mod.author.mod-name`; every record it owns uses the matching namespace
   after its category, such as `ability.author.mod-name.fire`.
+- Enemy drops belong in reusable `loot-tables/` records. Enemy definitions reference those
+  records by stable ID and never embed item-drop arrays.
 
 ## Implementation discipline
 

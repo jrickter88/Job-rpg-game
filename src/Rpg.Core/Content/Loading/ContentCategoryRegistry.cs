@@ -8,16 +8,18 @@ namespace RpgGame.Core.Content.Loading;
 /// One explicit description of a top-level JSON content category.
 /// </summary>
 /// <remarks>
-/// Folder name, stable-ID prefix, concrete definition type, and deserialization previously
-/// lived in several independent switches. That made adding a category error-prone: a new
-/// record could deserialize but still fail reference validation, or validate an ID prefix but
-/// remain invisible to the loader. Keeping those mechanical facts together gives a future
-/// category one obvious registration point. Semantic validation still belongs in
-/// <see cref="ContentValidator"/> because each category has different rules.
+/// Folder name, stable-ID prefix, supported schema version, concrete definition type, and
+/// deserialization previously lived in several independent switches. That made adding or
+/// evolving a category error-prone: a record could deserialize but still fail reference
+/// validation, or validate an ID prefix but remain invisible to the loader. Keeping those
+/// mechanical facts together gives a future category one obvious registration point.
+/// Semantic validation still belongs in <see cref="ContentValidator"/> because each category
+/// has different rules.
 /// </remarks>
 internal sealed record ContentCategoryDescriptor(
     string FolderName,
     string IdPrefix,
+    int SupportedSchemaVersion,
     Type DefinitionType,
     Func<string, JsonSerializerOptions, ContentDefinition?> Deserialize);
 
@@ -38,9 +40,10 @@ internal static class ContentCategoryRegistry
         Create<ClassDefinition>("classes", "class."),
         Create<DialogueDefinition>("dialogues", "dialogue."),
         Create<EncounterDefinition>("encounters", "encounter."),
-        Create<EnemyDefinition>("enemies", "enemy."),
+        Create<EnemyDefinition>("enemies", "enemy.", supportedSchemaVersion: 2),
         Create<EquipmentDefinition>("equipment", "equipment."),
         Create<ItemDefinition>("items", "item."),
+        Create<LootTableDefinition>("loot-tables", "loot-table."),
         Create<MagicDisciplineDefinition>("magic-disciplines", "magic-discipline."),
         Create<QuestDefinition>("quests", "quest."),
         Create<StartingClassRuleDefinition>("starting-class-rules", "newgame.class-rule."),
@@ -81,10 +84,12 @@ internal static class ContentCategoryRegistry
 
     private static ContentCategoryDescriptor Create<TDefinition>(
         string folderName,
-        string idPrefix)
+        string idPrefix,
+        int supportedSchemaVersion = 1)
         where TDefinition : ContentDefinition => new(
             folderName,
             idPrefix,
+            supportedSchemaVersion,
             typeof(TDefinition),
             static (json, options) => JsonSerializer.Deserialize<TDefinition>(json, options));
 }

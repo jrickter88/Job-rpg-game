@@ -30,13 +30,14 @@ changes during battle are deliberately outside the current rules.
 ## JSON field and compatible default
 
 Enemy JSON uses the optional `formationFootprint` object. The repository keeps this existing
-field name so data-API-2 mods do not have to rename a published member.
+field name unchanged in current data API 3; the later API bump affects loot ownership, not
+formation geometry.
 
 An explicit normal enemy can write:
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "id": "enemy.example.normal",
   "displayNameKey": "enemy.example.normal.name",
   "level": 1,
@@ -46,7 +47,7 @@ An explicit normal enemy can write:
     "rows": 1,
     "columns": 1
   },
-  "loot": []
+  "lootTableId": null
 }
 ```
 
@@ -54,7 +55,7 @@ A large enemy can write:
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "id": "enemy.example.large",
   "displayNameKey": "enemy.example.large.name",
   "level": 1,
@@ -64,7 +65,7 @@ A large enemy can write:
     "rows": 2,
     "columns": 2
   },
-  "loot": []
+  "lootTableId": null
 }
 ```
 
@@ -72,13 +73,13 @@ An older or ordinary enemy may omit the entire member:
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "id": "enemy.example.compatible",
   "displayNameKey": "enemy.example.compatible.name",
   "level": 1,
   "statistics": {},
   "abilityIds": [],
-  "loot": []
+  "lootTableId": null
 }
 ```
 
@@ -144,17 +145,23 @@ does not increment the save format and adds no migration.
 
 ## Data-mod compatibility
 
-This is an additive enemy-schema change:
+At Milestone 2.8 this was an additive enemy-schema change:
 
 - existing base enemies without `formationFootprint` still load as `1 × 1`;
 - existing mod enemies without it also load as `1 × 1`;
-- enemy `schemaVersion` remains `1`;
-- mod `gameApiVersion` remains `2`;
+- the then-current enemy `schemaVersion` remained `1`;
+- the then-current mod `gameApiVersion` remained `2`;
 - save `SaveFormatVersion` remains unchanged;
 - no existing enemy record must be rewritten.
 
 The default is deterministic and does not depend on filenames, display names, sprites,
 source order, or whether the record came from the base game or a mod.
+
+Milestone 3.06 later moves embedded drops into standalone loot tables. Current enemy records
+therefore use schema version `2`, require an explicit nullable `lootTableId`, and require mod
+data API `3`. That later compatibility change does not alter footprint behavior: omitting
+`formationFootprint` still means `1 × 1`. Current examples in this guide use the latest enemy
+shape so they can be copied safely. See `LOOT_TABLE_AUTHORING_GUIDE.md` for the new drop data.
 
 ## What remains outside Milestone 2.8
 

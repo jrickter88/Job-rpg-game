@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using RpgGame.Core.Combat.Formation;
 
 namespace RpgGame.Core.Content.Definitions;
@@ -29,8 +30,17 @@ public sealed record EnemyDefinition : ContentDefinition
     /// </summary>
     public EnemyFootprintDefinition FormationFootprint { get; init; } = new();
 
-    /// <summary>Independent item-drop possibilities evaluated after victory.</summary>
-    public List<LootEntryDefinition> Loot { get; init; } = [];
+    /// <summary>
+    /// Stable ID of the reusable loot table for this enemy, or null when it drops no items.
+    /// </summary>
+    /// <remarks>
+    /// The member is required in enemy-schema version 2 JSON so accidentally forgetting loot
+    /// ownership cannot silently mean "no drops." A present JSON null is the explicit no-loot
+    /// choice. The referenced table remains definition data; per-battle rolls and awarded
+    /// inventory will belong to future transient/domain state rather than this enemy record.
+    /// </remarks>
+    [JsonRequired]
+    public string? LootTableId { get; init; }
 }
 
 /// <summary>Rectangular rows-by-columns footprint authored for one enemy species.</summary>
@@ -52,20 +62,4 @@ public sealed record EnemyFootprintDefinition
     /// the same two fields by hand while keeping this DTO separate from battle state.
     /// </remarks>
     public FormationFootprint ToFormationFootprint() => new(Rows, Columns);
-}
-
-/// <summary>Embedded description of one possible item drop.</summary>
-public sealed record LootEntryDefinition
-{
-    /// <summary>Stable ID of the item that may drop.</summary>
-    public required string ItemId { get; init; }
-
-    /// <summary>Probability from 0 through 1; for example, 0.125 means 12.5%.</summary>
-    public decimal Chance { get; init; }
-
-    /// <summary>Smallest quantity awarded when this entry succeeds.</summary>
-    public int MinQuantity { get; init; } = 1;
-
-    /// <summary>Largest quantity awarded when this entry succeeds.</summary>
-    public int MaxQuantity { get; init; } = 1;
 }

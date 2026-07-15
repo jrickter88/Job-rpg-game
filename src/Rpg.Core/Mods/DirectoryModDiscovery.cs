@@ -14,7 +14,11 @@ namespace RpgGame.Core.Mods;
 public sealed class DirectoryModDiscovery
 {
     public const int SupportedManifestSchemaVersion = 1;
-    public const int SupportedGameApiVersion = 2;
+
+    // API 3 is the intentional pre-release break that moves API-2 inline enemy loot into
+    // standalone loot-table records and enemy schema 2. This is a content/mod contract
+    // version, not the save format or executable build number.
+    public const int SupportedGameApiVersion = 3;
 
     private static readonly JsonSerializerOptions SerializerOptions = CreateSerializerOptions();
 

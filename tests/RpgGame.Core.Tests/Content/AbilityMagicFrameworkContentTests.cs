@@ -218,13 +218,13 @@ public sealed class AbilityMagicFrameworkContentTests
                 """),
             new("enemies/duplicate-ability.json", $$"""
                 {
-                  "schemaVersion": 1,
+                  "schemaVersion": 2,
                   "id": "enemy.test.duplicate-ability",
                   "displayNameKey": "enemy.test.duplicate-ability.name",
                   "level": 1,
                   "statistics": {},
                   "abilityIds": ["{{abilityId}}", "{{abilityId}}"],
-                  "loot": []
+                  "lootTableId": null
                 }
                 """),
             new("items/test-charm.json", """

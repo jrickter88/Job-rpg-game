@@ -9,7 +9,7 @@ namespace RpgGame.Core.Tests.Content;
 public sealed class ContentLoadingTests
 {
     /// <summary>
-    /// Loads every checked-in JSON record and proves all eleven content categories made it
+    /// Loads every checked-in JSON record and proves all thirteen content categories made it
     /// through parsing, identity checks, semantic checks, and cross-reference validation.
     /// </summary>
     [Fact]
@@ -17,13 +17,14 @@ public sealed class ContentLoadingTests
     {
         var catalog = TestContent.LoadCatalog();
 
-        Assert.Equal(19, catalog.Count);
+        Assert.Equal(20, catalog.Count);
         Assert.Single(catalog.GetAll<ActorDefinition>());
         Assert.Equal(3, catalog.GetAll<ClassDefinition>().Count);
         Assert.Single(catalog.GetAll<DialogueDefinition>());
         Assert.Equal(5, catalog.GetAll<StatisticDefinition>().Count);
         Assert.Equal(2, catalog.GetAll<ItemDefinition>().Count);
         Assert.Single(catalog.GetAll<EquipmentDefinition>());
+        Assert.Single(catalog.GetAll<LootTableDefinition>());
         Assert.Equal(2, catalog.GetAll<AbilityDefinition>().Count);
         Assert.Empty(catalog.GetAll<MagicDisciplineDefinition>());
         Assert.Single(catalog.GetAll<EnemyDefinition>());
@@ -57,6 +58,13 @@ public sealed class ContentLoadingTests
             "enemy.forest.green-slime");
         Assert.Equal(1, slime.FormationFootprint.Rows);
         Assert.Equal(1, slime.FormationFootprint.Columns);
+        Assert.Equal("loot-table.forest.green-slime", slime.LootTableId);
+
+        LootTableDefinition slimeLoot = catalog.GetRequired<LootTableDefinition>(
+            slime.LootTableId!);
+        LootEntryDefinition slimeDrop = Assert.Single(slimeLoot.Entries);
+        Assert.Equal("item.consumable.potion", slimeDrop.ItemId);
+        Assert.Equal(0.125m, slimeDrop.Chance);
     }
 
     /// <summary>
@@ -294,13 +302,13 @@ public sealed class ContentLoadingTests
     {
         ContentDocument enemy = new("enemies/default-footprint.json", """
             {
-              "schemaVersion": 1,
+              "schemaVersion": 2,
               "id": "enemy.test.default-footprint",
               "displayNameKey": "enemy.test.default-footprint.name",
               "level": 1,
               "statistics": {},
               "abilityIds": [],
-              "loot": []
+              "lootTableId": null
             }
             """);
 
@@ -352,14 +360,14 @@ public sealed class ContentLoadingTests
     {
         ContentDocument enemy = new("enemies/null-footprint.json", """
             {
-              "schemaVersion": 1,
+              "schemaVersion": 2,
               "id": "enemy.test.null-footprint",
               "displayNameKey": "enemy.test.null-footprint.name",
               "level": 1,
               "statistics": {},
               "abilityIds": [],
               "formationFootprint": null,
-              "loot": []
+              "lootTableId": null
             }
             """);
 
@@ -512,14 +520,14 @@ public sealed class ContentLoadingTests
     {
         ContentDocument enemy = new("enemies/large.json", """
             {
-              "schemaVersion": 1,
+              "schemaVersion": 2,
               "id": "enemy.test.large",
               "displayNameKey": "enemy.test.large.name",
               "level": 1,
               "statistics": {},
               "abilityIds": [],
               "formationFootprint": { "rows": 2, "columns": 2 },
-              "loot": []
+              "lootTableId": null
             }
             """);
         ContentDocument encounter = new("encounters/invalid-formation.json", """
@@ -606,13 +614,13 @@ public sealed class ContentLoadingTests
             $"enemies/{fileName}",
             $$"""
             {
-              "schemaVersion": 1,
+              "schemaVersion": 2,
               "id": "{{id}}",
               "displayNameKey": "{{id}}.name",
               "level": 1,
               "statistics": {},
               "abilityIds": []{{footprintMember}},
-              "loot": []
+              "lootTableId": null
             }
             """);
     }

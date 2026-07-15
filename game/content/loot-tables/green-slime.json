@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "loot-table.forest.green-slime",
+  "entries": [
+    {
+      "itemId": "item.consumable.potion",
+      "chance": 0.125,
+      "minQuantity": 1,
+      "maxQuantity": 1
+    }
+  ]
+}

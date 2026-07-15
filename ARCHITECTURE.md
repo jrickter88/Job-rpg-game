@@ -221,27 +221,53 @@ This split isolates platform IO while ensuring the editor, tests, and CI all app
 same deserialization and validation rules.
 
 `ContentCategoryRegistry` is the single mechanical registration point for a category's folder,
-definition type, and stable-ID prefix. It is an explicit code-owned list, not runtime type
-scanning or a mod plugin hook. Category-specific semantic rules remain in `ContentValidator`.
-This prevents a future content type from being added to one loader switch while being forgotten
-by ID/reference validation. JSON must explicitly include `schemaVersion`; the default on the
-C# base record exists only for concise hand-built test/tool definitions.
+definition type, stable-ID prefix, and currently supported schema version. It is an explicit
+code-owned list, not runtime type scanning or a mod plugin hook. Category-specific semantic
+rules remain in `ContentValidator`. This prevents a future content type from being added to one
+loader switch while being forgotten by ID/reference validation, and lets one category evolve
+without falsely changing every other record's version. JSON must explicitly include
+`schemaVersion`; the default on the C# base record exists only for concise hand-built test/tool
+definitions.
 
 `DirectoryModDiscovery` validates one strict `manifest.json` per immediate mod folder,
 checks its data-contract API version, verifies dependencies, and produces a deterministic
 topological order. `GameRoot` loads base content first and each mod's `content/` folder in
 that order. Validation remains all-or-nothing across the combined catalog.
 
-The supported data API is `2`. It changed from `1` when encounter formation slots moved from
-loosely documented `formation.*` keys to canonical grid coordinates. This deliberately rejects
-old encounter mods instead of guessing what `formation.left` meant. The additive enemy
-footprint still defaults to `1 × 1`, and neither change alters `SaveFormatVersion`.
+The supported data API is `3`. API 2 replaced API 1's loosely documented encounter formation
+keys with canonical grid coordinates. API 3 replaces embedded enemy `loot` arrays with typed,
+reusable `loot-tables/` records and an enemy `lootTableId`; enemy records consequently use
+schema version 2. These explicit compatibility gates reject old mod shapes instead of guessing
+their meaning. Neither content-contract change alters `SaveFormatVersion`.
 
 Milestone 2.8 keeps authored `EnemyFootprintDefinition` separate from transient formation
 state. Its one `ToFormationFootprint` conversion copies validated rows and columns into the
 pure core value; it does not infer size from a sprite or silently clamp author mistakes.
 Because the DTO supplies `1` for both omitted members, existing base and data-mod enemy files
-remain valid without a schema, data-API, or save-format increment.
+remained valid when that additive field was introduced. Enemy schema 2 retains the same
+omission default; the later schema/API bump exists only for standalone loot ownership.
+
+### Loot-table content boundary
+
+Milestone 3.06 keeps enemy identity/combat tuning separate from reward authoring. An
+`EnemyDefinition` stores one nullable stable `lootTableId`; a `LootTableDefinition` owns the
+ordered independent item possibilities. Several enemies may share a table, and an empty table
+is a legal deliberate no-award configuration. The production validator proves table and item
+references, chance bounds, and inclusive positive quantity ranges before publishing the
+catalog.
+
+This milestone defines no `LootResolver`. Later victory handling will pass defeated enemy IDs,
+validated content, and an injected `IRandomSource` to a small pure-core resolver. That resolver
+will return typed award data; a separate campaign/inventory use case will decide whether and
+how those awards enter persistent state. Content definitions never roll randomness or mutate
+`GameState`, and Godot never owns reward calculations.
+
+The standalone table is useful for additive mods, but it deliberately does not create base
+record replacement. A mod may add its own table and enemy or reference base/dependency content;
+it may not redeclare a vanilla table ID. A future randomizer or vanilla-loot customization
+feature needs an explicit deterministic profile/composition design rather than load-order wins.
+
+### Mod composition boundary
 
 Milestone 1.5 has no replacement or patch semantics. A mod owns only IDs under the namespace
 derived from its manifest—for example, `mod.alex.weather-pack` may define
@@ -389,6 +415,9 @@ identity/order, formation preservation, current HP, ability availability, defens
 and independently owned read-only snapshot collections. Ability-framework tests additionally
 cover Skill/Magic gating, multi-discipline projection, code-owned target/ruleset parameter
 contracts, duplicate grants, required JSON schema versions, and defensive hand-built catalogs.
+Loot-table content tests cover category-specific enemy schema versions, typed enemy/table/item
+references, probability and quantity boundaries, null handling, legacy inline-shape rejection,
+and namespaced mod tables without performing random rolls.
 
 ## Decisions intentionally deferred
 

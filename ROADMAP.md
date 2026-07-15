@@ -199,7 +199,7 @@ and both green-slime instances with starting HP, statistics, abilities, and form
 Explicitly excluded: damage, targeting, commands, Guard resolution, enemy AI, turn order,
 victory, defeat, rewards, battle UI, and campaign result handling.
 
-### Milestone 3.05 — Ability and magic framework (implemented; hardening review pending)
+### Milestone 3.05 — Ability and magic framework (implemented)
 
 - Distinguish direct Skills from Magic abilities.
 - Add authored magic-discipline containers and class discipline access.
@@ -215,6 +215,23 @@ supported, and existing base content remains compatible without defining concret
 
 Explicitly excluded: concrete spell content, battle menus, MP, spell execution,
 Silence, Reflect, Hybrid abilities, and combination recipes.
+
+### Milestone 3.06 — Loot-table content foundation (implementation review pending)
+
+- Move item-drop entries out of enemy records into reusable `loot-tables/` definitions.
+- Give each enemy one explicit nullable `lootTableId` reference.
+- Validate table/item references, independent chances, and inclusive quantity ranges.
+- Raise enemy schema to version 2 and the data-mod API to version 3 rather than silently
+  accepting the retired embedded `loot` shape.
+- Document base and mod authoring with focused nonvisual regression tests.
+
+Exit criteria: the green slime references a typed standalone loot table, valid base and mod
+tables publish through `IContentCatalog`, invalid tables withhold the catalog with actionable
+diagnostics, and legacy inline enemy loot is rejected deliberately.
+
+Explicitly excluded: random loot rolls, victory rewards, inventory mutation, gold, experience,
+stealing, weighted pools, conditional drops, encounter overrides, reward UI, randomizers, and
+save-format changes.
 
 ### Remaining first-playable work
 

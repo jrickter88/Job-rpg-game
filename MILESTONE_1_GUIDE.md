@@ -32,7 +32,7 @@ James, the guide, the grid, and development controls. Startup details also appea
 **Output** panel:
 
 ```text
-Milestone 2.75 ready: loaded 19 definitions with 0 data mod(s); new game ... starts at map.prologue.test-room.
+Milestone 2.75 ready: loaded 20 definitions with 0 data mod(s); new game ... starts at map.prologue.test-room.
 ```
 
 If content is invalid, startup prints every discovered problem and exits instead of giving
@@ -59,7 +59,7 @@ The pipeline has four small parts:
 - required text and collection values, including explicit JSON `null` mistakes;
 - statistic ranges and statistic-valued maps;
 - nonnegative prices and ability costs;
-- valid loot probabilities and quantity ranges;
+- typed enemy-to-loot-table references plus valid item probabilities and quantity ranges;
 - duplicate class unlocks, overlapping/out-of-bounds encounter footprints, quest objective
   IDs, and equipment items;
 - starting-class rule references, duplicates, contradictions, and a nonempty final pool;
@@ -84,7 +84,7 @@ kind of content from silently being used as another.
 
 ## The fixture pack
 
-The 19 checked-in records cover every implemented category:
+The 20 checked-in records cover every implemented category:
 
 | Category | Fixture purpose |
 |---|---|
@@ -96,7 +96,8 @@ The 19 checked-in records cover every implemented category:
 | Dialogue | One short guide exchange used by the test room |
 | Items | A potion and the inventory identity for an iron sword |
 | Equipment | Equippable behavior that decorates the iron-sword item |
-| Enemy | A green slime with statistics, an ability, loot, and a `1 × 1` footprint |
+| Loot table | One reusable potion-drop table referenced by enemy ID |
+| Enemy | A green slime with statistics, an ability, a loot-table reference, and a `1 × 1` footprint |
 | Encounter | A two-slime formation with canonical coordinate anchors |
 | Quest | One reach objective, item reward, and completion flag |
 

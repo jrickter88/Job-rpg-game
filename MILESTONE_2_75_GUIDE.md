@@ -131,7 +131,8 @@ The content records answer two different authoring questions:
 | `EncounterDefinition` | Which enemy participates and its top-front anchor | slime at `formation.enemy.r1.c0` |
 | `EnemyDefinition` | Species-wide rectangular footprint | `{ "rows": 1, "columns": 1 }` |
 
-The footprint is additive to enemy schema version `1`:
+The footprint was additive to enemy schema version `1` when introduced and remains optional
+in current enemy schema version `2`:
 
 ```json
 "formationFootprint": {
@@ -140,7 +141,7 @@ The footprint is additive to enemy schema version `1`:
 }
 ```
 
-Omitting it means `1 × 1`, preserving existing enemy records. Explicit `null` is rejected
+Omitting it means `1 × 1`. Explicit `null` is rejected
 because it is usually an authoring mistake rather than an intentional default. Neither an
 enemy footprint nor an encounter anchor is inferred from a filename, display name, sprite,
 or Godot node.
@@ -148,6 +149,7 @@ or Godot node.
 Milestone 2.8 formalizes this content-to-geometry connection, its enemy-specific diagnostics,
 and its mod-compatibility tests. The formation dimensions and rectangular geometry continue
 to be owned here by the Milestone 2.75 pure rules. See `MILESTONE_2_8_GUIDE.md`.
+The later schema-2 change concerns standalone loot tables and does not alter this geometry.
 
 ## Runtime ownership and data flow
 
@@ -213,9 +215,11 @@ boundary as a defensive invariant; the Godot scene does not duplicate any rule.
 
 ## Data-mod compatibility
 
-The supported `gameApiVersion` is now `2`. Version 1 allowed the documented broad
-`formation.*` encounter contract; version 2 requires canonical coordinates. Rejecting API 1
-manifests gives mod authors a clear compatibility error instead of guessing old slot meaning.
+Milestone 2.75 raised the supported `gameApiVersion` from `1` to `2`. Version 1 allowed the
+documented broad `formation.*` encounter contract; version 2 requires canonical coordinates.
+Rejecting API 1 manifests gave mod authors a clear compatibility error instead of guessing
+old slot meaning. The current contract is API 3 because Milestone 3.06 later changes enemy
+loot authoring; that later change does not alter these formation-coordinate rules.
 
 The save format remains unchanged. Enemy footprints and encounter anchors are definitions,
 and battle-local formation placements are reconstructed rather than persisted. See

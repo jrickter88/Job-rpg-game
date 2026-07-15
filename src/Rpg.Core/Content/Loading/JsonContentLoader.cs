@@ -221,13 +221,14 @@ public sealed class JsonContentLoader
         string diagnosticPath,
         ICollection<ContentProblem> problems)
     {
-        if (definition.SchemaVersion != 1)
+        if (definition.SchemaVersion != category.SupportedSchemaVersion)
         {
             problems.Add(new ContentProblem(
                 diagnosticPath,
                 "$.schemaVersion",
                 "schema.unsupported",
-                $"Schema version {definition.SchemaVersion} is unsupported; expected 1."));
+                $"Schema version {definition.SchemaVersion} is unsupported for "
+                + $"{category.FolderName}/; expected {category.SupportedSchemaVersion}."));
         }
 
         if (!ContentId.IsValid(definition.Id))

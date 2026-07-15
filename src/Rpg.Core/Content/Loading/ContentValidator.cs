@@ -79,6 +79,9 @@ internal sealed class ContentValidator
                 case ItemDefinition itemDefinition:
                     ValidateItem(item, itemDefinition);
                     break;
+                case LootTableDefinition lootTable:
+                    ValidateLootTable(item, lootTable);
+                    break;
                 case MagicDisciplineDefinition magicDiscipline:
                     ValidateMagicDiscipline(item, magicDiscipline);
                     break;
@@ -412,10 +415,29 @@ internal sealed class ContentValidator
 
         ValidateEnemyFootprint(item, enemy);
 
-        IReadOnlyList<LootEntryDefinition> lootEntries = RequireList(item, "$.loot", enemy.Loot);
+        if (enemy.LootTableId is not null)
+        {
+            RequireReference<LootTableDefinition>(item, "$.lootTableId", enemy.LootTableId);
+        }
+    }
+
+    /// <summary>
+    /// Validates reusable loot definition data without performing any random rolls.
+    /// </summary>
+    /// <remarks>
+    /// Entries are intentionally independent and may repeat an item ID. Rejecting duplicate
+    /// items here would prevent future authors from expressing two distinct chances for the
+    /// same item. Award aggregation belongs to the later reward resolver, not content loading.
+    /// </remarks>
+    private void ValidateLootTable(LoadedContent item, LootTableDefinition lootTable)
+    {
+        IReadOnlyList<LootEntryDefinition> lootEntries = RequireList(
+            item,
+            "$.entries",
+            lootTable.Entries);
         for (int index = 0; index < lootEntries.Count; index++)
         {
-            string path = $"$.loot[{index}]";
+            string path = $"$.entries[{index}]";
             LootEntryDefinition? loot = lootEntries[index];
             if (loot is null)
             {
@@ -427,7 +449,7 @@ internal sealed class ContentValidator
 
             if (loot.Chance < 0m || loot.Chance > 1m)
             {
-                Add(item, $"{path}.chance", "loot.invalid-chance",
+                Add(item, $"{path}.chance", "loot-table.chance-out-of-range",
                     "Loot chance must be between 0 and 1 inclusive.");
             }
 

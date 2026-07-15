@@ -29,6 +29,7 @@ The initial directory-to-type mapping is:
 | `statistics/` | `StatisticDefinition` |
 | `items/` | `ItemDefinition` |
 | `equipment/` | `EquipmentDefinition` |
+| `loot-tables/` | `LootTableDefinition` |
 | `abilities/` | `AbilityDefinition` |
 | `magic-disciplines/` | `MagicDisciplineDefinition` |
 | `enemies/` | `EnemyDefinition` |
@@ -53,6 +54,7 @@ dialogue.prologue.test-room-guide
 stat.max-hp
 item.consumable.potion
 equipment.weapon.iron-sword
+loot-table.forest.green-slime
 ability.black-magic.fire
 magic-discipline.black
 enemy.forest.green-slime
@@ -80,7 +82,7 @@ same namespace between the category and record name:
 
 | Manifest ID | Valid record examples |
 |---|---|
-| `mod.example.starter-pack` | `class.example.starter-pack.chronoguard`, `ability.example.starter-pack.temporal-guard` |
+| `mod.example.starter-pack` | `class.example.starter-pack.chronoguard`, `ability.example.starter-pack.temporal-guard`, `loot-table.example.starter-pack.clockwork-slime` |
 
 This is enforced by the production loader. Mod records cannot reuse or replace base-game
 IDs, and all IDs remain globally unique. References may point to base content or a declared
@@ -267,6 +269,46 @@ This keeps common inventory/shop data in exactly one place.
 }
 ```
 
+### Loot table
+
+A loot table owns reusable item-drop authoring separately from enemy combat data. Tables are
+not player-facing and therefore need no display-name key.
+
+| Field | Type | Notes |
+|---|---|---|
+| `entries` | array | Required, including when empty. Every entry is an independent future roll. |
+
+Each entry contains:
+
+| Entry field | Type | Notes |
+|---|---|---|
+| `itemId` | ID | References an `ItemDefinition`. |
+| `chance` | decimal | Required probability from `0` through `1`, inclusive. |
+| `minQuantity` | integer | Required; at least `1`. |
+| `maxQuantity` | integer | Required; at least `minQuantity`. |
+
+```json
+{
+  "schemaVersion": 1,
+  "id": "loot-table.forest.green-slime",
+  "entries": [
+    {
+      "itemId": "item.consumable.potion",
+      "chance": 0.125,
+      "minQuantity": 1,
+      "maxQuantity": 1
+    }
+  ]
+}
+```
+
+Entries retain authored order and are independent; repeated item IDs are legal. A future
+resolver may therefore succeed on more than one entry for the same item and aggregate the
+awards afterward. An empty `entries` array is legal and disables all drops for every enemy
+that references the table. Explicit JSON `null` is invalid. Milestone 3.06 only loads and
+validates these records—it does not roll chance, grant inventory, or define victory behavior.
+See `LOOT_TABLE_AUTHORING_GUIDE.md`.
+
 ### Ability
 
 | Field | Type | Notes |
@@ -347,19 +389,17 @@ the category but intentionally adds no concrete base-game disciplines or spells.
 | `statistics` | object of ID → integer | Keys reference statistics. |
 | `abilityIds` | ID array | References abilities. |
 | `formationFootprint` | object | Optional rectangular `rows` and `columns`; omitted means `1 × 1`, but explicit `null` is invalid. |
-| `loot` | array | `itemId`, chance from `0` to `1`, and inclusive quantity range. |
+| `lootTableId` | ID or null | Required member in enemy schema 2; references `loot-tables/`, or explicit null means no item drops. |
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "id": "enemy.forest.green-slime",
   "displayNameKey": "enemy.green-slime.name",
   "level": 1,
   "statistics": { "stat.max-hp": 22, "stat.strength": 3 },
   "abilityIds": ["ability.enemy.tackle"],
-  "loot": [
-    { "itemId": "item.consumable.potion", "chance": 0.125, "minQuantity": 1, "maxQuantity": 1 }
-  ]
+  "lootTableId": "loot-table.forest.green-slime"
 }
 ```
 
@@ -370,6 +410,12 @@ columns. Explicit JSON `null` is invalid; omit the property to select the compat
 `1 × 1` default. Footprints are definition data, never save data or sprite-derived values.
 The content DTO converts to the core `FormationFootprint` without clamping either value;
 catalog publication occurs only after the authored dimensions pass validation.
+
+Enemy schema version `2` requires authors to write `lootTableId`, even when its value is null.
+This prevents a forgotten property from silently becoming a no-loot enemy. The retired
+schema-1 `loot` array is not accepted; its entries move unchanged into a standalone schema-1
+loot-table record. Loot tables are reusable definition data and never become per-battle or
+save state.
 
 ### Encounter
 
@@ -438,6 +484,8 @@ The content validator milestone must report the file and JSON path for:
 - invalid or duplicate top-level IDs;
 - missing references and wrong-category references;
 - impossible ranges, negative prices/costs, and invalid probabilities;
+- missing/wrong-category loot-table and item references, null loot entries, and invalid
+  loot chances or quantity ranges;
 - null, nonpositive, or oversized enemy footprints, malformed encounter anchors,
   footprints outside the grid, overlapping placements, or
   quest objective IDs duplicated within a quest;
@@ -465,14 +513,16 @@ process exit code, making it suitable for local authoring and future CI.
 
 ## Evolution policy
 
-Additive fields must have safe defaults. `formationFootprint` is such a field: enemy schema
-version `1` remains valid when it is omitted, including existing mod records authored before
-Milestone 2.8. A breaking category shape change increments
-that category's `schemaVersion` and adds an explicit content migration before old files are
-removed. The canonical encounter-slot restriction is instead a public data-contract change,
-so Milestone 2.75 raises the mod `gameApiVersion` to `2`; it does not alter record schema or
-save format. Never infer identity from filename changes. Status effects, shops, dialogue,
-and cutscene schemas will be added only when their first playable use case is built.
+Additive fields must have safe defaults. `formationFootprint` was such a field when introduced:
+omitting it still produces `1 × 1` in current enemy schema 2. Breaking public shapes require
+an explicit compatibility decision. Milestone 2.75 raised the mod `gameApiVersion` to `2` for
+canonical encounter slots. Milestone 3.06 deliberately raises it to `3`, raises enemy schema
+to `2`, and rejects the retired embedded `loot` array in favor of standalone loot tables.
+This pre-release clean break updates all checked-in content rather than carrying two reward
+formats into future gameplay. It changes neither `SaveFormatVersion` nor existing campaign
+state because definitions and unrolled drop possibilities are not save data. Never infer
+identity from filename changes. Status effects, shops, dialogue, and cutscene schemas will be
+added only when their first playable use case is built.
 
 Every JSON record must write `schemaVersion` even when it is `1`. The C# default exists for
 hand-built tests and tools only; accepting a missing JSON version would make future migrations

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "id": "enemy.forest.green-slime",
   "displayNameKey": "enemy.green-slime.name",
   "level": 1,
@@ -12,12 +12,5 @@
   "abilityIds": [
     "ability.enemy.tackle"
   ],
-  "loot": [
-	{
-	  "itemId": "item.consumable.potion",
-	  "chance": 0.125,
-	  "minQuantity": 1,
-	  "maxQuantity": 1
-	}
-  ]
+  "lootTableId": "loot-table.forest.green-slime"
 }

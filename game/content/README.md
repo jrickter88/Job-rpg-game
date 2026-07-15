@@ -8,7 +8,7 @@ The records here are a deliberately tiny fixture pack, not production content. T
 they exercise every implemented category, cross-record references, new-game creation,
 and save/load tests. They should remain small as real content is introduced separately.
 
-The base pack currently contains 19 definitions and no concrete magic-discipline records yet.
+The base pack currently contains 20 definitions and no concrete magic-discipline records yet.
 James is class-neutral; the
 `starting-class-rules/default.json` record makes Vanguard, Black Mage, and White Mage legal
 new-game choices. Until a class-selection screen exists, the bootstrap selects the first
@@ -20,13 +20,16 @@ omits that optional member to prove old/base records still receive the safe `1 Ã
 Existing abilities also omit `abilityKindId`, which proves they remain direct Skills through
 the compatible `ability-kind.skill` default. Their target, ruleset, and numeric parameters use
 the closed contracts documented in `ABILITY_AUTHORING_GUIDE.md`; arbitrary behavior strings no
-longer pass validation.
+longer pass validation. Green-slime drops live in
+`loot-tables/green-slime.json`; the enemy references that reusable definition rather than
+embedding reward data beside its combat statistics.
 
 Before adding content, use:
 
 - `ABILITY_AUTHORING_GUIDE.md` for a direct Skill or general ability record;
 - `MAGIC_AUTHORING_GUIDE.md` for disciplines, spells, and the two-part class unlock;
 - `ABILITY_RULESET_DEVELOPER_GUIDE.md` only when a genuinely new behavior needs C#.
+- `LOOT_TABLE_AUTHORING_GUIDE.md` for enemy drop tables and enemy/table references.
 
 Run validation without opening Godot:
 

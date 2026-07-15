@@ -36,7 +36,7 @@ public sealed class DirectoryModDiscoveryTests
             contentResult.IsSuccess,
             string.Join(Environment.NewLine, contentResult.Problems));
         ContentCatalog catalog = Assert.IsType<ContentCatalog>(contentResult.Catalog);
-        Assert.Equal(22, catalog.Count);
+        Assert.Equal(23, catalog.Count);
         Assert.NotNull(catalog.GetRequired<ClassDefinition>(
             "class.example.starter-pack.chronoguard"));
         Assert.NotNull(catalog.GetRequired<AbilityDefinition>(
@@ -109,11 +109,13 @@ public sealed class DirectoryModDiscoveryTests
         Assert.Contains(result.Problems, problem => problem.Code == "dependency.cycle");
     }
 
-    [Fact]
-    public void GameApiVersion1_AfterCanonicalFormationChange_IsRejected()
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    public void GameApiVersionsBeforeStandaloneLootTables_AreRejected(int legacyApiVersion)
     {
         using var installation = new TemporaryModInstallation();
-        installation.Add("mod.example.legacy", [], gameApiVersion: 1);
+        installation.Add("mod.example.legacy", [], gameApiVersion: legacyApiVersion);
 
         ModDiscoveryResult result = new DirectoryModDiscovery().Discover(installation.Root);
 
@@ -121,7 +123,7 @@ public sealed class DirectoryModDiscoveryTests
         ModProblem problem = Assert.Single(
             result.Problems,
             problem => problem.Code == "manifest.api-unsupported");
-        Assert.Contains("expected 2", problem.Message, StringComparison.Ordinal);
+        Assert.Contains("expected 3", problem.Message, StringComparison.Ordinal);
     }
 
     /// <summary>

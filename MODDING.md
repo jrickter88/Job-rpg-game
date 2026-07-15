@@ -3,8 +3,9 @@
 ## Scope of Milestone 1.5
 
 The game supports **data-only, loose-folder mods**. A mod may add records in the same JSON
-categories as the base game: actors, classes, statistics, items, equipment, abilities,
-magic disciplines, enemies, encounters, quests, dialogues, and starting-class rules. Those
+categories as the base game: actors, classes, statistics, items, equipment, loot tables,
+abilities, magic disciplines, enemies, encounters, quests, dialogues, and starting-class
+rules. Those
 definitions enter the same typed catalog and pass the same strict validation as built-in
 content.
 
@@ -57,8 +58,8 @@ where an array/string is expected, and unsupported versions are errors.
   "schemaVersion": 1,
   "id": "mod.example.starter-pack",
   "name": "Example Starter Pack",
-  "version": "1.0.0",
-  "gameApiVersion": 2,
+  "version": "2.0.0",
+  "gameApiVersion": 3,
   "dependencies": []
 }
 ```
@@ -69,7 +70,7 @@ where an array/string is expected, and unsupported versions are errors.
 | `id` | Permanent lowercase ID in `mod.author.mod-name` form. It must equal the folder name. |
 | `name` | Nonblank human-facing name. It is never used as identity. |
 | `version` | Author-controlled Semantic Version such as `1.0.0` or `1.1.0-beta.1`. |
-| `gameApiVersion` | Integer data contract supported by the game; currently exactly `2`. |
+| `gameApiVersion` | Integer data contract supported by the game; currently exactly `3`. |
 | `dependencies` | Stable IDs of mods that must be installed and loaded first. |
 
 `gameApiVersion` is separate from the executable's build string. Ordinary game releases do
@@ -82,11 +83,24 @@ Milestone 2.75 raises the public data API from `1` to `2`. API 1 documented enco
 `slotId` values only as general `formation.*` stable keys, so accepting names such as
 `formation.left` and then silently changing their meaning would break encounter mods. API 2
 instead requires canonical enemy coordinates such as `formation.enemy.r1.c0`. A mod manifest
-must opt into that contract by declaring `gameApiVersion: 2`.
+had to opt into that contract by declaring `gameApiVersion: 2`.
 
 This is not a save-format change. Formation anchors and enemy footprints are content used to
 build a transient battle arrangement; they are not stored in `GameState` or the save envelope.
-The manifest schema remains `1`, as do the existing content-record schema versions.
+The manifest schema remains `1`; API 3 later changes only the enemy content-record version.
+
+### Data API 3 loot-table change
+
+Milestone 3.06 raises the public data API from `2` to `3`. API-2 enemy records embedded a
+`loot` array beside statistics and abilities. API 3 moves those entries into independently
+addressable `loot-tables/` records and requires enemy schema version `2` with one explicit
+nullable `lootTableId`. This is an intentional pre-release clean break: carrying two drop
+formats into future reward gameplay would create permanent ambiguity and duplicate code.
+
+This is still not a save-format change. Loot tables describe immutable possibilities, not
+items already awarded to a campaign. API-2 mods must move each embedded array into a
+namespaced table, update each enemy reference, use enemy `schemaVersion: 2`, and declare
+`gameApiVersion: 3`. The manifest's own `schemaVersion` remains `1`.
 
 ## Record ownership and references
 
@@ -99,6 +113,7 @@ class.example.starter-pack.chronoguard
 ability.example.starter-pack.temporal-guard
 item.example.starter-pack.time-shard
 enemy.example.starter-pack.clockwork-slime
+loot-table.example.starter-pack.clockwork-slime
 magic-discipline.example.starter-pack.runes
 ```
 
@@ -121,14 +136,14 @@ An enemy may declare its rectangular battlefield size:
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "id": "enemy.example.starter-pack.clockwork-slime",
   "displayNameKey": "enemy.example.starter-pack.clockwork-slime.name",
   "level": 1,
   "statistics": {},
   "abilityIds": [],
   "formationFootprint": { "rows": 2, "columns": 2 },
-  "loot": []
+  "lootTableId": null
 }
 ```
 
@@ -157,11 +172,50 @@ Validation rejects malformed anchors, any footprint that leaves the enemy 4 × 4
 overlap between enemies. See `CONTENT_SCHEMA.md` and `MILESTONE_2_75_GUIDE.md` for the full
 coordinate convention.
 
-Milestone 2.8 is an additive enemy-record change. Existing mod enemies do not need to be
-rewritten: absence of `formationFootprint` constructs the same deterministic `1 × 1` value
-as an explicit `{ "rows": 1, "columns": 1 }`. This does not change `gameApiVersion`, mod
-manifest shape, or save compatibility because footprints are immutable content definitions,
-not campaign state. See `MILESTONE_2_8_GUIDE.md` for the focused content contract.
+Milestone 2.8 originally added `formationFootprint` compatibly. Current API-3/schema-2 enemies
+still may omit that member and receive the same deterministic `1 × 1` value as an explicit
+`{ "rows": 1, "columns": 1 }`. The later schema/API bump is caused by standalone loot, not
+by footprint behavior. See `MILESTONE_2_8_GUIDE.md` for the focused geometry contract.
+
+## Authoring enemy loot tables
+
+Place reusable tables beneath `content/loot-tables/`. A table owned by the example mod uses
+the same namespace rule as every other mod record:
+
+```json
+{
+  "schemaVersion": 1,
+  "id": "loot-table.example.starter-pack.clockwork-slime",
+  "entries": [
+    {
+      "itemId": "item.consumable.potion",
+      "chance": 0.25,
+      "minQuantity": 1,
+      "maxQuantity": 2
+    }
+  ]
+}
+```
+
+Its enemy uses schema version 2 and references the table by ID:
+
+```json
+{
+  "schemaVersion": 2,
+  "id": "enemy.example.starter-pack.clockwork-slime",
+  "displayNameKey": "enemy.example.starter-pack.clockwork-slime.name",
+  "level": 1,
+  "statistics": {},
+  "abilityIds": [],
+  "lootTableId": "loot-table.example.starter-pack.clockwork-slime"
+}
+```
+
+Several mod enemies may share one table. A mod table may reference base items, the mod's own
+items, or items from a directly declared dependency. A mod cannot redeclare a vanilla table
+ID to replace its contents; base-record patching and conflict resolution remain deliberately
+unsupported. Use `lootTableId: null` for an enemy with no item drops. See
+`LOOT_TABLE_AUTHORING_GUIDE.md` for entry rules and validation commands.
 
 ## Combat statistic resolution
 
@@ -227,8 +281,10 @@ that mod. Extending vanilla progression needs a future explicit composition cont
 than order-dependent JSON replacement.
 
 This remains data-only. It does not add scripts, spell effects, MP, battle menus, enemy
-spellbook AI, or save data. Because omitted ability kinds remain Skills and the new category
-is additive, this does not change `gameApiVersion`, the manifest schema, or the save format.
+spellbook AI, or save data. Because omitted ability kinds remain Skills and the category was
+additive, Milestone 3.05 did not itself change the then-current `gameApiVersion`; the later
+API-3 change is solely the loot contract described above. Neither ability classification nor
+loot definitions change the save format.
 The stricter ruleset validation does not make previously unsupported custom behavior executable;
 it reports those unusable IDs at load time instead of allowing a later runtime failure.
 

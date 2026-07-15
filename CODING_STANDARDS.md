@@ -80,6 +80,9 @@ edition of the Godot editor; standard editor builds cannot compile C# projects.
 - Keep `PartyAbilityAvailability` as the authoritative structured party projection. Its flat
   executable list must be derived from direct Skills and discipline spell lists, not maintained
   as a separate caller-supplied collection.
+- Keep loot-table definitions declarative. A table owns item IDs, chances, and quantity ranges;
+  a future pure-core resolver owns random rolls and returns typed awards. Neither definition
+  code nor Godot presentation may mutate inventory as a side effect of reading content.
 - Treat a mod manifest ID and version as a compatibility contract. Never derive either
   from display text or silently rewrite it during discovery.
 - Data mods contain JSON definitions only. Do not deserialize type names, invoke authored
