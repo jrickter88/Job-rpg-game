@@ -5,12 +5,16 @@ using RpgGame.Core.Combat.Formation;
 using RpgGame.Core.Content;
 using RpgGame.Core.Content.Definitions;
 using RpgGame.Core.Content.Loading;
+using RpgGame.Core.Inventory;
+using RpgGame.Core.Loot;
 using RpgGame.Core.Mods;
 using RpgGame.Core.Persistence;
+using RpgGame.Core.Rewards;
 using RpgGame.Core.State;
 using RpgGame.Encounters;
 using RpgGame.Exploration;
 using RpgGame.Input;
+using RpgGame.Rewards;
 
 namespace RpgGame.Bootstrap;
 
@@ -31,14 +35,18 @@ namespace RpgGame.Bootstrap;
 /// </remarks>
 public partial class GameRoot : Node, IExplorationDevelopmentCommands
 {
-    private const string GameVersion = "0.3.15-campaign-handoff";
+    private const string GameVersion = "0.4.2-victory-rewards";
     private const string TestRoomScenePath = "res://game/scenes/exploration/TestRoom.tscn";
     private const string BattleScenePath = "res://game/scenes/encounters/Battle.tscn";
+    private const string RewardSummaryScenePath =
+        "res://game/scenes/rewards/RewardSummary.tscn";
     private const string DevelopmentQuickSlotId = "slot_1";
 
     // Exactly one transient gameplay presentation is active at a time. Campaign truth is
     // still held only by Session, so replacing this Node never replaces or copies GameState.
     private Node? _activeGameplayScene;
+    private IRandomSource? _randomSource;
+    private BattleCompletionService? _battleCompletion;
 
     /// <summary>Validated immutable content available after <see cref="_Ready"/>.</summary>
     public IContentCatalog Content { get; private set; } = null!;
@@ -73,7 +81,7 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
             InitializeApplicationServices();
             ShowExploration();
             GD.Print(
-                $"Milestone 3.15 ready: loaded {Content.Count} definitions "
+                $"Milestone 4.2 ready: loaded {Content.Count} definitions "
                 + $"with {EnabledMods.Count} data mod(s); "
                 + $"new game {Session.Current.SaveId} starts at {Session.Current.Location.MapId}.");
         }
@@ -201,6 +209,13 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
 
         Session = new GameSession();
 
+        // Reward services live for the application lifetime but retain only narrow core
+        // dependencies. The random adapter is created once and injected at confirmed victory.
+        var inventory = new InventoryService(Content, Session);
+        var victoryRewards = new VictoryRewardService(new LootResolver(Content), inventory);
+        _randomSource = new SystemRandomSource();
+        _battleCompletion = new BattleCompletionService(victoryRewards, Session);
+
         string saveDirectory = ProjectSettings.GlobalizePath("user://saves");
         var serializer = new SaveJsonSerializer();
         var store = new JsonFileSaveStore(saveDirectory, serializer);
@@ -225,9 +240,8 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
     /// Presents a newly instantiated test room reconstructed entirely from GameState.
     /// </summary>
     /// <remarks>
-    /// This and <see cref="ShowBattle(EncounterLaunchRequest)"/> are two direct,
-    /// feature-specific handoff methods—not a route registry or an API for navigating to
-    /// arbitrary scene strings.
+    /// This, <see cref="ShowBattle(EncounterLaunchRequest)"/>, and the reward summary are
+    /// direct feature-specific handoffs, not a route registry for arbitrary scene strings.
     /// </remarks>
     private void ShowExploration(string? developmentStatus = null)
     {
@@ -319,7 +333,32 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
         }
     }
 
-    /// <summary>Disconnects and frees whichever of the two known gameplay scenes is active.</summary>
+    /// <summary>Presents already-applied item totals before exploration is reconstructed.</summary>
+    private void ShowRewardSummary(VictoryRewardResult rewards)
+    {
+        ArgumentNullException.ThrowIfNull(rewards);
+        PackedScene packedScene = ResourceLoader.Load<PackedScene>(RewardSummaryScenePath)
+            ?? throw new InvalidOperationException(
+                $"Could not load reward summary scene '{RewardSummaryScenePath}'.");
+        var scene = packedScene.Instantiate<RewardSummaryController>();
+
+        RemoveActiveGameplayScene();
+        AddChild(scene);
+        try
+        {
+            scene.Initialize(rewards.ItemSummaries, InputBindings);
+            scene.ContinueRequested += OnRewardSummaryContinueRequested;
+            _activeGameplayScene = scene;
+        }
+        catch
+        {
+            RemoveChild(scene);
+            scene.QueueFree();
+            throw;
+        }
+    }
+
+    /// <summary>Disconnects and frees whichever known gameplay presentation is active.</summary>
     private void RemoveActiveGameplayScene()
     {
         if (_activeGameplayScene is null)
@@ -338,6 +377,10 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
         {
             battle.CompletionRequested -= OnBattleCompletionRequested;
         }
+        else if (_activeGameplayScene is RewardSummaryController rewardSummary)
+        {
+            rewardSummary.ContinueRequested -= OnRewardSummaryContinueRequested;
+        }
 
         RemoveChild(_activeGameplayScene);
         _activeGameplayScene.QueueFree();
@@ -353,16 +396,50 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
         object? sender,
         BattleCompletionRequestedEventArgs eventArgs)
     {
-        TestRoomEncounterProgress.ApplyOutcome(
-            Session,
-            eventArgs.Request.EncounterId,
-            eventArgs.Request.Outcome);
+        BattleCompletionRequest request = eventArgs.Request;
+        string clearanceFlagId = TestRoomEncounterProgress.GetClearanceFlagId(
+            request.EncounterId);
 
-        string status = eventArgs.Request.Outcome == BattleOutcome.PartyVictory
-            ? $"Victory: cleared {eventArgs.Request.EncounterId}."
-            : $"Defeat: {eventArgs.Request.EncounterId} remains uncleared.";
-        ShowExploration(status);
+        // This composition-level check is intentionally repeated inside the headless policy.
+        // It protects against stale presentation requests before any reward dependency runs.
+        if (request.Outcome == BattleOutcome.PartyVictory
+            && TestRoomEncounterProgress.IsCleared(Session, request.EncounterId))
+        {
+            ShowExploration("That encounter has already granted its victory rewards.");
+            return;
+        }
+
+        BattleCompletionResult completion = RequireBattleCompletion().Complete(
+            request,
+            clearanceFlagId,
+            RequireRandomSource());
+        switch (completion.Disposition)
+        {
+            case BattleCompletionDisposition.PartyDefeat:
+                ShowExploration(
+                    $"Defeat: {request.EncounterId} remains uncleared.");
+                break;
+
+            case BattleCompletionDisposition.VictoryRewardsApplied:
+                ShowRewardSummary(completion.Rewards
+                    ?? throw new InvalidDataException(
+                        "Applied victory completion did not return reward presentation data."));
+                break;
+
+            case BattleCompletionDisposition.AlreadyCleared:
+                ShowExploration("That encounter has already granted its victory rewards.");
+                break;
+
+            default:
+                throw new NotSupportedException(
+                    $"Unsupported battle completion disposition '{completion.Disposition}'.");
+        }
     }
+
+    private void OnRewardSummaryContinueRequested(
+        object? sender,
+        RewardSummaryContinueRequestedEventArgs eventArgs) =>
+        ShowExploration("Victory rewards applied; encounter cleared.");
 
     private void OnExplorationReloadRequested(object? sender, EventArgs eventArgs) =>
         ShowExploration("Room reconstructed from in-memory GameState.");
@@ -375,4 +452,12 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
                 $"{serviceName} is unavailable until GameRoot._Ready has initialized services.");
         }
     }
+
+    private BattleCompletionService RequireBattleCompletion() => _battleCompletion
+        ?? throw new InvalidOperationException(
+            "Battle completion is unavailable until GameRoot is initialized.");
+
+    private IRandomSource RequireRandomSource() => _randomSource
+        ?? throw new InvalidOperationException(
+            "Random source is unavailable until GameRoot is initialized.");
 }

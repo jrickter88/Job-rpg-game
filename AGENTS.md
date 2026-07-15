@@ -48,6 +48,9 @@ a general-purpose RPG engine.
     stack limits, inventory mutations, session inventory publication, or inventory saves.
 25. Read `MILESTONE_4_1_GUIDE.md` before changing deterministic loot resolution, loot award
     ordering, chance/quantity random rolls, or the boundary between loot and inventory.
+26. Read `MILESTONE_4_2_GUIDE.md` before changing victory reward timing, loot-to-inventory
+    application, defeated-enemy reward identity, one-time reward protection, or reward-summary
+    presentation.
 
 When a requested feature conflicts with those documents, update the relevant design
 document in the same change or explain why the exception is temporary.

@@ -42,10 +42,15 @@ items. Actor and class content do not gain starting-inventory fields.
 `GetQuantity` resolves the requested ID as an `ItemDefinition` and returns zero when that valid
 item has no stack.
 
-`AddItem` accepts only a nonblank item ID and positive requested quantity. It validates the
-current inventory, uses checked integer addition, and rejects any result above `MaxStack`.
-It never clamps, discards overflow, partially applies a request, or creates another stack.
-Capacity errors report the item ID, current quantity, requested quantity, and maximum stack.
+`AddItems` accepts an ordered collection of positive item additions. It validates the complete
+batch and current inventory, resolves every item, combines duplicate IDs in first-occurrence
+order, uses checked arithmetic, and rejects any final quantity above `MaxStack`. It builds the
+complete replacement before one `UpdateInventory` call, so an invalid later award cannot publish
+an earlier one. An empty batch is a no-op. `AddItem` delegates to this same path.
+
+Neither addition API clamps, discards overflow, partially applies a request, or creates another
+stack. Capacity errors report the item ID, current quantity, requested quantity, and maximum
+stack.
 
 `RemoveItem` also requires a resolved item and positive request. It rejects absent items and
 requests larger than the owned quantity. A partial removal stores the remaining positive
@@ -83,17 +88,18 @@ when that item is present in the resolved catalog.
 
 ## Relationship to loot tables
 
-Loot tables reference item definitions and describe possible quantities. Milestone 4.1 now
-resolves those independent rolls into transient typed awards, but it still does not mutate
-campaign state. Milestone 4.0 provides the inventory application boundary that Milestone 4.2
-will call after a confirmed victory.
+Loot tables reference item definitions and describe possible quantities. Milestone 4.1 resolves
+those independent rolls into transient typed awards without mutating campaign state. Milestone
+4.2 now converts accepted victory awards to one atomic `AddItems` batch and shows separately
+aggregated presentation totals.
 
 ## Automated coverage
 
 Focused headless tests cover empty new games, quantity queries, new and existing stacks,
-maximum boundaries, checked overflow, add/remove atomicity, malformed current inventory,
-notification counts, unrelated-state preservation, defensive session copies, logical no-op
-updates, save compatibility, unknown future fields, and mod-owned item IDs.
+single and batch additions, duplicate aggregation/order, maximum boundaries, checked overflow,
+invalid-later rollback, add/remove atomicity, malformed current inventory, notification counts,
+unrelated-state preservation, defensive session copies, logical no-op updates, save
+compatibility, unknown future fields, and mod-owned item IDs.
 
 ## Local validation
 
@@ -125,8 +131,7 @@ if ($LASTEXITCODE -ne 0) {
 
 ## Deferred scope
 
-Milestone 4.0 deliberately excludes loot rolling, random-number generation, victory rewards,
-reward summaries, item use, healing or battle items, equipment ownership and equipping, shops,
-buying or selling, gold, experience rewards, key-item rules, sorting, discard confirmation,
-storage boxes, inventory presentation, Godot scene changes, battle-controller changes, and
-`GameRoot` reward changes.
+Milestone 4.0's inventory boundary still excludes item use, healing or battle items, equipment
+ownership and equipping, shops, buying or selling, gold, experience rewards, key-item rules,
+sorting, discard confirmation, storage boxes, and inventory-menu presentation. Victory reward
+composition is documented separately in `MILESTONE_4_2_GUIDE.md`.

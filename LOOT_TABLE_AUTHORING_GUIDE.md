@@ -7,8 +7,9 @@ one stable `lootTableId`; the referenced JSON record stores the possible items, 
 and quantity ranges.
 
 Milestone 4.1 resolves these tables into ordered transient award facts through the pure-core
-`LootResolver`. It does **not** grant inventory, show a reward screen, save awarded items, or
-connect battle victory to campaign state. Those behaviors wait for Milestone 4.2. Keeping this
+`LootResolver`. Milestone 4.2 calls it exactly once after accepted party victory, applies the
+resulting item batch atomically, and shows aggregated totals. The resolver itself still does
+**not** grant inventory, show UI, save items, or decide when a result is accepted. Keeping this
 content boundary separate prevents reward application from depending on enemy JSON layout or
 Godot scenes.
 
@@ -202,13 +203,14 @@ Milestone 4.1's pure-.NET resolver:
 3. receive randomness through `IRandomSource`;
 4. rolls entries independently in supplied enemy and authored entry order;
 5. returns one typed item/quantity award per successful entry without aggregating duplicates;
-6. leaves a later campaign/inventory use case to apply those awards.
+6. leaves the Milestone 4.2 campaign/inventory use case to apply those awards.
 
 The resolver must not find Godot nodes, play animations, update controls, mutate a scene, or
-touch `GameState`/inventory. The loot table must not contain C# method names, scripts, formulas,
-or reflection-selected types. A future randomizer can work with the same stable table IDs; its
-seed or generated mapping would be campaign state, while the original tables remain definition
-data.
+touch `GameState`/inventory. `VictoryRewardService` consumes its typed output; it does not alter
+table semantics or aggregate the resolver's raw facts. The loot table must not contain C# method
+names, scripts, formulas, or reflection-selected types. A future randomizer can work with the
+same stable table IDs; its seed or generated mapping would be campaign state, while the original
+tables remain definition data.
 
 ## Common validation failures
 
@@ -251,4 +253,5 @@ Before committing, confirm:
 - every current enemy uses schema 2 and explicitly writes `lootTableId`;
 - every mod manifest declares data API 3;
 - no enemy still contains an inline `loot` array;
-- no reward rolling, inventory behavior, or Godot presentation was added accidentally.
+- no reward timing, inventory mutation, or Godot presentation was embedded in content or the
+  resolver; those concerns remain in the documented 4.2 application/presentation owners.

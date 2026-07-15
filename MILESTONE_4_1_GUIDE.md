@@ -61,13 +61,14 @@ the resolved catalog and use their stable namespaced IDs.
 
 ## Relationship to victory and inventory
 
-Milestone 4.1 answers only: what independent awards did these defeated definitions produce?
-It does not know whether a battle was confirmed, whether an encounter should clear, whether an
-inventory stack has room, or what UI should be shown.
+Milestone 4.1 still answers only: what independent awards did these defeated definitions
+produce? It does not know whether a battle was confirmed, whether an encounter should clear,
+whether an inventory stack has room, or what UI should be shown.
 
-Milestone 4.2 will receive a confirmed `PartyVictory`, read defeated enemy definitions, call
-this resolver once, pass each award through `InventoryService`, persist accepted stacks, and
-show a reward summary before leaving battle.
+Milestone 4.2 now owns that application seam. A confirmed `PartyVictory` carries final-snapshot
+enemy definition IDs to `VictoryRewardService`, which calls this resolver once, preserves its
+raw awards, submits one atomic inventory batch, and derives separate first-occurrence summary
+totals. `BattleCompletionService` sets clearance only after that application succeeds.
 
 ## Automated coverage
 
@@ -106,6 +107,7 @@ if ($LASTEXITCODE -ne 0) {
 
 ## Deferred scope
 
-Milestone 4.1 excludes inventory mutation, battle-controller changes, reward UI, encounter
-clearance changes, experience, gold, item overflow handling, automatic aggregation, save
-changes, loot rarity, weighted pools, guaranteed-drop groups, stealing, and conditional drops.
+The resolver itself continues to exclude inventory mutation, battle completion policy, reward
+UI, encounter clearance, experience, gold, item overflow handling, aggregation, save changes,
+loot rarity, weighted pools, guaranteed-drop groups, stealing, and conditional drops. The 4.2
+application layer composes it without expanding this boundary.

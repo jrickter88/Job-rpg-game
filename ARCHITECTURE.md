@@ -101,19 +101,21 @@ typed `EncounterLaunchRequest`. It never locates or replaces another Node itself
 `GameRoot` resolves that ID as an `EncounterDefinition` and builds its transient enemy/party
 formations before removing exploration. Milestones 3.14 and 3.15 now extend the original
 handoff: `GameRoot` constructs the initial `CombatSnapshot`, pure action/round resolvers, and
-enemy planner, then injects them into `BattleController`. The battle still receives no
-`IGameSession`; it can report a typed confirmed terminal result but cannot mutate campaign
-progress itself.
+enemy planner, then injects them into `BattleController`. Milestone 4.2 extends the confirmed
+victory path through atomic rewards and a disposable summary scene. The battle still receives
+no `IGameSession`; it can report stable defeated enemy definitions and a typed terminal result
+but cannot mutate campaign progress itself.
 
 The trigger check exists only on the accepted-movement path, after the session update. Scene
 construction, `StateChanged`, R reconstruction, quick-load, and battle return only apply
 authoritative state to presentation. After defeat, James can return standing on the marker
 without an immediate transition; stepping off and deliberately stepping back creates a retry.
-After victory, the persistent clearance flag makes the room hide and ignore that marker.
+After victory, rewards enter inventory before the persistent clearance flag is set. The room
+then hides and ignores the marker after the player confirms the reward summary.
 
-These two private composition methods—show exploration and show battle—are not
-a general navigator, scene stack, route registry, or transition state machine. A reusable map
-navigation design still waits for a second actual map.
+The three explicit presentations—exploration, battle, and reward summary—are not a general
+navigator, scene stack, route registry, or transition state machine. A reusable map navigation
+design still waits for a second actual map.
 
 ### Battle formation foundation
 
@@ -164,6 +166,7 @@ Expected examples are:
 - `IContentCatalog`: immutable, validated content lookup after startup;
 - `IGameSession`: owns the current scene-independent campaign state;
 - a save coordinator using `ISaveStore`: migration, serialization, and atomic storage;
+- one `IRandomSource` production adapter injected into confirmed reward resolution;
 - a scene navigator, once multiple real maps/destinations prove what navigation must support.
 
 `GameRoot` currently constructs these services and exposes narrow Milestone 1 methods
@@ -257,7 +260,8 @@ catalog.
 Milestone 4.1 supplies the promised pure-core `LootResolver`. It receives defeated enemy
 definition IDs in explicit order, validated content, and an injected `IRandomSource`; it returns
 one ordered `LootAward` for every independently successful entry. Duplicate item awards remain
-separate facts, and a later campaign use case decides whether/how they enter persistent state.
+separate facts. Milestone 4.2's `VictoryRewardService` is the campaign use case that applies
+those facts after confirmed victory without changing resolver ownership.
 The resolver never reads `GameState`, mutates inventory, aggregates stacks, or depends on Godot.
 Content definitions themselves still never roll randomness or mutate campaign state.
 
@@ -280,12 +284,13 @@ flowchart TD
     Session --> State["replacement GameState"]
 ```
 
-`InventoryService` is a plain-.NET, content-aware application service. It validates the whole
-current inventory before each mutation, applies checked add/remove rules to an ordinal copy,
-and publishes only a complete valid replacement. `GameSession` deliberately has no content
-catalog; its narrower responsibility is to copy positive key/value pairs, suppress logically
-identical updates, preserve unrelated campaign fields, and raise `StateChanged` once for a
-real change.
+`InventoryService` is a plain-.NET, content-aware application service. Its ordered `AddItems`
+batch combines repeated additions, validates every requested item and the whole current
+inventory, applies checked stack rules to an ordinal copy, and publishes only one complete
+valid replacement. `AddItem` delegates to that path; removal remains unchanged. `GameSession`
+deliberately has no content catalog; its narrower responsibility is to copy positive key/value
+pairs, suppress logically identical updates, preserve unrelated campaign fields, and raise
+`StateChanged` once for a real inventory change.
 
 The inventory field is additive and defaults to an empty ordinal dictionary, so saves that
 predate Milestone 4.0 load without a migration or format-version increment. Normal JSON
@@ -293,9 +298,38 @@ serialization writes current stacks, and existing extension-data handling contin
 unknown future fields. Data-mod items use the same resolved catalog and stable-ID rules; the
 mod data API and content schemas do not change.
 
-Loot tables define possible awards, and Milestone 4.1 resolves them into transient typed facts.
-That resolver still does not connect battle victory to inventory. Milestone 4.2 will own the
-one-time application boundary that passes those facts to this inventory service.
+### Victory reward application boundary
+
+Milestone 4.2 connects confirmed battle completion to persistent inventory without moving
+campaign or presentation concerns into loot resolution:
+
+```mermaid
+flowchart TD
+    Final["Final CombatSnapshot"] --> Request["BattleCompletionRequest"]
+    Request --> Root["GameRoot on confirmed PartyVictory"]
+    Root --> Completion["BattleCompletionService"]
+    Completion --> Rewards["VictoryRewardService"]
+    Rewards --> Loot["LootResolver"]
+    Rewards --> Inventory["InventoryService"]
+    Loot --> Inventory
+    Inventory --> State["GameState inventory"]
+    Completion --> Flag["Encounter clearance after reward success"]
+    State --> Summary["RewardSummaryController"]
+    Flag --> Summary
+    Summary --> Exploration["Exploration"]
+```
+
+`BattleCompletionRequest.FromFinalSnapshot` carries defeated enemy definition IDs in combatant
+order and preserves duplicates. `VictoryRewardService` calls the resolver once, retains raw
+awards, builds first-occurrence item totals for presentation, and submits one atomic inventory
+batch. `BattleCompletionService` bypasses rewards on defeat, rejects an already-cleared victory,
+and sets clearance only after the batch succeeds. `GameRoot` repeats the cleared check as a
+composition-level stale-request guard.
+
+`SystemRandomSource` is created once at application lifetime and has no loot-specific policy.
+The summary scene receives only immutable item totals and input bindings; it cannot reroll,
+reapply, save, or mutate campaign state. Reward facts and summary presentation remain transient.
+Only existing inventory and event-flag fields persist, so no save or content version changes.
 
 ### Mod composition boundary
 
@@ -479,10 +513,9 @@ current single-target rules cannot produce it and the requested three-value outc
 draw result.
 
 Outcome remains encounter-lifetime data. `PartyVictory` does not itself grant items, roll a
-loot table, clear an encounter, set a `GameState` flag, or save a battle. Milestone 3.15 adds
-one explicit game-specific handoff that consumes the confirmed outcome and sets exactly one
-clearance flag; the reusable combat rule still has no campaign dependency. See
-`MILESTONE_3_13_GUIDE.md`.
+loot table, clear an encounter, set a `GameState` flag, or save a battle. Milestones 3.15 and
+4.2 add an explicit confirmed application handoff; the reusable combat rule still has no
+campaign dependency. See `MILESTONE_3_13_GUIDE.md`.
 
 ### Playable battle presentation and campaign handoff
 
@@ -497,20 +530,21 @@ flowchart TD
     UI["Attack + target"] --> Commands["Party and enemy commands"]
     Commands --> Core["Pure round resolver"]
     Core --> Present["Snapshot + typed events"]
-    Present --> Handoff["Confirmed terminal request"]
+    Present --> Handoff["Confirmed terminal request + defeated enemy definitions"]
 ```
 
-`GameRoot` owns the application transition. A confirmed `PartyVictory` is passed to the narrow
-game-specific `TestRoomEncounterProgress` mapping, which sets
-`flag.encounter.forest.slimes-01.cleared` through `IGameSession`. `PartyDefeat` intentionally
-does not mutate the session. `TestRoomView` receives the derived cleared boolean during every
-state application, so scene reconstruction and quick-load both redraw and suppress the marker
-from `GameState`, never from a remembered Node field.
+`GameRoot` owns the application transition. On confirmed `PartyVictory`, it maps the fixed
+encounter to `flag.encounter.forest.slimes-01.cleared`, invokes the headless completion service,
+and shows the already-applied reward totals. Inventory publication succeeds before the service
+sets clearance. `PartyDefeat` intentionally resolves no loot and does not mutate the session.
+`TestRoomView` receives the derived cleared boolean during every state application, so scene
+reconstruction and quick-load both redraw and suppress the marker from `GameState`, never from
+a remembered Node field.
 
-The battle snapshot is still not saved. Only the clearance fact is persistent, and the existing
-named-field save format already preserves event flags without a format-version change. There is
-still one fixed encounter and no general encounter-progress schema, reward handoff, or scene
-navigator. See `MILESTONE_3_14_GUIDE.md` and `MILESTONE_3_15_GUIDE.md`.
+The battle snapshot, raw awards, and reward-summary state are not saved. Inventory and clearance
+use existing persistent fields, so the named-field save format needs no version change. There is
+still one fixed encounter and no general encounter-progress schema or scene navigator. See
+`MILESTONE_3_14_GUIDE.md`, `MILESTONE_3_15_GUIDE.md`, and `MILESTONE_4_2_GUIDE.md`.
 
 ## Save and load
 

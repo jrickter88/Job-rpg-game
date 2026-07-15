@@ -1,0 +1,64 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Rpg.Game/Rewards/RewardSummaryController.cs" id="1_controller"]
+
+[node name="RewardSummary" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_controller")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.045, 0.055, 0.07, 1)
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Summary" type="VBoxContainer" parent="Center"]
+custom_minimum_size = Vector2(420, 280)
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 20
+
+[node name="Title" type="Label" parent="Center/Summary"]
+layout_mode = 2
+text = "Victory Rewards"
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(1, 0.86, 0.56, 1)
+theme_override_font_sizes/font_size = 28
+
+[node name="RewardLines" type="VBoxContainer" parent="Center/Summary"]
+custom_minimum_size = Vector2(0, 110)
+layout_mode = 2
+size_flags_vertical = 3
+alignment = 1
+theme_override_constants/separation = 8
+
+[node name="Continue" type="Button" parent="Center/Summary"]
+custom_minimum_size = Vector2(150, 38)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Continue"
+
+[node name="InputHint" type="Label" parent="Center/Summary"]
+layout_mode = 2
+text = "Current confirm binding loads here."
+horizontal_alignment = 1
+autowrap_mode = 2
+theme_override_colors/font_color = Color(0.62, 1, 0.72, 1)
+theme_override_font_sizes/font_size = 14

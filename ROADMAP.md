@@ -347,8 +347,23 @@ Explicitly excluded: inventory mutation, victory handoff, reward UI, encounter c
 experience, gold, stack overflow handling, aggregation, save changes, weighted pools, stealing,
 and conditional drops. See `MILESTONE_4_1_GUIDE.md`.
 
-Milestone 4.2 will apply confirmed-victory awards exactly once through `InventoryService` and
-show a reward summary. Remaining vertical-slice work will then:
+### Milestone 4.2 - Victory rewards and reward summary
+
+- Carry ordered defeated enemy definitions through confirmed battle completion.
+- Resolve loot exactly once after confirmed party victory.
+- Apply all item awards atomically through the persistent inventory boundary.
+- Set encounter clearance only after successful reward application.
+- Present an aggregated reward summary before returning to exploration.
+
+Exit criteria: defeating the fixed slimes can produce deterministic loot awards, accepted
+awards enter persistent inventory exactly once, defeat grants nothing, duplicate completion
+cannot farm rewards, and the player confirms a reward summary before exploration resumes.
+
+Explicitly excluded: experience, gold, inventory UI, item use, equipment, shops, autosave,
+reward animation, overflow-resolution UI, and loot-table schema changes. See
+`MILESTONE_4_2_GUIDE.md`.
+
+Remaining vertical-slice work will then:
 
 - Add a three-character party shell, equipment, item rewards, a shop, and one short quest.
 - Add a limited set of common ability effects and status effects based on actual slice

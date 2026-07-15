@@ -19,22 +19,27 @@ commands, and event-log text disappear when the battle scene is freed.
 ## Victory and defeat flow
 
 The battle scene raises a typed `BattleCompletionRequest` only after the player confirms a core
-terminal outcome. It contains the stable encounter ID and `BattleOutcome`, not a scene path,
-display label, or arbitrary result string.
+terminal outcome. It contains the stable encounter ID, `BattleOutcome`, and defeated enemy
+definition IDs derived in final snapshot order, not scene paths, display labels, or arbitrary
+result strings.
 
 ```mermaid
 flowchart TD
     End["Confirmed BattleEnded"] --> Root["GameRoot"]
-    Root -->|PartyVictory| Flag["Set clearance flag"]
+    Root -->|PartyVictory| Rewards["Apply rewards atomically"]
     Root -->|PartyDefeat| Keep["Leave flag unchanged"]
-    Flag --> Room["Reconstruct exploration"]
+    Rewards --> Flag["Set clearance flag"]
+    Flag --> Summary["Confirm reward summary"]
+    Summary --> Room["Reconstruct exploration"]
     Keep --> Room
 ```
 
 `TestRoomEncounterProgress` is a small game-specific mapping for this one real encounter. It is
 not a generic quest system or encounter manager. `GameRoot` owns the transition because it
-already owns `IGameSession` and the lifetime of the two scenes. `BattleController` deliberately
-receives no session service and therefore cannot accidentally mutate campaign progress.
+already owns application services and the lifetime of the three current presentations.
+`BattleController` deliberately receives no session service and therefore cannot accidentally
+mutate campaign progress. Milestone 4.2 sets clearance only after atomic reward application;
+failure leaves both inventory and the flag unchanged.
 
 ## Why the encounter cannot retrigger after victory
 
@@ -67,12 +72,13 @@ already uses named fields and preserves future unknown fields, so this addition 
 
 Manual proof after a victory:
 
-1. Confirm the battle result and verify the test room returns with no red diamond.
-2. Press R and verify reconstruction does not restore the marker.
-3. Press K to save the cleared campaign to `slot_1`.
-4. Start or load a state where the marker is present if you want a visible contrast.
-5. Press L and verify the saved cleared state hides the marker again.
-6. Walk across `(3, 4)` and verify battle does not retrigger.
+1. Confirm the victory result and verify the reward summary appears before the test room.
+2. Confirm the summary and verify the room returns with no red diamond.
+3. Press R and verify reconstruction does not restore the marker or reapply rewards.
+4. Press K to save the cleared campaign to `slot_1`.
+5. Start or load a state where the marker is present if you want a visible contrast.
+6. Press L and verify the saved cleared state hides the marker again.
+7. Walk across `(3, 4)` and verify battle does not retrigger.
 
 Loading an older save made before victory correctly restores that older save's uncleared state.
 Save/load preserves the saved campaign; it does not merge progress from a newer in-memory state.
@@ -81,7 +87,6 @@ Save/load preserves the saved campaign; it does not merge progress from a newer 
 
 - generic encounter-progress definitions or map encounter tables;
 - random encounters, respawning enemies, multiple maps, or scene navigation infrastructure;
-- rewards, loot rolls, inventory changes, experience, gold, or quests;
+- experience, gold, quest rewards, or reward autosave;
 - battle save/resume and persistence of damage taken inside a battle;
 - victory animation, defeat penalties, checkpoints, or game-over screens.
-

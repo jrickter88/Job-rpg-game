@@ -24,6 +24,137 @@ public sealed class InventoryServiceTests
     }
 
     [Fact]
+    public void AddItems_EmptyBatch_IsANoOp()
+    {
+        (InventoryService inventory, GameSession session) = CreateService();
+        GameState previous = session.Current;
+        int notifications = 0;
+        session.StateChanged += (_, _) => notifications++;
+
+        inventory.AddItems([]);
+
+        Assert.Same(previous, session.Current);
+        Assert.Equal(0, notifications);
+    }
+
+    [Fact]
+    public void AddItems_MultipleItems_PublishesOneReplacement()
+    {
+        (InventoryService inventory, GameSession session) = CreateService();
+        int notifications = 0;
+        session.StateChanged += (_, _) => notifications++;
+
+        inventory.AddItems(
+        [
+            new InventoryAddition(PotionId, 2),
+            new InventoryAddition(SwordId, 1),
+        ]);
+
+        Assert.Equal(2, session.Current.Inventory[PotionId]);
+        Assert.Equal(1, session.Current.Inventory[SwordId]);
+        Assert.Equal(1, notifications);
+    }
+
+    [Fact]
+    public void AddItems_DuplicatesAggregateInFirstOccurrenceOrder()
+    {
+        (InventoryService inventory, GameSession session) = CreateService();
+
+        inventory.AddItems(
+        [
+            new InventoryAddition(PotionId, 1),
+            new InventoryAddition(SwordId, 1),
+            new InventoryAddition(PotionId, 2),
+        ]);
+
+        Assert.Equal(3, session.Current.Inventory[PotionId]);
+        Assert.Equal(1, session.Current.Inventory[SwordId]);
+        Assert.Equal([PotionId, SwordId], session.Current.Inventory.Keys);
+    }
+
+    [Fact]
+    public void AddItems_ExactlyToMaximumStack_Succeeds()
+    {
+        (InventoryService inventory, GameSession session) = CreateService(
+            Inventory((PotionId, 96)));
+
+        inventory.AddItems(
+        [
+            new InventoryAddition(PotionId, 1),
+            new InventoryAddition(PotionId, 2),
+        ]);
+
+        Assert.Equal(99, session.Current.Inventory[PotionId]);
+    }
+
+    [Fact]
+    public void AddItems_ExceedingMaximumStack_FailsWithoutMutationOrNotification()
+    {
+        (InventoryService inventory, GameSession session) = CreateService(
+            Inventory((PotionId, 98)));
+        GameState previous = session.Current;
+        int notifications = 0;
+        session.StateChanged += (_, _) => notifications++;
+
+        Assert.Throws<InvalidOperationException>(() => inventory.AddItems(
+        [
+            new InventoryAddition(PotionId, 1),
+            new InventoryAddition(PotionId, 1),
+        ]));
+
+        Assert.Same(previous, session.Current);
+        Assert.Equal(0, notifications);
+    }
+
+    [Fact]
+    public void AddItems_CheckedAggregateOverflow_FailsWithoutMutation()
+    {
+        const string itemId = "item.test.batch-overflow";
+        var content = new TestCatalog(Item(itemId, int.MaxValue));
+        (InventoryService inventory, GameSession session) = CreateService(content: content);
+        GameState previous = session.Current;
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
+            inventory.AddItems(
+            [
+                new InventoryAddition(itemId, int.MaxValue),
+                new InventoryAddition(itemId, 1),
+            ]));
+
+        Assert.IsType<OverflowException>(exception.InnerException);
+        Assert.Same(previous, session.Current);
+    }
+
+    [Fact]
+    public void AddItems_InvalidLaterAddition_PreventsEarlierPublication()
+    {
+        (InventoryService inventory, GameSession session) = CreateService();
+        GameState previous = session.Current;
+        int notifications = 0;
+        session.StateChanged += (_, _) => notifications++;
+
+        Assert.Throws<KeyNotFoundException>(() => inventory.AddItems(
+        [
+            new InventoryAddition(PotionId, 2),
+            new InventoryAddition("item.test.missing", 1),
+        ]));
+
+        Assert.Same(previous, session.Current);
+        Assert.Equal(0, notifications);
+    }
+
+    [Fact]
+    public void AddItems_NullCollectionOrEntry_IsRejected()
+    {
+        (InventoryService inventory, GameSession session) = CreateService();
+        GameState previous = session.Current;
+
+        Assert.Throws<ArgumentNullException>(() => inventory.AddItems(null!));
+        Assert.Throws<ArgumentException>(() => inventory.AddItems([null!]));
+        Assert.Same(previous, session.Current);
+    }
+
+    [Fact]
     public void AddItem_NewItem_CreatesOneStackWithoutMutatingPreviousState()
     {
         (InventoryService inventory, GameSession session) = CreateService();

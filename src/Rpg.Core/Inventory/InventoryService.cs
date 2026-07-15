@@ -27,39 +27,93 @@ public sealed class InventoryService
     }
 
     /// <summary>Adds a positive quantity without exceeding the item's authored stack limit.</summary>
-    public void AddItem(string itemId, int quantity)
+    public void AddItem(string itemId, int quantity) =>
+        AddItems([new InventoryAddition(itemId, quantity)]);
+
+    /// <summary>
+    /// Adds an ordered batch atomically, combining repeated item IDs before one publication.
+    /// </summary>
+    public void AddItems(IReadOnlyList<InventoryAddition> additions)
     {
-        ValidateRequestedQuantity(quantity);
-        ItemDefinition item = ResolveItem(itemId);
+        ArgumentNullException.ThrowIfNull(additions);
+        if (additions.Any(addition => addition is null))
+        {
+            throw new ArgumentException(
+                "Inventory additions cannot contain a null entry.",
+                nameof(additions));
+        }
+
+        if (additions.Count == 0)
+        {
+            return;
+        }
+
         IReadOnlyDictionary<string, int> currentInventory = ValidateCurrentInventory();
-        int currentQuantity = currentInventory.TryGetValue(itemId, out int owned) ? owned : 0;
+        var requestedByItemId = new Dictionary<string, int>(StringComparer.Ordinal);
+        var itemById = new Dictionary<string, ItemDefinition>(StringComparer.Ordinal);
+        var itemOrder = new List<string>();
 
-        int updatedQuantity;
-        try
+        foreach (InventoryAddition addition in additions)
         {
-            updatedQuantity = checked(currentQuantity + quantity);
-        }
-        catch (OverflowException exception)
-        {
-            throw CreateAddException(
-                item,
-                currentQuantity,
-                quantity,
-                "The resulting quantity exceeds the supported integer range.",
-                exception);
-        }
+            ArgumentException.ThrowIfNullOrWhiteSpace(addition.ItemId);
+            ValidateRequestedQuantity(addition.Quantity);
+            ItemDefinition item = ResolveItem(addition.ItemId);
 
-        if (updatedQuantity > item.MaxStack)
-        {
-            throw CreateAddException(
-                item,
-                currentQuantity,
-                quantity,
-                "The resulting quantity would exceed the maximum stack.");
+            if (!requestedByItemId.TryGetValue(item.Id, out int requestedQuantity))
+            {
+                requestedByItemId.Add(item.Id, addition.Quantity);
+                itemById.Add(item.Id, item);
+                itemOrder.Add(item.Id);
+                continue;
+            }
+
+            try
+            {
+                requestedByItemId[item.Id] = checked(requestedQuantity + addition.Quantity);
+            }
+            catch (OverflowException exception)
+            {
+                throw new InvalidOperationException(
+                    $"Cannot add item '{item.Id}': combined requested quantity exceeds the "
+                    + "supported integer range.",
+                    exception);
+            }
         }
 
         Dictionary<string, int> replacement = CopyInventory(currentInventory);
-        replacement[item.Id] = updatedQuantity;
+        foreach (string itemId in itemOrder)
+        {
+            ItemDefinition item = itemById[itemId];
+            int requestedQuantity = requestedByItemId[itemId];
+            int currentQuantity = currentInventory.TryGetValue(itemId, out int owned) ? owned : 0;
+
+            int updatedQuantity;
+            try
+            {
+                updatedQuantity = checked(currentQuantity + requestedQuantity);
+            }
+            catch (OverflowException exception)
+            {
+                throw CreateAddException(
+                    item,
+                    currentQuantity,
+                    requestedQuantity,
+                    "The resulting quantity exceeds the supported integer range.",
+                    exception);
+            }
+
+            if (updatedQuantity > item.MaxStack)
+            {
+                throw CreateAddException(
+                    item,
+                    currentQuantity,
+                    requestedQuantity,
+                    "The resulting quantity would exceed the maximum stack.");
+            }
+
+            replacement[item.Id] = updatedQuantity;
+        }
+
         _session.UpdateInventory(replacement);
     }
 

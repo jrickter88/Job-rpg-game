@@ -468,10 +468,10 @@ public partial class BattleController : Control
         CompletionRequested?.Invoke(
             this,
             new BattleCompletionRequestedEventArgs(
-                new BattleCompletionRequest(
+                BattleCompletionRequest.FromFinalSnapshot(
                     _encounterId
                         ?? throw new InvalidOperationException("Battle has no encounter ID."),
-                    snapshot.Outcome)));
+                    snapshot)));
     }
 
     private void OnBindingsChanged(object? sender, EventArgs eventArgs) => RefreshInputHint();

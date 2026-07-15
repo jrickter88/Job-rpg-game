@@ -1,10 +1,9 @@
-using RpgGame.Core.Combat;
 using RpgGame.Core.State;
 
 namespace RpgGame.Encounters;
 
 /// <summary>
-/// Owns the two stable IDs and the one campaign handoff for the fixed test-room encounter.
+/// Owns the stable encounter-to-clearance mapping for the fixed test-room encounter.
 /// </summary>
 /// <remarks>
 /// This is intentionally not a generalized encounter-progress framework. The game has one
@@ -18,40 +17,18 @@ public static class TestRoomEncounterProgress
 
     public const string ClearedFlagId = "flag.encounter.forest.slimes-01.cleared";
 
+    /// <summary>Maps the one supported encounter ID to its persistent clearance flag.</summary>
+    public static string GetClearanceFlagId(string encounterId)
+    {
+        RequireSupportedEncounter(encounterId);
+        return ClearedFlagId;
+    }
+
     /// <summary>Reads the fixed persistent clearance fact; an absent flag means not cleared.</summary>
     public static bool IsCleared(IGameSession session, string encounterId)
     {
         ArgumentNullException.ThrowIfNull(session);
-        RequireSupportedEncounter(encounterId);
-        return session.GetEventFlag(ClearedFlagId);
-    }
-
-    /// <summary>
-    /// Applies the terminal battle result to campaign state. Only victory clears the encounter.
-    /// </summary>
-    /// <remarks>
-    /// Defeat deliberately performs no session mutation. The caller still reconstructs
-    /// exploration, but stepping off and back onto the marker can start a fresh battle.
-    /// </remarks>
-    public static void ApplyOutcome(
-        IGameSession session,
-        string encounterId,
-        BattleOutcome outcome)
-    {
-        ArgumentNullException.ThrowIfNull(session);
-        RequireSupportedEncounter(encounterId);
-        if (outcome == BattleOutcome.InProgress || !Enum.IsDefined(outcome))
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(outcome),
-                outcome,
-                "Campaign handoff requires PartyVictory or PartyDefeat.");
-        }
-
-        if (outcome == BattleOutcome.PartyVictory)
-        {
-            session.SetEventFlag(ClearedFlagId);
-        }
+        return session.GetEventFlag(GetClearanceFlagId(encounterId));
     }
 
     private static void RequireSupportedEncounter(string encounterId)
