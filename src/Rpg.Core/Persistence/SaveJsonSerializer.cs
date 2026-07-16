@@ -4,22 +4,18 @@ using System.Text.Json.Nodes;
 namespace RpgGame.Core.Persistence;
 
 /// <summary>
-/// Owns the canonical JSON settings and migration-before-deserialization save pipeline.
+/// Owns the canonical JSON settings for the current save format.
 /// </summary>
 public sealed class SaveJsonSerializer
 {
     /// <summary>Current file format written by this build.</summary>
-    public const int CurrentFormatVersion = 2;
+    public const int CurrentFormatVersion = 1;
 
     private readonly JsonSerializerOptions _options;
-    private readonly SaveMigrationRunner _migrationRunner;
 
-    public SaveJsonSerializer(IEnumerable<ISaveMigration>? migrations = null)
+    public SaveJsonSerializer()
     {
         _options = CreateOptions();
-        _migrationRunner = new SaveMigrationRunner(
-            CurrentFormatVersion,
-            migrations ?? [new VanguardClassIdMigration()]);
     }
 
     /// <summary>Serializes one current-format envelope as readable camelCase JSON.</summary>
@@ -37,7 +33,7 @@ public sealed class SaveJsonSerializer
     }
 
     /// <summary>
-    /// Parses raw JSON, migrates it to the current shape, then creates strongly typed state.
+    /// Parses current-format JSON into strongly typed state.
     /// </summary>
     public SaveEnvelope Deserialize(string json)
     {
@@ -64,42 +60,39 @@ public sealed class SaveJsonSerializer
             throw new InvalidDataException("Save file must contain one top-level JSON object.");
         }
 
-        JsonObject migrated = _migrationRunner.MigrateToCurrent(root);
+        if (!root.TryGetPropertyValue("saveFormatVersion", out JsonNode? versionNode)
+            || versionNode is null)
+        {
+            throw new NotSupportedException(
+                $"Save uses an unsupported format; expected {CurrentFormatVersion}.");
+        }
+
+        int saveFormatVersion;
+        try
+        {
+            saveFormatVersion = versionNode.GetValue<int>();
+        }
+        catch (Exception exception) when (exception is FormatException or InvalidOperationException)
+        {
+            throw new InvalidDataException("Save format version must be an integer.", exception);
+        }
+
+        if (saveFormatVersion != CurrentFormatVersion)
+        {
+            throw new NotSupportedException(
+                $"Save uses an unsupported format; expected {CurrentFormatVersion}.");
+        }
 
         try
         {
-            SaveEnvelope envelope = migrated.Deserialize<SaveEnvelope>(_options)
+            SaveEnvelope envelope = root.Deserialize<SaveEnvelope>(_options)
                 ?? throw new InvalidDataException("Save JSON deserialized to null.");
-            return NormalizeLocation(envelope);
+            return envelope;
         }
         catch (JsonException exception)
         {
             throw new InvalidDataException("Save JSON does not match the current schema.", exception);
         }
-    }
-
-    private static SaveEnvelope NormalizeLocation(SaveEnvelope envelope)
-    {
-        if (!string.IsNullOrWhiteSpace(envelope.State.Location.MapId))
-        {
-            return envelope;
-        }
-
-        // Saves from the first exploration milestone may not contain a map identity. Their
-        // only valid destination is the original starting map and spawn.
-        return envelope with
-        {
-            State = envelope.State with
-            {
-                Location = envelope.State.Location with
-                {
-                    MapId = "map.prologue.test-room",
-                    X = 4,
-                    Y = 4,
-                    Facing = "south",
-                },
-            },
-        };
     }
 
     private static JsonSerializerOptions CreateOptions()

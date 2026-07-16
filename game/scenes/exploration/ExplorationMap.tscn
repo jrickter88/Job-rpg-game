@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://src/Rpg.Game/Exploration/ExplorationSceneController.cs" id="1_controller"]
 [ext_resource type="Script" path="res://src/Rpg.Game/Exploration/DataDrivenMapView.cs" id="2_room"]
@@ -9,6 +9,7 @@
 [ext_resource type="Script" path="res://src/Rpg.Game/Exploration/GameMenuPanel.cs" id="7_menu"]
 [ext_resource type="Script" path="res://src/Rpg.Game/Exploration/CharacterEquipmentPanel.cs" id="9_character_equipment"]
 [ext_resource type="Script" path="res://src/Rpg.Game/Display/DisplaySettingsPanel.cs" id="10_display_settings"]
+[ext_resource type="Script" path="res://src/Rpg.Game/Display/SoundSettingsPanel.cs" id="11_sound_settings"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_equipment"]
 bg_color = Color(0.035, 0.11, 0.24, 1)
@@ -120,6 +121,11 @@ custom_minimum_size = Vector2(0, 32)
 layout_mode = 2
 text = "Display"
 
+[node name="Sound" type="Button" parent="Interface/GameMenu/Margin/VBox"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+text = "Sound"
+
 [node name="Close" type="Button" parent="Interface/GameMenu/Margin/VBox"]
 custom_minimum_size = Vector2(0, 32)
 layout_mode = 2
@@ -166,6 +172,75 @@ layout_mode = 2
 theme_override_constants/separation = 4
 
 [node name="Close" type="Button" parent="Interface/DisplaySettings/Margin/VBox"]
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+text = "Close"
+
+[node name="SoundSettings" type="PanelContainer" parent="Interface"]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_equipment")
+script = ExtResource("11_sound_settings")
+
+[node name="Margin" type="MarginContainer" parent="Interface/SoundSettings"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 18
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 18
+
+[node name="VBox" type="VBoxContainer" parent="Interface/SoundSettings/Margin"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="Interface/SoundSettings/Margin/VBox"]
+layout_mode = 2
+text = "Sound"
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.95, 0.82, 0.25, 1)
+theme_override_font_sizes/font_size = 22
+
+[node name="BattleMusic" type="CheckButton" parent="Interface/SoundSettings/Margin/VBox"]
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+button_pressed = true
+text = "Battle Music"
+alignment = 1
+
+[node name="BattleMusicVolume" type="HSlider" parent="Interface/SoundSettings/Margin/VBox"]
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+max_value = 100.0
+value = 70.0
+tooltip_text = "Combat music volume"
+
+[node name="BattleMusicVolumeValue" type="Label" parent="Interface/SoundSettings/Margin/VBox"]
+layout_mode = 2
+text = "70%"
+horizontal_alignment = 1
+
+[node name="OverworldMusicLabel" type="Label" parent="Interface/SoundSettings/Margin/VBox"]
+layout_mode = 2
+text = "Overworld Music Volume"
+horizontal_alignment = 1
+
+[node name="OverworldMusicVolume" type="HSlider" parent="Interface/SoundSettings/Margin/VBox"]
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+max_value = 100.0
+value = 100.0
+
+[node name="OverworldMusicVolumeValue" type="Label" parent="Interface/SoundSettings/Margin/VBox"]
+layout_mode = 2
+text = "100%"
+horizontal_alignment = 1
+
+[node name="Close" type="Button" parent="Interface/SoundSettings/Margin/VBox"]
 custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
 text = "Close"

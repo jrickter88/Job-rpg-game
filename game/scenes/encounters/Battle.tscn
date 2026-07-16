@@ -160,6 +160,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 
 [node name="Heading" type="Label" parent="Margin/VBox/StatusRow/PartyStatus"]
+visible = false
 layout_mode = 2
 text = "PARTY STATUS"
 theme_override_colors/font_color = Color(0.66, 0.82, 1, 1)
@@ -170,6 +171,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 
 [node name="Heading" type="Label" parent="Margin/VBox/StatusRow/EnemyStatus"]
+visible = false
 layout_mode = 2
 text = "ENEMY STATUS"
 theme_override_colors/font_color = Color(1, 0.72, 0.72, 1)

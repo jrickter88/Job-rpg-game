@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Text.Json;
 using RpgGame.Core.Content;
 using RpgGame.Core.Content.Definitions;
 using RpgGame.Core.Content.Loading;
@@ -394,20 +393,14 @@ public sealed class InventoryServiceTests
         {
             ["flag.test-room.npc-spoken-to"] = true,
         };
-        var extensionData = new Dictionary<string, JsonElement>(StringComparer.Ordinal)
-        {
-            ["futureState"] = ParseElement("""{"value":42}"""),
-        };
         var state = new GameState
         {
-            SchemaVersion = 1,
             SaveId = "preservation-test",
             Location = location,
             ActivePartyActorIds = party,
             ActorProgress = progress,
             Inventory = Inventory((SwordId, 1)),
             EventFlags = flags,
-            ExtensionData = extensionData,
         };
         (InventoryService inventory, GameSession session) = CreateService(state: state);
         int notifications = 0;
@@ -416,13 +409,11 @@ public sealed class InventoryServiceTests
         inventory.AddItem(PotionId, 2);
 
         Assert.NotSame(state, session.Current);
-        Assert.Equal(state.SchemaVersion, session.Current.SchemaVersion);
         Assert.Equal(state.SaveId, session.Current.SaveId);
         Assert.Same(location, session.Current.Location);
         Assert.Same(party, session.Current.ActivePartyActorIds);
         Assert.Same(progress, session.Current.ActorProgress);
         Assert.Same(flags, session.Current.EventFlags);
-        Assert.Same(extensionData, session.Current.ExtensionData);
         Assert.Equal(1, state.Inventory[SwordId]);
         Assert.False(state.Inventory.ContainsKey(PotionId));
         Assert.Equal(1, session.Current.Inventory[SwordId]);
@@ -497,11 +488,6 @@ public sealed class InventoryServiceTests
         MaxStack = maxStack,
     };
 
-    private static JsonElement ParseElement(string json)
-    {
-        using JsonDocument document = JsonDocument.Parse(json);
-        return document.RootElement.Clone();
-    }
 
     private sealed class TestCatalog : IContentCatalog
     {

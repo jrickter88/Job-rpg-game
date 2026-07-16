@@ -4,6 +4,7 @@ namespace RpgGame.Core.Content.Definitions;
 public sealed record MapDefinition : ContentDefinition
 {
     public required string DisplayNameKey { get; init; }
+    public string? MusicCueId { get; init; }
     public required int Width { get; init; }
     public required int Height { get; init; }
     public required List<string> Rows { get; init; }

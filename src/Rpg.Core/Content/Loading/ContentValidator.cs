@@ -943,6 +943,8 @@ internal sealed class ContentValidator
     private void ValidateMap(LoadedContent item, MapDefinition map)
     {
         RequireNonBlank(item, "$.displayNameKey", map.DisplayNameKey);
+        if (map.MusicCueId is not null)
+            RequireStableKey(item, "$.musicCueId", map.MusicCueId, "music.");
         IReadOnlyList<string> rows = RequireList(item, "$.rows", map.Rows);
         if (map.Width <= 0)
         {

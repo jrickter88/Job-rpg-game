@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "id": "map.test-forest",
   "displayNameKey": "map.test-forest.name",
+  "musicCueId": "music.battle.starting-area",
   "width": 12,
   "height": 9,
   "rows": [

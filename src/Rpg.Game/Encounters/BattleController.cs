@@ -934,12 +934,21 @@ public partial class BattleController : Control
                 .Select(combatant => combatant.InstanceId));
         foreach (CombatantSnapshot combatant in snapshot.Combatants)
         {
-            string defeatedSuffix = combatant.IsDefeated ? " - defeated" : string.Empty;
+            if (combatant.IsDefeated)
+            {
+                if (_hpLabelByInstanceId.Remove(combatant.InstanceId, out Label? defeatedLabel))
+                {
+                    defeatedLabel.QueueFree();
+                }
+
+                continue;
+            }
+
             _hpLabelByInstanceId[combatant.InstanceId].Text = combatant.Side == BattleSide.Enemy
-                ? $"{DisplayName(combatant.InstanceId)}{defeatedSuffix}"
+                ? DisplayName(combatant.InstanceId)
                 : $"{DisplayName(combatant.InstanceId)}: "
                     + $"{combatant.CurrentHp}/{combatant.MaximumHp} HP | "
-                    + $"{combatant.CurrentMp}/{combatant.MaximumMp} MP{defeatedSuffix}";
+                    + $"{combatant.CurrentMp}/{combatant.MaximumMp} MP";
 
             if (_targetButtonByInstanceId.TryGetValue(
                     combatant.InstanceId,

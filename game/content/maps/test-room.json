@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "id": "map.prologue.test-room",
   "displayNameKey": "map.prologue.test-room.name",
+  "musicCueId": "music.overworld.map-1",
   "width": 12,
   "height": 9,
   "rows": [

@@ -531,6 +531,12 @@ Damage types are closed code-owned IDs, not a new content category. See
 | `battlefieldId` | ID or null | Presentation lookup, never a resource path. |
 | `musicCueId` | ID or null | Presentation lookup, never an audio path. |
 
+The current Godot presentation resolves a cue such as `music.battle.starting-area` to
+`game/assets/audio/music/battle-starting-area.mp3`. The cue remains content data so future
+battlefields or mods can select different music without embedding resource paths in JSON.
+Map definitions may also use `musicCueId` for looping overworld music. The current
+runtime uses the same cue lookup for both encounter and map music.
+
 ```json
 {
   "schemaVersion": 1,

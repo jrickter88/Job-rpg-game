@@ -56,6 +56,10 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
     // Exactly one transient gameplay presentation is active at a time. Campaign truth is
     // still held only by Session, so replacing this Node never replaces or copies GameState.
     private Node? _activeGameplayScene;
+    private AudioStreamPlayer? _battleMusicPlayer;
+    private AudioStreamPlayer? _victoryMusicPlayer;
+    private string? _activeBattleMusicCueId;
+    private string? _activeOverworldMusicCueId;
     private IRandomSource? _randomSource;
     private BattleCompletionService? _battleCompletion;
 
@@ -95,6 +99,10 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
         try
         {
             InitializeApplicationServices();
+            _battleMusicPlayer = new AudioStreamPlayer();
+            AddChild(_battleMusicPlayer);
+            _victoryMusicPlayer = new AudioStreamPlayer();
+            AddChild(_victoryMusicPlayer);
             ShowExploration();
             GD.Print(
                 $"Milestone 4.96 ready: loaded {Content.Count} definitions "
@@ -291,6 +299,8 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
         InputBindings = new InputBindingService(controlsPath);
         InputBindings.Initialize();
         DisplaySettings = new DisplaySettingsService();
+        DisplaySettings.BattleMusicChanged += OnBattleMusicChanged;
+        DisplaySettings.OverworldMusicChanged += OnOverworldMusicChanged;
         Text = new LocalizedTextCatalog(baseLocalization);
         if (InputBindings.LoadWarning is not null)
         {
@@ -330,6 +340,9 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
             }
 
             _activeGameplayScene = scene;
+            StopBattleMusic();
+            _victoryMusicPlayer?.Stop();
+            PlayOverworldMusic(Content.GetRequired<MapDefinition>(Session.Current.Location.MapId).MusicCueId);
         }
         catch
         {
@@ -394,6 +407,7 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
                 InputBindings);
             scene.CompletionRequested += OnBattleCompletionRequested;
             _activeGameplayScene = scene;
+            PlayBattleMusic(encounter.MusicCueId);
         }
         catch
         {
@@ -404,7 +418,7 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
     }
 
     /// <summary>Presents already-applied item totals before exploration is reconstructed.</summary>
-    private void ShowRewardSummary(VictoryRewardResult rewards)
+    private void ShowRewardSummary(BattleController battle, VictoryRewardResult rewards)
     {
         ArgumentNullException.ThrowIfNull(rewards);
         PackedScene packedScene = ResourceLoader.Load<PackedScene>(RewardSummaryScenePath)
@@ -412,8 +426,7 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
                 $"Could not load reward summary scene '{RewardSummaryScenePath}'.");
         var scene = packedScene.Instantiate<RewardSummaryController>();
 
-        RemoveActiveGameplayScene();
-        AddChild(scene);
+        battle.AddChild(scene);
         try
         {
             scene.Initialize(rewards.ItemSummaries, InputBindings);
@@ -422,7 +435,6 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
         }
         catch
         {
-            RemoveChild(scene);
             scene.QueueFree();
             throw;
         }
@@ -431,6 +443,7 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
     /// <summary>Disconnects and frees whichever known gameplay presentation is active.</summary>
     private void RemoveActiveGameplayScene()
     {
+        StopBattleMusic();
         if (_activeGameplayScene is null)
         {
             return;
@@ -456,6 +469,118 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
         RemoveChild(_activeGameplayScene);
         _activeGameplayScene.QueueFree();
         _activeGameplayScene = null;
+    }
+
+    private void PlayBattleMusic(string? musicCueId)
+    {
+        _activeBattleMusicCueId = musicCueId;
+        _activeOverworldMusicCueId = null;
+        _victoryMusicPlayer?.Stop();
+        if (!DisplaySettings.BattleMusicEnabled)
+        {
+            StopBattleMusic(false);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(musicCueId))
+        {
+            StopBattleMusic(false);
+            return;
+        }
+
+        AudioStream? stream = LoadMusicStream(musicCueId);
+        if (stream is null)
+        {
+            return;
+        }
+
+        AudioStreamPlayer player = _battleMusicPlayer
+            ?? throw new InvalidOperationException("Battle music player is not initialized.");
+        double fadeDuration = 0.65;
+        if (player.Playing)
+        {
+            FadeVolume(player, -80.0f, fadeDuration);
+            Tween transition = player.GetTree().CreateTween();
+            transition.TweenInterval(fadeDuration);
+            transition.TweenCallback(Callable.From(() => StartBattleMusic(stream)));
+        }
+        else
+        {
+            StartBattleMusic(stream);
+        }
+    }
+
+    private void StartBattleMusic(AudioStream stream)
+    {
+        AudioStreamPlayer player = _battleMusicPlayer
+            ?? throw new InvalidOperationException("Battle music player is not initialized.");
+        player.Stream = stream;
+        player.VolumeDb = -80.0f;
+        player.Play();
+        FadeVolume(player, VolumePercentToDecibels(DisplaySettings.BattleMusicVolumePercent), 0.65);
+    }
+
+    private void PlayOverworldMusic(string? musicCueId)
+    {
+        _activeOverworldMusicCueId = musicCueId;
+        _activeBattleMusicCueId = null;
+        StopBattleMusic(false);
+        if (string.IsNullOrWhiteSpace(musicCueId)) return;
+
+        AudioStream? stream = LoadMusicStream(musicCueId);
+        if (stream is null) return;
+        AudioStreamPlayer player = _battleMusicPlayer
+            ?? throw new InvalidOperationException("Music player is not initialized.");
+        player.Stream = stream;
+        player.VolumeDb = VolumePercentToDecibels(DisplaySettings.OverworldMusicVolumePercent);
+        player.Play();
+    }
+
+    private AudioStream? LoadMusicStream(string musicCueId)
+    {
+        const string musicPrefix = "music.";
+        string assetName = musicCueId.StartsWith(musicPrefix, StringComparison.Ordinal)
+            ? musicCueId[musicPrefix.Length..].Replace('.', '-')
+            : musicCueId.Replace('.', '-');
+        string path = $"res://game/assets/audio/music/{assetName}.mp3";
+        AudioStream? stream = ResourceLoader.Load<AudioStream>(path);
+        if (stream is null) GD.PushWarning($"Music cue '{musicCueId}' has no audio asset at '{path}'.");
+        if (stream is AudioStreamMP3 mp3) mp3.Loop = true;
+        return stream;
+    }
+
+    private void OnBattleMusicChanged(object? sender, EventArgs eventArgs)
+    {
+        if (_battleMusicPlayer is not null)
+            _battleMusicPlayer.VolumeDb = VolumePercentToDecibels(DisplaySettings.BattleMusicVolumePercent);
+        if (!DisplaySettings.BattleMusicEnabled)
+        {
+            StopBattleMusic(false);
+            return;
+        }
+
+        if (_activeBattleMusicCueId is not null)
+        {
+            PlayBattleMusic(_activeBattleMusicCueId);
+        }
+    }
+
+    private void OnOverworldMusicChanged(object? sender, EventArgs eventArgs)
+    {
+        if (_activeOverworldMusicCueId is not null)
+            PlayOverworldMusic(_activeOverworldMusicCueId);
+    }
+
+    private static float VolumePercentToDecibels(int percent) =>
+        percent <= 0 ? -80.0f : Mathf.LinearToDb(percent / 100.0f);
+
+    private void StopBattleMusic(bool clearCue = true)
+    {
+        _battleMusicPlayer?.Stop();
+        if (clearCue)
+        {
+            _activeBattleMusicCueId = null;
+        }
     }
 
     private void OnEncounterRequested(
@@ -537,7 +662,9 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
                 break;
 
             case BattleCompletionDisposition.VictoryRewardsApplied:
-                ShowRewardSummary(completion.Rewards
+                PlayVictoryMusic();
+                ShowRewardSummary((BattleController)sender!
+                    , completion.Rewards
                     ?? throw new InvalidDataException(
                         "Applied victory completion did not return reward presentation data."));
                 break;
@@ -556,6 +683,40 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
         object? sender,
         RewardSummaryContinueRequestedEventArgs eventArgs) =>
         ShowExploration("Victory rewards applied; encounter cleared.");
+
+    private void PlayVictoryMusic()
+    {
+        AudioStream? victoryStream = LoadMusicStream("music.victory");
+        AudioStreamPlayer battlePlayer = _battleMusicPlayer
+            ?? throw new InvalidOperationException("Battle music player is not initialized.");
+        AudioStreamPlayer victoryPlayer = _victoryMusicPlayer
+            ?? throw new InvalidOperationException("Victory music player is not initialized.");
+
+        victoryPlayer.Stop();
+        if (victoryStream is null)
+        {
+            return;
+        }
+
+        if (victoryStream is AudioStreamMP3 victoryMp3)
+        {
+            victoryMp3.Loop = false;
+        }
+
+        FadeVolume(battlePlayer, -80.0f, 0.65f);
+        victoryPlayer.Stream = victoryStream;
+        victoryPlayer.VolumeDb = -80.0f;
+        victoryPlayer.Play();
+        FadeVolume(
+            victoryPlayer,
+            VolumePercentToDecibels(DisplaySettings.BattleMusicVolumePercent),
+            0.65f);
+    }
+
+    private static void FadeVolume(AudioStreamPlayer player, float targetDb, double duration)
+    {
+        player.GetTree().CreateTween().TweenProperty(player, "volume_db", targetDb, duration);
+    }
 
     private void OnExplorationReloadRequested(object? sender, EventArgs eventArgs) =>
         ShowExploration("Room reconstructed from in-memory GameState.");

@@ -1,6 +1,3 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
-
 namespace RpgGame.Core.State;
 
 /// <summary>
@@ -14,12 +11,6 @@ namespace RpgGame.Core.State;
 /// </remarks>
 public sealed record GameState
 {
-    /// <summary>
-    /// Version of the state object's shape. The outer save envelope has its own format
-    /// version because file-level and state-level changes do not always happen together.
-    /// </summary>
-    public int SchemaVersion { get; init; } = 1;
-
     /// <summary>
     /// Stable identity of this playthrough/save lineage, independent of a UI slot number.
     /// </summary>
@@ -54,12 +45,6 @@ public sealed record GameState
     /// </summary>
     public Dictionary<string, bool> EventFlags { get; init; } = [];
 
-    /// <summary>
-    /// JSON properties unknown to this version of the game. Preserving them prevents an
-    /// older reader from silently deleting future data when it loads and re-saves a file.
-    /// </summary>
-    [JsonExtensionData]
-    public Dictionary<string, JsonElement>? ExtensionData { get; init; }
 }
 
 /// <summary>
@@ -82,9 +67,6 @@ public sealed record MapLocationState
     /// </summary>
     public string Facing { get; init; } = "south";
 
-    /// <summary>Unknown future location fields retained during a load/save round trip.</summary>
-    [JsonExtensionData]
-    public Dictionary<string, JsonElement>? ExtensionData { get; init; }
 }
 
 /// <summary>
@@ -116,7 +98,4 @@ public sealed record ActorProgressState
     /// </summary>
     public Dictionary<string, string> EquippedItems { get; init; } = new(StringComparer.Ordinal);
 
-    /// <summary>Unknown future actor-progress fields retained for compatibility.</summary>
-    [JsonExtensionData]
-    public Dictionary<string, JsonElement>? ExtensionData { get; init; }
 }

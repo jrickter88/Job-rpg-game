@@ -114,35 +114,14 @@ public sealed class SaveRoundTripTests
     }
 
     [Fact]
-    public void Deserialize_LegacyStateWithoutMapId_UsesOriginalStartingLocation()
+    public void Deserialize_UnsupportedFormat_IsRejected()
     {
-        const string legacy = """
-            {
-              "saveFormatVersion": 2,
-              "gameVersion": "old-build",
-              "state": {
-                "schemaVersion": 1,
-                "saveId": "legacy-campaign",
-                "location": { "x": 9, "y": 2 },
-                "activePartyActorIds": [],
-                "actorProgress": {},
-                "inventory": {},
-                "eventFlags": {}
-              },
-              "enabledMods": []
-            }
-            """;
-
-        SaveEnvelope loaded = new SaveJsonSerializer().Deserialize(legacy);
-
-        Assert.Equal("map.prologue.test-room", loaded.State.Location.MapId);
-        Assert.Equal((4, 4, "south"),
-            (loaded.State.Location.X, loaded.State.Location.Y, loaded.State.Location.Facing));
+        Assert.Throws<NotSupportedException>(() =>
+            new SaveJsonSerializer().Deserialize("{\"saveFormatVersion\": 0}"));
     }
 
     private static void AssertEquivalent(GameState expected, GameState actual)
     {
-        Assert.Equal(expected.SchemaVersion, actual.SchemaVersion);
         Assert.Equal(expected.SaveId, actual.SaveId);
         Assert.Equal(expected.Location, actual.Location);
         Assert.Equal(expected.ActivePartyActorIds, actual.ActivePartyActorIds);

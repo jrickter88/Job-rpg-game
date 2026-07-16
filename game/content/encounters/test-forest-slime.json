@@ -5,5 +5,5 @@
 	{ "enemyId": "enemy.forest.green-slime", "slotId": "formation.enemy.r1.c0" }
   ],
   "battlefieldId": "battlefield.forest.day",
-  "musicCueId": "music.battle.normal"
+  "musicCueId": "music.battle.starting-area"
 }

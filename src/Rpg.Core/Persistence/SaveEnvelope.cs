@@ -1,5 +1,3 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using RpgGame.Core.Mods;
 using RpgGame.Core.State;
 
@@ -10,20 +8,19 @@ namespace RpgGame.Core.Persistence;
 /// </summary>
 /// <remarks>
 /// The envelope stores file-format metadata separately from gameplay state. This lets the
-/// loader decide whether JSON migration is required before attempting strong deserialization.
+/// loader validate the current document version before attempting strong deserialization.
 /// It is a record/DTO, not the service that decides paths or performs disk IO.
 /// </remarks>
 public sealed record SaveEnvelope
 {
     /// <summary>
-    /// Version controlling ordered <see cref="ISaveMigration"/> execution.
-    /// Increment only for a breaking file-format change.
+    /// Current save document format. Older formats are intentionally unsupported during
+    /// active development and must be discarded when the shape changes.
     /// </summary>
     public int SaveFormatVersion { get; init; } = SaveJsonSerializer.CurrentFormatVersion;
 
     /// <summary>
-    /// Human-diagnostic build version that created the file. Compatibility decisions use
-    /// <see cref="SaveFormatVersion"/>, not this value.
+    /// Human-diagnostic build version that created the file. It is not used for loading.
     /// </summary>
     public string GameVersion { get; init; } = "0.0.0";
 
@@ -34,13 +31,8 @@ public sealed record SaveEnvelope
     public required GameState State { get; init; }
 
     /// <summary>
-    /// Data mods whose records may be referenced by this campaign. This additive field does
-    /// not require a save-format migration: saves written before Milestone 1.5 deserialize it
-    /// as an empty list and remain valid.
+    /// Data mods whose records may be referenced by this campaign.
     /// </summary>
     public List<ModReference> EnabledMods { get; init; } = [];
 
-    /// <summary>Unknown future envelope fields retained during round-trip serialization.</summary>
-    [JsonExtensionData]
-    public Dictionary<string, JsonElement>? ExtensionData { get; init; }
 }

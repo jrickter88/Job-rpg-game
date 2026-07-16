@@ -26,6 +26,7 @@ public partial class ExplorationSceneController : Node2D
 	private DialoguePanel _dialogue = null!;
 	private ControlsPanel _controlsPanel = null!;
 	private DisplaySettingsPanel _displaySettingsPanel = null!;
+	private SoundSettingsPanel _soundSettingsPanel = null!;
 	private GameMenuPanel _gameMenuPanel = null!;
 	private CharacterEquipmentPanel _equipmentPanel = null!;
 	private Label _instructions = null!;
@@ -66,6 +67,7 @@ public partial class ExplorationSceneController : Node2D
 		_dialogue = GetNode<DialoguePanel>("Interface/Dialogue");
 		_controlsPanel = GetNode<ControlsPanel>("Interface/Controls");
 		_displaySettingsPanel = GetNode<DisplaySettingsPanel>("Interface/DisplaySettings");
+		_soundSettingsPanel = GetNode<SoundSettingsPanel>("Interface/SoundSettings");
 		_gameMenuPanel = GetNode<GameMenuPanel>("Interface/GameMenu");
 		_equipmentPanel = GetNode<CharacterEquipmentPanel>("Interface/Equipment");
 		_instructions = GetNode<Label>("Interface/Instructions");
@@ -108,9 +110,11 @@ public partial class ExplorationSceneController : Node2D
 		_inputBindings.BindingsChanged += OnBindingsChanged;
 		_controlsPanel.Initialize(_inputBindings);
 		_displaySettingsPanel.Initialize(displaySettings);
+		_soundSettingsPanel.Initialize(displaySettings);
 		_gameMenuPanel.EquipmentRequested += OnEquipmentRequested;
 		_gameMenuPanel.ControlsRequested += OnControlsRequested;
 		_gameMenuPanel.DisplayRequested += OnDisplayRequested;
+		_gameMenuPanel.SoundRequested += OnSoundRequested;
 		_equipmentPanel.Initialize(_content, _session, text);
 		_room.Initialize(new RpgGame.Core.Maps.MapQueryService(
 			_content.GetRequired<MapDefinition>(_session.Current.Location.MapId)));
@@ -119,6 +123,7 @@ public partial class ExplorationSceneController : Node2D
 		SetProcessUnhandledInput(true);
 		SetProcess(true);
 		_readyForInput = true;
+		ResumeHeldMovementIfPressed();
 	}
 
 	public override void _Process(double delta)
@@ -178,7 +183,8 @@ public partial class ExplorationSceneController : Node2D
 		{
 			_gameMenuPanel.EquipmentRequested -= OnEquipmentRequested;
 			_gameMenuPanel.ControlsRequested -= OnControlsRequested;
-			_gameMenuPanel.DisplayRequested -= OnDisplayRequested;
+		_gameMenuPanel.DisplayRequested -= OnDisplayRequested;
+			_gameMenuPanel.SoundRequested -= OnSoundRequested;
 		}
 	}
 
@@ -194,7 +200,8 @@ public partial class ExplorationSceneController : Node2D
 
 		// The controls panel captures rebinding input in _Input before this unhandled-input
 		// phase. UI navigation that remains unconsumed must still never move James.
-		if (_controlsPanel.IsOpen || _gameMenuPanel.Visible || _equipmentPanel.IsOpen)
+		if (_controlsPanel.IsOpen || _gameMenuPanel.Visible || _equipmentPanel.IsOpen
+			|| _displaySettingsPanel.IsOpen || _soundSettingsPanel.IsOpen)
 		{
 			return;
 		}
@@ -278,6 +285,11 @@ public partial class ExplorationSceneController : Node2D
 	private void BeginHeldMovement(InputEventKey keyEvent, Vector2I delta, string facing)
 	{
 		string action = GetMovementAction(keyEvent);
+		BeginHeldMovement(action, delta, facing);
+	}
+
+	private void BeginHeldMovement(string action, Vector2I delta, string facing)
+	{
 		bool changedDirection = !string.Equals(
 			RequireSession().Current.Location.Facing,
 			facing,
@@ -295,6 +307,26 @@ public partial class ExplorationSceneController : Node2D
 		}
 
 		TryMove(delta, facing);
+	}
+
+	private void ResumeHeldMovementIfPressed()
+	{
+		(string Action, Vector2I Delta, string Facing)[] directions =
+		[
+			(GameInputActions.MoveUp, Vector2I.Up, "north"),
+			(GameInputActions.MoveRight, Vector2I.Right, "east"),
+			(GameInputActions.MoveDown, Vector2I.Down, "south"),
+			(GameInputActions.MoveLeft, Vector2I.Left, "west"),
+		];
+
+		foreach ((string action, Vector2I delta, string facing) in directions)
+		{
+			if (global::Godot.Input.IsActionPressed(action))
+			{
+				BeginHeldMovement(action, delta, facing);
+				break;
+			}
+		}
 	}
 
 	private void TurnTo(string facing)
@@ -325,8 +357,7 @@ public partial class ExplorationSceneController : Node2D
 
 		// Facing changes even when a wall blocks movement, matching classic JRPG controls
 		// and allowing the player to turn toward an adjacent NPC before interacting.
-		// `with` preserves unknown future location fields held by JsonExtensionData. Creating
-		// a brand-new DTO here would make ordinary movement erase data written by a newer build.
+		// Keep the existing location record so movement only changes the fields it owns.
 		session.UpdateLocation(location with
 		{
 			X = acceptedTile.X,
@@ -423,6 +454,12 @@ public partial class ExplorationSceneController : Node2D
 	{
 		_gameMenuPanel.Close();
 		_displaySettingsPanel.Open();
+	}
+
+	private void OnSoundRequested(object? sender, EventArgs eventArgs)
+	{
+		_gameMenuPanel.Close();
+		_soundSettingsPanel.Open();
 	}
 
 	private void ApplyAuthoritativeState()

@@ -492,28 +492,12 @@ public partial class BattleFormationView : Control
         IReadOnlyList<FormationPlacement> placements,
         Dictionary<string, string> labels)
     {
-        Dictionary<string, int> totalByDefinitionId = placements
-            .GroupBy(placement => placement.DefinitionId, StringComparer.Ordinal)
-            .ToDictionary(
-                group => group.Key,
-                group => group.Count(),
-                StringComparer.Ordinal);
-        var seenByDefinitionId = new Dictionary<string, int>(StringComparer.Ordinal);
-
         foreach (FormationPlacement placement in placements)
         {
             string shortName = ShortDefinitionName(placement.DefinitionId);
-            int seenCount = seenByDefinitionId.GetValueOrDefault(placement.DefinitionId) + 1;
-            seenByDefinitionId[placement.DefinitionId] = seenCount;
-
-            // If two slimes use the same enemy definition, show a friendly occurrence number.
-            // The core still keeps enemy-0/enemy-1 internally because rules need battle-local
-            // identities for overlap diagnostics, targeting later, and deterministic tests.
-            labels.Add(
-                placement.InstanceId,
-                totalByDefinitionId[placement.DefinitionId] > 1
-                    ? $"{shortName} #{seenCount}"
-                    : shortName);
+            // Duplicate presentation names are intentional. Combat still uses the unique
+            // battle-local instance ID for targeting, ordering, and event application.
+            labels.Add(placement.InstanceId, shortName);
         }
     }
 
