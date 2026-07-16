@@ -6,6 +6,14 @@
 
 ## Current Milestone 5.4 summary
 
+ART-001 documentation adds `docs/ART_STYLE_GUIDE.md` as the visual source of truth. It records
+confidence-labeled FFIV technical observations without copying artwork, then defines project
+standards for 8 x 8 construction, 16 x 16 native maps at 3x display, 16 x 16 exploration
+characters, 16 x 24 party battle art with an optional 24 x 32 extension, 32 x 32 portraits,
+standardized enemy canvases, independent tactical footprints, upper-left lighting, palette rules,
+fixed-frame animation, export requirements, and AI-art review. No artwork, code, scenes, content,
+maps, or project settings changed.
+
 `ExplorationMap.tscn` and `DataDrivenMapView` now present every validated `MapDefinition` from
 the current `GameState.Location.MapId`. `GameRoot` owns one generic scene path rather than a
 map-ID-to-scene switch. ASCII rows remain the logic source for collision and placeholder tiles;

@@ -70,8 +70,9 @@ a general-purpose RPG engine.
 34. Read `MILESTONE_4_95_GUIDE.md` before changing character equipment comparison previews.
 35. Read `MILESTONE_4_96_GUIDE.md` before changing viewport configuration, scene layout,
     resolution safety, or adaptive battle-formation presentation.
-36. Read `docs/ART_STYLE_GUIDE.md` before creating or reviewing artwork, sprites, tiles,
-    portraits, icons, effects, or other visual assets.
+36. Read `docs/ART_STYLE_GUIDE.md` before any task involving creation, modification, import,
+    generation, or review of artwork, sprites, tiles, portraits, icons, effects, or other visual
+    assets.
 
 When a requested feature conflicts with those documents, update the relevant design
 document in the same change or explain why the exception is temporary.

@@ -592,6 +592,14 @@ quest, a shop/equipment choice, two encounters, a boss, and reliable save/load.
 
 ## Later expansion gates
 
+### ART-001 - Visual dimensions and asset standards (documentation)
+
+The permanent visual specification separates confidence-labeled FFIV technical observations from
+exact project requirements. It defines the 8 x 8 construction grid, 16 x 16 native map tiles at
+48 x 48 display, 16 x 16 exploration characters, 16 x 24 party battle sprites, tile-aligned enemy
+and boss canvases, 32 x 32 portraits, shared lighting, palette, animation, naming, export, and
+review standards. No artwork or runtime systems are changed by this documentation milestone.
+
 Only after the vertical slice is fun and stable:
 
 - class learning/equipping and multi-class combinations;
