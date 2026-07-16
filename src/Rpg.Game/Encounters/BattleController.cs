@@ -63,6 +63,8 @@ public partial class BattleController : Control
     private bool _completionRequested;
     private bool _showFormationGrid = true;
     private bool _showBattleLog;
+    private static readonly List<string> PersistentBattleLogLines = [];
+    private static bool PersistentBattleLogVisible;
 
     /// <summary>
     /// Raised only after the player confirms a core-authored victory or defeat outcome.
@@ -96,6 +98,21 @@ public partial class BattleController : Control
         _continueButton.Pressed += RequestCompletion;
         _battleLogCloseButton.Pressed += ToggleBattleLog;
         ConfigureLowerBattlePanel();
+        _showFormationGrid = false;
+        _formationView.SetGridVisible(false);
+        SetGridDebugPresentation();
+        _showBattleLog = PersistentBattleLogVisible;
+        _battleLogWindow.Visible = _showBattleLog;
+        _battleLogDebugToggle.Text = _showBattleLog
+            ? "Hide Log (Debug)"
+            : "Show Log (Debug)";
+        if (PersistentBattleLogLines.Count > 0)
+        {
+            _eventLog.AppendText(string.Join(
+                System.Environment.NewLine,
+                PersistentBattleLogLines)
+                + System.Environment.NewLine);
+        }
         SetProcessInput(true);
         SetProcessUnhandledInput(false);
     }
@@ -147,6 +164,11 @@ public partial class BattleController : Control
     {
         _showFormationGrid = !_showFormationGrid;
         _formationView.SetGridVisible(_showFormationGrid);
+        SetGridDebugPresentation();
+    }
+
+    private void SetGridDebugPresentation()
+    {
         Color debugTextColor = new Color(1.0f, 1.0f, 1.0f, _showFormationGrid ? 1.0f : 0.0f);
         _encounterLabel.Modulate = debugTextColor;
         _battlefieldLabel.Modulate = debugTextColor;
@@ -158,6 +180,7 @@ public partial class BattleController : Control
     private void ToggleBattleLog()
     {
         _showBattleLog = !_showBattleLog;
+        PersistentBattleLogVisible = _showBattleLog;
         _battleLogWindow.Visible = _showBattleLog;
         _battleLogDebugToggle.Text = _showBattleLog
             ? "Hide Log (Debug)"
@@ -1061,6 +1084,7 @@ public partial class BattleController : Control
 
     private void AppendLog(string line)
     {
+        PersistentBattleLogLines.Add(line);
         _eventLog.AppendText(line + System.Environment.NewLine);
     }
 
