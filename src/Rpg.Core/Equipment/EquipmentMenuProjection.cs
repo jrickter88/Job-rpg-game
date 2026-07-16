@@ -29,7 +29,7 @@ public sealed class EquipmentMenuProjectionResolver
         {
             progress.EquippedItems.TryGetValue(slotId, out string? equippedItemId);
             string[] compatibleOwnedItemIds = _content.GetAll<EquipmentDefinition>()
-                .Where(equipment => string.Equals(equipment.SlotId, slotId, StringComparison.Ordinal)
+                .Where(equipment => EquipmentSlotIds.IsCompatible(equipment.SlotId, slotId)
                     && state.Inventory.TryGetValue(equipment.ItemId, out int quantity)
                     && quantity > 0)
                 .Select(equipment => equipment.ItemId)

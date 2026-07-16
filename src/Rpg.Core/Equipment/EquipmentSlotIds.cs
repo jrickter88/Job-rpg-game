@@ -10,7 +10,14 @@ public static class EquipmentSlotIds
     public const string HelmArmor = "slot.armor.helm";
     public const string AccessoryOne = "slot.accessory.one";
     public const string AccessoryTwo = "slot.accessory.two";
+    public const string AccessoryCategory = "slot.accessory";
 
     public static IReadOnlyList<string> Supported { get; } =
         [MainHandWeapon, OffHandWeapon, BodyArmor, FeetArmor, HelmArmor, AccessoryOne, AccessoryTwo];
+
+    public static bool IsCompatible(string authoredSlotId, string equippedSlotId) =>
+        string.Equals(authoredSlotId, equippedSlotId, StringComparison.Ordinal)
+        || (string.Equals(authoredSlotId, AccessoryCategory, StringComparison.Ordinal)
+            && (string.Equals(equippedSlotId, AccessoryOne, StringComparison.Ordinal)
+                || string.Equals(equippedSlotId, AccessoryTwo, StringComparison.Ordinal)));
 }

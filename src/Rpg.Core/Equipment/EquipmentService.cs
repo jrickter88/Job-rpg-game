@@ -22,7 +22,7 @@ public sealed class EquipmentService
         ActorProgressState progress = GetRequiredProgress(actorId);
         EquipmentDefinition equipment = ResolveEquipmentByItemId(equipmentItemId);
 
-        if (!string.Equals(equipment.SlotId, slotId, StringComparison.Ordinal))
+        if (!EquipmentSlotIds.IsCompatible(equipment.SlotId, slotId))
         {
             throw new ArgumentException(
                 $"Equipment item '{equipmentItemId}' is compatible with '{equipment.SlotId}', not '{slotId}'.",

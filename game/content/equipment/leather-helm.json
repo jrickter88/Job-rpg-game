@@ -4,9 +4,7 @@
   "itemId": "item.equipment.leather-helm",
   "slotId": "slot.armor.helm",
   "statisticModifiers": {
-    "stat.defense": 1
+	"stat.defense": 1
   },
-  "attack": 0,
-  "weaponDamagePercentages": {},
   "grantedAbilityIds": []
 }

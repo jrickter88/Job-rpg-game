@@ -2,11 +2,9 @@
   "schemaVersion": 1,
   "id": "equipment.accessory.power-ring",
   "itemId": "item.equipment.power-ring",
-  "slotId": "slot.accessory.one",
+  "slotId": "slot.accessory",
   "statisticModifiers": {
-    "stat.strength": 1
+	"stat.strength": 1
   },
-  "attack": 0,
-  "weaponDamagePercentages": {},
   "grantedAbilityIds": []
 }

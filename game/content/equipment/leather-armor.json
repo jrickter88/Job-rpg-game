@@ -4,9 +4,7 @@
   "itemId": "item.equipment.leather-armor",
   "slotId": "slot.armor.body",
   "statisticModifiers": {
-    "stat.defense": 2
+	"stat.defense": 2
   },
-  "attack": 0,
-  "weaponDamagePercentages": {},
   "grantedAbilityIds": []
 }

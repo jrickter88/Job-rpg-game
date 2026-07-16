@@ -31,6 +31,9 @@ public sealed class ContentLoadingTests
         Assert.Equal(2, catalog.GetAll<EncounterDefinition>().Count);
         Assert.Equal(2, catalog.GetAll<MapDefinition>().Count);
         Assert.Equal(2, catalog.GetAll<MapTransitionDefinition>().Count);
+        Assert.Equal(
+            "slot.accessory",
+            catalog.GetRequired<EquipmentDefinition>("equipment.accessory.power-ring").SlotId);
         Assert.Single(catalog.GetAll<QuestDefinition>());
         Assert.Single(catalog.GetAll<StartingClassRuleDefinition>());
 

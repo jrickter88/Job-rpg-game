@@ -63,7 +63,7 @@ public sealed class EquipmentScreenProjectionResolver
             progress.EquippedItems.TryGetValue(slotId, out string? equippedItemId);
             EquipmentItemDetail? equipped = equippedItemId is null ? null : ResolveItemDetail(equippedItemId);
             EquipmentItemDetail[] choices = _content.GetAll<EquipmentDefinition>()
-                .Where(equipment => string.Equals(equipment.SlotId, slotId, StringComparison.Ordinal)
+                .Where(equipment => EquipmentSlotIds.IsCompatible(equipment.SlotId, slotId)
                     && state.Inventory.TryGetValue(equipment.ItemId, out int quantity)
                     && quantity > 0)
                 .OrderBy(equipment => equipment.ItemId, StringComparer.Ordinal)
@@ -104,7 +104,7 @@ public sealed class EquipmentScreenProjectionResolver
         }
 
         EquipmentItemDetail detail = ResolveItemDetail(itemId);
-        if (!string.Equals(detail.SlotId, slotId, StringComparison.Ordinal))
+        if (!EquipmentSlotIds.IsCompatible(detail.SlotId, slotId))
         {
             throw new ArgumentException(
                 $"Equipment item '{itemId}' is compatible with '{detail.SlotId}', not '{slotId}'.",

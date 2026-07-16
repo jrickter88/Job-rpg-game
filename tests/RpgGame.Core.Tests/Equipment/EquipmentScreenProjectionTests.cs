@@ -99,7 +99,7 @@ public sealed class EquipmentScreenProjectionTests
     [InlineData(EquipmentSlotIds.HelmArmor, LeatherHelmItemId)]
     [InlineData(EquipmentSlotIds.AccessoryOne, PowerRingItemId)]
     [InlineData(EquipmentSlotIds.AccessoryTwo, SpiritCharmItemId)]
-    public void PreviewEquipmentChange_EachAdditionalStarterSlotHasOneCompatibleOwnedItem(
+    public void PreviewEquipmentChange_EachAdditionalStarterSlotHasCompatibleOwnedItem(
         string slotId,
         string itemId)
     {
@@ -110,10 +110,26 @@ public sealed class EquipmentScreenProjectionTests
         EquipmentSlotScreenModel slot = screen.Slots.Single(candidate => candidate.SlotId == slotId);
         EquipmentPreviewModel preview = resolver.PreviewEquipmentChange(state, JamesId, slotId, itemId);
 
-        Assert.Equal([itemId], slot.CompatibleOwnedItems.Select(item => item.ItemId));
+        Assert.Contains(itemId, slot.CompatibleOwnedItems.Select(item => item.ItemId));
         Assert.Equal(itemId, preview.CandidateItem!.ItemId);
         Assert.NotEqual(preview.Current.CurrentStats, preview.PreviewStats);
         Assert.Empty(state.ActorProgress[JamesId].EquippedItems);
+    }
+
+    [Fact]
+    public void AccessoryEquipment_IsAvailableInEitherAccessorySlot()
+    {
+        GameState state = CreateState();
+        var resolver = new EquipmentScreenProjectionResolver(TestContent.LoadCatalog());
+
+        EquipmentScreenModel screen = resolver.Resolve(state, JamesId);
+
+        Assert.All(
+            screen.Slots.Where(slot => slot.SlotId is EquipmentSlotIds.AccessoryOne
+                or EquipmentSlotIds.AccessoryTwo),
+            slot => Assert.Contains(
+                PowerRingItemId,
+                slot.CompatibleOwnedItems.Select(item => item.ItemId)));
     }
 
     private static GameState CreateState(string? equippedItemId = null)

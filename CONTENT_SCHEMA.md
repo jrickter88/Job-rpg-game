@@ -264,8 +264,8 @@ This keeps common inventory/shop data in exactly one place.
 | `itemId` | ID | Unique reference to its item record. |
 | `slotId` | ID | Stable game-owned equipment slot. |
 | `statisticModifiers` | object of ID → integer | Keys reference statistics. |
-| `attack` | integer | Nonnegative direct weapon offensive value. A positive value is legal only for `slot.weapon.*`; it is not a Strength modifier. |
-| `weaponDamagePercentages` | object of damage-type ID → integer | Optional. A nonempty profile is legal only for `slot.weapon.*`; every value is positive and the total is exactly `100`. |
+| `attack` | integer, optional | Nonnegative direct weapon offensive value. Omit it for armor, shields, and accessories; omitted means `0`. A positive value is legal only for `slot.weapon.*`. |
+| `weaponDamagePercentages` | object of damage-type ID → integer, optional | Omit it for non-weapons. A nonempty profile is legal only for `slot.weapon.*`; every value is positive and the total is exactly `100`. |
 | `grantedAbilityIds` | ID array | References abilities. |
 
 ```json
@@ -294,10 +294,11 @@ This keeps common inventory/shop data in exactly one place.
 }
 ```
 
-The supported base-game slot IDs are `slot.weapon.main-hand`, `slot.weapon.off-hand`, `slot.armor.body`,
-`slot.armor.feet`, `slot.armor.helm`, `slot.accessory.one`, and `slot.accessory.two`. They are
-stable save keys, not display labels. Each equipment definition selects exactly one slot; a
-character can independently equip one item in each supported slot.
+The supported base-game save slots are `slot.weapon.main-hand`, `slot.weapon.off-hand`,
+`slot.armor.body`, `slot.armor.feet`, `slot.armor.helm`, `slot.accessory.one`, and
+`slot.accessory.two`. They are stable save keys, not display labels. Equipment authored with
+`slot.accessory` is compatible with either accessory save slot; all other equipment selects one
+specific slot.
 
 Weapon profiles may mix Slash, Energy, Fire, Ice, and Lightning. Milestone 4.8 activates only
 an equipped weapon's single 100% profile for intrinsic `ability.command.attack`; a mixed profile

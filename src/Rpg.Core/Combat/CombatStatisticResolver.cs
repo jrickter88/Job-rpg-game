@@ -114,7 +114,7 @@ public sealed class CombatStatisticResolver
 			EquipmentDefinition[] matches = _content.GetAll<EquipmentDefinition>()
 				.Where(equipment => string.Equals(equipment.ItemId, itemId, StringComparison.Ordinal))
 				.ToArray();
-			if (matches.Length != 1 || !string.Equals(matches[0].SlotId, slotId, StringComparison.Ordinal))
+            if (matches.Length != 1 || !EquipmentSlotIds.IsCompatible(matches[0].SlotId, slotId))
 			{
 				throw new InvalidDataException(
 					$"Actor '{progress.ActorId}' has invalid equipment item '{itemId}' in slot '{slotId}'.");
