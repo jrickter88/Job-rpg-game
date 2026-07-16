@@ -15,6 +15,9 @@ public sealed record EnemyDefinition : ContentDefinition
     /// <summary>Localization key for the enemy name shown to the player.</summary>
     public required string DisplayNameKey { get; init; }
 
+    /// <summary>Optional presentation ID resolved by the Godot battle view.</summary>
+    public string? PresentationId { get; init; }
+
     /// <summary>Authored level used by future scaling and reward calculations.</summary>
     public int Level { get; init; } = 1;
 

@@ -1,5 +1,7 @@
 using Godot;
 using RpgGame.Core.Combat.Formation;
+using RpgGame.Core.Content;
+using RpgGame.Core.Content.Definitions;
 
 namespace RpgGame.Encounters;
 
@@ -15,6 +17,8 @@ public partial class BattleFormationView : Control
     private IReadOnlyList<FormationPlacement> _partyPlacements = [];
     private IReadOnlyDictionary<string, string> _labelByInstanceId =
         new Dictionary<string, string>(StringComparer.Ordinal);
+    private IReadOnlyDictionary<string, Texture2D> _textureByDefinitionId =
+        new Dictionary<string, Texture2D>(StringComparer.Ordinal);
     private readonly List<Label> _layoutLabels = [];
     private bool _initialized;
 
@@ -23,10 +27,12 @@ public partial class BattleFormationView : Control
     /// <summary>Receives placements already built and validated by plain .NET core rules.</summary>
     public void Initialize(
         IReadOnlyList<FormationPlacement> enemyPlacements,
-        IReadOnlyList<FormationPlacement> partyPlacements)
+        IReadOnlyList<FormationPlacement> partyPlacements,
+        IContentCatalog content)
     {
         ArgumentNullException.ThrowIfNull(enemyPlacements);
         ArgumentNullException.ThrowIfNull(partyPlacements);
+        ArgumentNullException.ThrowIfNull(content);
         if (_initialized)
         {
             throw new InvalidOperationException("BattleFormationView is already initialized.");
@@ -48,6 +54,7 @@ public partial class BattleFormationView : Control
 
         _enemyPlacements = enemyPlacements.ToArray();
         _partyPlacements = partyPlacements.ToArray();
+        _textureByDefinitionId = LoadEnemyTextures(_enemyPlacements, content);
         _labelByInstanceId = BuildDisplayLabels(_enemyPlacements, _partyPlacements);
         _initialized = true;
 
@@ -67,7 +74,13 @@ public partial class BattleFormationView : Control
 
         foreach (FormationPlacement placement in _enemyPlacements)
         {
-            DrawPlacement(placement, new Color(0.70f, 0.23f, 0.29f));
+            if (!_textureByDefinitionId.TryGetValue(placement.DefinitionId, out Texture2D? texture))
+            {
+                DrawPlacement(placement, new Color(0.70f, 0.23f, 0.29f));
+                continue;
+            }
+
+            DrawEnemyTexture(placement, texture);
         }
 
         foreach (FormationPlacement placement in _partyPlacements)
@@ -164,6 +177,45 @@ public partial class BattleFormationView : Control
             occupied.Size - new Vector2(3.0f, 3.0f));
         DrawRect(inset, fillColor);
         DrawRect(inset, Colors.White, filled: false, width: 2.0f);
+    }
+
+    private void DrawEnemyTexture(FormationPlacement placement, Texture2D texture)
+    {
+        Rect2 occupied = GetPlacementRectangle(placement);
+        float scale = Mathf.Min(occupied.Size.X / texture.GetWidth(), occupied.Size.Y / texture.GetHeight());
+        Vector2 size = new(texture.GetWidth() * scale, texture.GetHeight() * scale);
+        Rect2 destination = new(
+            occupied.Position + ((occupied.Size - size) / 2.0f),
+            size);
+        DrawTextureRect(texture, destination, false);
+    }
+
+    private static IReadOnlyDictionary<string, Texture2D> LoadEnemyTextures(
+        IReadOnlyList<FormationPlacement> placements,
+        IContentCatalog content)
+    {
+        var textures = new Dictionary<string, Texture2D>(StringComparer.Ordinal);
+        foreach (string definitionId in placements.Select(placement => placement.DefinitionId).Distinct(StringComparer.Ordinal))
+        {
+            EnemyDefinition enemy = content.GetRequired<EnemyDefinition>(definitionId);
+            if (string.IsNullOrWhiteSpace(enemy.PresentationId))
+            {
+                continue;
+            }
+
+            string assetName = enemy.PresentationId[(enemy.PresentationId.LastIndexOf('.') + 1)..];
+            string path = $"res://game/assets/enemies/{assetName}/battle.png";
+            if (ResourceLoader.Load<Texture2D>(path) is Texture2D texture)
+            {
+                textures[definitionId] = texture;
+            }
+            else
+            {
+                GD.PushWarning($"Enemy presentation '{enemy.PresentationId}' could not load '{path}'.");
+            }
+        }
+
+        return textures;
     }
 
     private void RefreshLayoutLabels()

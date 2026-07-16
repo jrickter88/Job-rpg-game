@@ -2,6 +2,7 @@
   "schemaVersion": 2,
   "id": "enemy.forest.green-slime",
   "displayNameKey": "enemy.green-slime.name",
+  "presentationId": "enemy.green-slime",
   "level": 1,
   "statistics": {
 	"stat.max-hp": 22,

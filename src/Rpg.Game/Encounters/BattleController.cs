@@ -135,7 +135,8 @@ public partial class BattleController : Control
             initialSnapshot.Combatants
                 .Where(combatant => combatant.Side == BattleSide.Party)
                 .Select(combatant => combatant.Placement)
-                .ToArray());
+                .ToArray(),
+            content);
 
         CreateCombatantControls(initialSnapshot);
         AppendLog("Battle started. Wait-mode timeline active.");
