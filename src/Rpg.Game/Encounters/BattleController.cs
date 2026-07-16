@@ -21,6 +21,8 @@ public partial class BattleController : Control
 {
     private Label _encounterLabel = null!;
     private Label _battlefieldLabel = null!;
+    private TextureRect _battlefieldBackground = null!;
+    private Button _gridDebugToggle = null!;
     private BattleFormationView _formationView = null!;
     private VBoxContainer _partyStatus = null!;
     private VBoxContainer _enemyStatus = null!;
@@ -65,6 +67,8 @@ public partial class BattleController : Control
     {
         _encounterLabel = GetNode<Label>("Margin/VBox/EncounterId");
         _battlefieldLabel = GetNode<Label>("Margin/VBox/BattlefieldId");
+        _battlefieldBackground = GetNode<TextureRect>("BattlefieldBackground");
+        _gridDebugToggle = GetNode<Button>("GridDebugToggle");
         _formationView = GetNode<BattleFormationView>("Margin/VBox/FormationView");
         _partyStatus = GetNode<VBoxContainer>("Margin/VBox/StatusRow/PartyStatus");
         _enemyStatus = GetNode<VBoxContainer>("Margin/VBox/StatusRow/EnemyStatus");
@@ -80,7 +84,43 @@ public partial class BattleController : Control
         _inputHint = GetNode<Label>("Margin/VBox/InputHint");
 
         _continueButton.Pressed += RequestCompletion;
+        _gridDebugToggle.Pressed += ToggleFormationGrid;
+        ConfigureLowerBattlePanel();
         SetProcessUnhandledInput(false);
+    }
+
+    private void ConfigureLowerBattlePanel()
+    {
+        var stack = (VBoxContainer)_commandMenu.GetParent().GetParent();
+        var commandArea = (VBoxContainer)_commandMenu.GetParent();
+        var lowerPanel = new HBoxContainer
+        {
+            CustomMinimumSize = new Vector2(0.0f, 112.0f),
+            SizeFlagsVertical = Control.SizeFlags.ShrinkBegin,
+        };
+        lowerPanel.AddThemeConstantOverride("separation", 10);
+        stack.AddChild(lowerPanel);
+        stack.MoveChild(lowerPanel, commandArea.GetIndex());
+
+        _eventLog.Reparent(lowerPanel);
+        commandArea.Reparent(lowerPanel);
+        lowerPanel.MoveChild(_eventLog, 0);
+        lowerPanel.MoveChild(commandArea, 1);
+
+        _eventLog.CustomMinimumSize = new Vector2(0.0f, 104.0f);
+        _eventLog.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        _eventLog.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
+        _eventLog.SizeFlagsStretchRatio = 1.0f;
+        commandArea.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        commandArea.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
+        commandArea.SizeFlagsStretchRatio = 1.35f;
+    }
+
+    private void ToggleFormationGrid()
+    {
+        bool showGrid = _gridDebugToggle.ButtonPressed;
+        _formationView.SetGridVisible(showGrid);
+        _gridDebugToggle.Text = showGrid ? "Hide Grid (Debug)" : "Show Grid (Debug)";
     }
 
     /// <summary>
@@ -127,6 +167,7 @@ public partial class BattleController : Control
 
         _encounterLabel.Text = $"Encounter: {encounter.Id}";
         _battlefieldLabel.Text = $"Battlefield: {encounter.BattlefieldId ?? "(none)"}";
+        _battlefieldBackground.Texture = LoadBattlefieldBackground(encounter.BattlefieldId);
         _formationView.Initialize(
             initialSnapshot.Combatants
                 .Where(combatant => combatant.Side == BattleSide.Enemy)
@@ -143,6 +184,27 @@ public partial class BattleController : Control
         _phase = BattleInputPhase.Resolving;
         AdvanceToReadyActor();
         SetProcessUnhandledInput(true);
+    }
+
+    private static Texture2D? LoadBattlefieldBackground(string? battlefieldId)
+    {
+        if (string.IsNullOrWhiteSpace(battlefieldId))
+        {
+            return null;
+        }
+
+        const string battlefieldPrefix = "battlefield.";
+        string assetName = battlefieldId.StartsWith(battlefieldPrefix, StringComparison.Ordinal)
+            ? battlefieldId[battlefieldPrefix.Length..].Replace('.', '-')
+            : battlefieldId.Replace('.', '-');
+        string path = $"res://game/assets/battlefields/{assetName}/background.png";
+        if (ResourceLoader.Load<Texture2D>(path) is Texture2D texture)
+        {
+            return texture;
+        }
+
+        GD.PushWarning($"Battlefield '{battlefieldId}' has no background asset at '{path}'.");
+        return null;
     }
 
     public override void _ExitTree()
@@ -722,6 +784,10 @@ public partial class BattleController : Control
         }
 
         CombatSnapshot snapshot = RequireSnapshot();
+        _formationView.SetDefeatedCombatants(
+            snapshot.Combatants
+                .Where(combatant => combatant.IsDefeated)
+                .Select(combatant => combatant.InstanceId));
         foreach (CombatantSnapshot combatant in snapshot.Combatants)
         {
             string defeatedSuffix = combatant.IsDefeated ? " - defeated" : string.Empty;
@@ -747,6 +813,8 @@ public partial class BattleController : Control
         _targetRow.Visible = _phase == BattleInputPhase.TargetSelection;
         _targetPrompt.Visible = _phase == BattleInputPhase.TargetSelection;
         _targetButtons.Visible = _phase == BattleInputPhase.TargetSelection;
+        _formationView.SetTargetedCombatant(
+            _phase == BattleInputPhase.TargetSelection ? _selectedTargetId : null);
         _continueButton.Visible = _phase == BattleInputPhase.Completed;
         _resultLabel.Visible = _phase == BattleInputPhase.Completed;
 

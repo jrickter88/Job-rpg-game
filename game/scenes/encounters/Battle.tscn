@@ -22,6 +22,28 @@ grow_vertical = 2
 mouse_filter = 2
 color = Color(0.055, 0.065, 0.095, 1)
 
+[node name="BattlefieldBackground" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 6
+modulate = Color(0.62, 0.62, 0.62, 1)
+
+[node name="GridDebugToggle" type="Button" parent="."]
+offset_left = 12.0
+offset_top = 8.0
+offset_right = 148.0
+offset_bottom = 36.0
+mouse_default_cursor_shape = 2
+toggle_mode = true
+button_pressed = true
+text = "Hide Grid (Debug)"
+
 [node name="Margin" type="MarginContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
@@ -63,9 +85,9 @@ text = "Battlefield loads here."
 theme_override_font_sizes/font_size = 12
 
 [node name="FormationView" type="Control" parent="Margin/VBox"]
-custom_minimum_size = Vector2(0, 130)
+custom_minimum_size = Vector2(0, 350)
 layout_mode = 2
-size_flags_vertical = 3
+size_flags_vertical = 0
 script = ExtResource("2_formation")
 
 [node name="StatusRow" type="HBoxContainer" parent="Margin/VBox"]
@@ -124,9 +146,11 @@ layout_mode = 2
 theme_override_constants/separation = 6
 
 [node name="EventLog" type="RichTextLabel" parent="Margin/VBox"]
-custom_minimum_size = Vector2(0, 48)
+custom_minimum_size = Vector2(0, 104)
 layout_mode = 2
-size_flags_vertical = 3
+size_flags_vertical = 0
+fit_content = false
+scroll_active = true
 scroll_following = true
 theme_override_colors/default_color = Color(0.88, 0.9, 0.96, 1)
 theme_override_font_sizes/normal_font_size = 12
@@ -150,6 +174,7 @@ layout_mode = 2
 text = "Continue"
 
 [node name="InputHint" type="Label" parent="Margin/VBox"]
+visible = false
 layout_mode = 2
 text = "Current battle bindings load here."
 horizontal_alignment = 1

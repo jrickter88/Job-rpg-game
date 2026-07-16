@@ -19,7 +19,13 @@ public partial class BattleFormationView : Control
         new Dictionary<string, string>(StringComparer.Ordinal);
     private IReadOnlyDictionary<string, Texture2D> _textureByDefinitionId =
         new Dictionary<string, Texture2D>(StringComparer.Ordinal);
+    private IReadOnlyDictionary<string, Texture2D> _partyTextureByDefinitionId =
+        new Dictionary<string, Texture2D>(StringComparer.Ordinal);
     private readonly List<Label> _layoutLabels = [];
+    private IReadOnlySet<string> _defeatedCombatantIds =
+        new HashSet<string>(StringComparer.Ordinal);
+    private string? _targetedCombatantId;
+    private bool _gridVisible = true;
     private bool _initialized;
 
     public override void _Ready() => Resized += OnResized;
@@ -55,6 +61,7 @@ public partial class BattleFormationView : Control
         _enemyPlacements = enemyPlacements.ToArray();
         _partyPlacements = partyPlacements.ToArray();
         _textureByDefinitionId = LoadEnemyTextures(_enemyPlacements, content);
+        _partyTextureByDefinitionId = LoadPartyTextures(_partyPlacements);
         _labelByInstanceId = BuildDisplayLabels(_enemyPlacements, _partyPlacements);
         _initialized = true;
 
@@ -64,8 +71,11 @@ public partial class BattleFormationView : Control
 
     public override void _Draw()
     {
-        DrawGrid(BattleSide.Enemy);
-        DrawGrid(BattleSide.Party);
+        if (_gridVisible)
+        {
+            DrawGrid(BattleSide.Enemy);
+            DrawGrid(BattleSide.Party);
+        }
 
         if (!_initialized)
         {
@@ -74,6 +84,11 @@ public partial class BattleFormationView : Control
 
         foreach (FormationPlacement placement in _enemyPlacements)
         {
+            if (_defeatedCombatantIds.Contains(placement.InstanceId))
+            {
+                continue;
+            }
+
             if (!_textureByDefinitionId.TryGetValue(placement.DefinitionId, out Texture2D? texture))
             {
                 DrawPlacement(placement, new Color(0.70f, 0.23f, 0.29f));
@@ -85,8 +100,55 @@ public partial class BattleFormationView : Control
 
         foreach (FormationPlacement placement in _partyPlacements)
         {
-            DrawPlacement(placement, new Color(0.18f, 0.45f, 0.78f));
+            if (_defeatedCombatantIds.Contains(placement.InstanceId))
+            {
+                continue;
+            }
+
+            if (_partyTextureByDefinitionId.TryGetValue(
+                    placement.DefinitionId,
+                    out Texture2D? texture))
+            {
+                DrawPartyTexture(placement, texture);
+            }
+            else
+            {
+                DrawPlacement(placement, new Color(0.18f, 0.45f, 0.78f));
+            }
         }
+
+        DrawTargetCursor();
+    }
+
+    /// <summary>Highlights the currently selected target without changing the logical grid.</summary>
+    public void SetTargetedCombatant(string? instanceId)
+    {
+        _targetedCombatantId = instanceId;
+        if (_initialized)
+        {
+            QueueRedraw();
+        }
+    }
+
+    /// <summary>Shows or hides the logical formation grid for presentation debugging.</summary>
+    public void SetGridVisible(bool visible)
+    {
+        _gridVisible = visible;
+        QueueRedraw();
+    }
+
+    /// <summary>Updates the presentation-only list of combatants removed from the field.</summary>
+    public void SetDefeatedCombatants(IEnumerable<string> instanceIds)
+    {
+        ArgumentNullException.ThrowIfNull(instanceIds);
+        _defeatedCombatantIds = new HashSet<string>(instanceIds, StringComparer.Ordinal);
+        if (!_initialized)
+        {
+            return;
+        }
+
+        RefreshLayoutLabels();
+        QueueRedraw();
     }
 
     /// <summary>
@@ -195,6 +257,40 @@ public partial class BattleFormationView : Control
         DrawTextureRect(texture, destination, false);
     }
 
+    private void DrawTargetCursor()
+    {
+        if (string.IsNullOrWhiteSpace(_targetedCombatantId))
+        {
+            return;
+        }
+
+        FormationPlacement? placement = _enemyPlacements
+            .Concat(_partyPlacements)
+            .FirstOrDefault(candidate => string.Equals(
+                candidate.InstanceId,
+                _targetedCombatantId,
+                StringComparison.Ordinal));
+        if (placement is null)
+        {
+            return;
+        }
+
+        Rect2 target = GetPlacementRectangle(placement);
+        bool pointsLeft = placement.Anchor.Side == BattleSide.Enemy;
+        float x = pointsLeft
+            ? target.End.X + 24.0f
+            : target.Position.X - 24.0f;
+        float y = target.Position.Y + (target.Size.Y / 2.0f);
+        Vector2[] points =
+        [
+            new(x + (pointsLeft ? -12.0f : 12.0f), y),
+            new(x, y - 8.0f),
+            new(x, y + 8.0f),
+        ];
+        DrawColoredPolygon(points, new Color(1.0f, 0.84f, 0.25f));
+        DrawPolyline([points[0], points[1], points[2], points[0]], new Color(1.0f, 0.96f, 0.65f), 2.0f);
+    }
+
     private static IReadOnlyDictionary<string, Texture2D> LoadEnemyTextures(
         IReadOnlyList<FormationPlacement> placements,
         IContentCatalog content)
@@ -223,6 +319,42 @@ public partial class BattleFormationView : Control
         return textures;
     }
 
+    private static IReadOnlyDictionary<string, Texture2D> LoadPartyTextures(
+        IReadOnlyList<FormationPlacement> placements)
+    {
+        var textures = new Dictionary<string, Texture2D>(StringComparer.Ordinal);
+        foreach (string definitionId in placements
+                     .Select(placement => placement.DefinitionId)
+                     .Distinct(StringComparer.Ordinal))
+        {
+            string assetName = definitionId[(definitionId.LastIndexOf('.') + 1)..];
+            string path = $"res://game/assets/party/{assetName}/battle.png";
+            if (ResourceLoader.Load<Texture2D>(path) is Texture2D texture)
+            {
+                textures[definitionId] = texture;
+            }
+            else
+            {
+                GD.PushWarning($"Party presentation '{definitionId}' could not load '{path}'.");
+            }
+        }
+
+        return textures;
+    }
+
+    private void DrawPartyTexture(FormationPlacement placement, Texture2D texture)
+    {
+        Rect2 occupied = GetPlacementRectangle(placement);
+        float scale = Mathf.Min(
+            (occupied.Size.X * 0.9f) / texture.GetWidth(),
+            (occupied.Size.Y * 0.9f) / texture.GetHeight());
+        Vector2 size = new(texture.GetWidth() * scale, texture.GetHeight() * scale);
+        DrawTextureRect(
+            texture,
+            new Rect2(occupied.Position + ((occupied.Size - size) / 2.0f), size),
+            false);
+    }
+
     private void RefreshLayoutLabels()
     {
         foreach (Label label in _layoutLabels)
@@ -235,6 +367,11 @@ public partial class BattleFormationView : Control
         CreateGridLabels();
         foreach (FormationPlacement placement in _enemyPlacements.Concat(_partyPlacements))
         {
+            if (_defeatedCombatantIds.Contains(placement.InstanceId))
+            {
+                continue;
+            }
+
             CreatePlacementLabel(placement);
         }
     }
