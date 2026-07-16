@@ -37,6 +37,7 @@ public partial class ExplorationSceneController : Node2D
 	private InputBindingService? _inputBindings;
 	private bool _developmentCommandInProgress;
 	private bool _encounterTransitionRequested;
+	private bool _readyForInput;
 	private string? _heldMovementAction;
 	private Vector2I _heldMovementDelta;
 	private string _heldMovementFacing = string.Empty;
@@ -71,6 +72,7 @@ public partial class ExplorationSceneController : Node2D
 		_developmentStatus = GetNode<Label>("Interface/DevelopmentStatus");
 		SetProcessUnhandledInput(false);
 		SetProcess(false);
+		_readyForInput = false;
 	}
 
 	/// <summary>
@@ -116,6 +118,7 @@ public partial class ExplorationSceneController : Node2D
 		ApplyAuthoritativeState();
 		SetProcessUnhandledInput(true);
 		SetProcess(true);
+		_readyForInput = true;
 	}
 
 	public override void _Process(double delta)
@@ -157,6 +160,10 @@ public partial class ExplorationSceneController : Node2D
 
 	public override void _ExitTree()
 	{
+		_readyForInput = false;
+		SetProcessUnhandledInput(false);
+		SetProcess(false);
+
 		if (_session is not null)
 		{
 			_session.StateChanged -= OnSessionStateChanged;
@@ -177,7 +184,8 @@ public partial class ExplorationSceneController : Node2D
 
 	public override void _UnhandledInput(InputEvent @event)
 	{
-		if (_session is null
+		if (!_readyForInput
+			|| _session is null
 			|| _encounterTransitionRequested
 			|| @event is not InputEventKey { Pressed: true, Echo: false } keyEvent)
 		{
