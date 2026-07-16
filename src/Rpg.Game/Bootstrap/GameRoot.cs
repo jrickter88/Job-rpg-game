@@ -38,7 +38,7 @@ namespace RpgGame.Bootstrap;
 /// </remarks>
 public partial class GameRoot : Node, IExplorationDevelopmentCommands
 {
-    private const string GameVersion = "0.4.8-equipment";
+    private const string GameVersion = "0.5.3B";
     private const string JamesId = "actor.hero.james";
     private const string IronSwordItemId = "item.equipment.iron-sword";
     private const string WoodenShieldItemId = "item.equipment.wooden-shield";

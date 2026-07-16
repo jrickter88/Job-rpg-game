@@ -196,28 +196,38 @@ same ID in one record are validation errors.
 
 ### Dialogue
 
-Milestone 2 supports only one speaker and an ordered list of literal placeholder lines. This
-is intentionally not a branching conversation or cutscene language.
+Milestone 5.3A supports one speaker localization key and an ordered list of line localization
+keys. This remains a linear exchange, not a branching conversation or cutscene language.
 
 | Field | Type | Notes |
 |---|---|---|
-| `speakerName` | string | Nonblank placeholder text shown above the dialogue. |
-| `lines` | string array | At least one nonblank line, displayed in authored order. |
+| `speakerNameKey` | string | Required localization key for the speaker label. |
+| `lineTextKeys` | string array | At least one nonblank localization key, displayed in authored order. |
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "id": "dialogue.prologue.test-room-guide",
-  "speakerName": "Test Room Guide",
-  "lines": [
-    "Hello, James. This room remembers what happens here."
+  "speakerNameKey": "dialogue.prologue.test-room-guide.speaker",
+  "lineTextKeys": [
+    "dialogue.prologue.test-room-guide.line.001"
   ]
 }
 ```
 
-Literal text is a documented temporary Milestone 2 choice because localization is explicitly
-deferred. Do not add conditions, choices, portraits, actions, arbitrary commands, or resource
-paths to this record. The exploration scene selects the record through its stable dialogue ID.
+The referenced text belongs in the base locale bundle, for example
+`game/localization/en/dialogue/prologue/test-room-guide.json`. Do not add conditions,
+choices, portraits, actions, arbitrary commands, or resource paths to this record. The
+exploration scene selects the record through its stable dialogue ID.
+
+### Localization bundles
+
+Locale text is authored beneath `game/localization/{locale}/` and loaded recursively. Every
+file contains schemaVersion 1, a matching locale, and a texts dictionary of stable key-to-string
+entries. File paths are organizational only. Duplicate keys across files, blank keys or values,
+malformed records, and missing base-locale references are validation errors. Runtime lookup uses
+`??missing.key??` as a development fallback. Data-mod localization is deferred and base keys
+cannot be replaced.
 
 ### Statistic
 

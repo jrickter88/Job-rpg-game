@@ -38,7 +38,7 @@ internal static class ContentCategoryRegistry
         Create<AbilityDefinition>("abilities", "ability."),
         Create<ActorDefinition>("actors", "actor."),
         Create<ClassDefinition>("classes", "class."),
-        Create<DialogueDefinition>("dialogues", "dialogue."),
+        Create<DialogueDefinition>("dialogues", "dialogue.", supportedSchemaVersion: 2),
         Create<EncounterDefinition>("encounters", "encounter."),
         Create<EnemyDefinition>("enemies", "enemy.", supportedSchemaVersion: 2),
         Create<EquipmentDefinition>("equipment", "equipment."),

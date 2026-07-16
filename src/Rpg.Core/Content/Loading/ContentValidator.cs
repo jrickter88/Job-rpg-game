@@ -359,6 +359,14 @@ internal sealed class ContentValidator
 
         foreach (LoadedContent item in _loaded)
         {
+            if (!string.Equals(item.SourceId, ContentSourceIds.Base, StringComparison.Ordinal))
+            {
+                // Mod localization bundles are deliberately deferred. Do not let this
+                // milestone require mod-owned text or accidentally treat base text as an
+                // override surface.
+                continue;
+            }
+
             switch (item.Definition)
             {
                 case AbilityDefinition ability:

@@ -107,10 +107,10 @@ public sealed class ContentLoadingTests
                 """),
             new("dialogues/broken.json", """
                 {
-                  "schemaVersion": 1,
+                  "schemaVersion": 2,
                   "id": "dialogue.test.broken",
-                  "speakerName": " ",
-                  "lines": []
+                  "speakerNameKey": " ",
+                  "lineTextKeys": []
                 }
                 """),
             new("starting-class-rules/broken.json", """

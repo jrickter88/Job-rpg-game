@@ -1,8 +1,35 @@
 # Current Project Handoff
 
-> Current update: Milestone 5.2 is implemented locally and intentionally uncommitted for review.
-> The live battle path now uses deterministic wait-mode timeline initiative plus the transient
-> status foundation. Older sections below remain historical unless explicitly superseded above.
+> Current update: Milestone 5.3B cleanup is in progress locally and intentionally uncommitted
+> for review. Milestones 5.3A, 5.2A, and the later combat/equipment work are committed in the
+> repository history. Older sections below remain historical unless explicitly superseded above.
+
+## Current Milestone 5.3B summary
+
+This cleanup pass reconciles the handoff with the current repository history and the completed
+5.3A localization migration. The runtime version is now `0.5.3B`. The authoring guide points
+authors to recursive scoped locale bundles, the roadmap marks 5.3A implemented and 5.3B current,
+and the retired root `game/localization/en.json` file has been replaced by:
+
+- `game/localization/en/common.json`
+- `game/localization/en/maps/prologue.json`
+- `game/localization/en/items/equipment.json`
+- `game/localization/en/items/consumables.json`
+- `game/localization/en/dialogue/prologue/test-room-guide.json`
+
+The command-line content validator loads the base English bundles, validates duplicate/blank/
+wrong-locale bundle errors, and checks content localization references. Mod localization remains
+deferred, so data mods cannot replace base locale keys.
+
+Validation for this cleanup is recorded at the end of this handoff after the commands are run.
+
+## Current Milestone 5.3A summary
+
+Milestone 5.3A added the Godot-free `LocalizationBundleLoader`, immutable
+`LocalizationCatalog`, recursive Godot filesystem adapter, and dialogue schema version 2.
+Dialogue records now contain `speakerNameKey` and ordered `lineTextKeys`; the dialogue panel
+resolves those keys through the application localization catalog. Missing runtime keys display
+as `??missing.key??`, while base-content validation rejects missing references.
 
 ## Current Milestone 5.2A summary
 
@@ -309,3 +336,39 @@ handled.
   later explicit decision, not the resolver.
 - Do not move campaign mutation into `LootResolver`; keep it headless, deterministic, and
   content-only.
+
+## Current 5.3B validation
+
+Commands run from the repository root:
+
+`text
+dotnet test tests/RpgGame.Core.Tests/RpgGame.Core.Tests.csproj --no-restore
+Passed! - Failed: 0, Passed: 390, Skipped: 0, Total: 390
+
+dotnet run --project tools/content-validation/RpgGame.ContentValidation.csproj -- game/content
+Content validation passed: 44 definitions loaded with 0 data mod(s).
+
+dotnet run --project tools/content-validation/RpgGame.ContentValidation.csproj -- game/content examples/mods
+Content validation passed: 47 definitions loaded with 1 data mod(s).
+
+dotnet build RpgGame.sln --no-restore
+Build succeeded. 0 Warning(s). 0 Error(s).
+
+godot --headless --editor --path . --quit
+Exited successfully with code 0.
+
+git diff --check
+Passed; only Git line-ending normalization warnings were reported by status inspection.
+`
+
+Interactive Godot gameplay verification was not run. The available validation only opened the
+project headlessly; a manual dialogue walkthrough, map-name check, and item-description check
+remain recommended before committing.
+
+## Current 5.3B deferred scope
+
+- Mod-owned localization bundles and base-key overrides.
+- Runtime locale switching and a language-selection UI.
+- Translation completeness reports, pluralization, gender/grammar rules, rich text, portraits,
+  voice/audio cues, and localization import/export tools.
+- Dialogue branching, choices, cutscene commands, and quest dialogue logic.

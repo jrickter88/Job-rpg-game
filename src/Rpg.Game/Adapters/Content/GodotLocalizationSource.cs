@@ -43,7 +43,7 @@ public sealed class GodotLocalizationSource
             string path = $"{directoryPath}/{fileName}";
             documents.Add(new LocalizationBundleDocument(
                 relativePath,
-                FileAccess.GetFileAsString(path)));
+                global::Godot.FileAccess.GetFileAsString(path)));
         }
 
         foreach (string childDirectory in DirAccess.GetDirectoriesAt(directoryPath))

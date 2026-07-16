@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "locale": "en",
+  "texts": {
+    "map.prologue.test-room.name": "Test Room",
+    "map.test-forest.name": "Test Forest"
+  }
+}

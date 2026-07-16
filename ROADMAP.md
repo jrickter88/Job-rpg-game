@@ -555,6 +555,21 @@ map-owned encounter markers. `MapQueryService` is Godot-free and answers bounds,
 passability, spawns, encounters, and transitions. Placeholder rendering remains separate from
 the gameplay logic layer. See `MAP_AUTHORING_GUIDE.md`.
 
+### Milestone 5.3A - Scoped localization bundles and dialogue text keys (implemented)
+
+Localization is organized beneath `game/localization/{locale}/` and loaded recursively into
+one immutable locale catalog. Duplicate keys, malformed bundle files, locale mismatches, blank
+keys/values, and missing base-locale references are rejected. Dialogue records now contain
+ordered speaker and line localization keys rather than literal prose. Mod localization remains
+deferred; data mods cannot override base text keys.
+
+### Milestone 5.3B - Cleanup, manual verification, and documentation consistency (current)
+
+This cleanup pass updates the handoff, authoring guidance, roadmap status, and runtime
+GameVersion after the 5.3A migration. It also verifies the scoped English bundles and the
+existing exploration dialogue in the Godot project. No new gameplay, save schema, or content
+systems are added.
+
 Remaining vertical-slice work will then:
 
 - Add a three-character party shell, equipment, item rewards, a shop, and one short quest.
@@ -575,7 +590,7 @@ Only after the vertical slice is fun and stable:
 - scalable encounter tables and more map tooling;
 - quest journal, party formation, equipment comparison, and shop polish;
 - dialogue/cutscene authoring improvements driven by actual writing volume;
-- localization pipeline, accessibility, performance budgets, and platform exports.
+- additional locale coverage, accessibility, performance budgets, and platform exports.
 
 ## Concise first-playable proposal
 

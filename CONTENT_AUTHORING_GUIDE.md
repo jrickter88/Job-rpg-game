@@ -10,7 +10,9 @@ complete field-level contract remains in `CONTENT_SCHEMA.md`.
    are discovered recursively.
 3. Include `schemaVersion` and `id` in every top-level record.
 4. Reference other records by stable IDs, never filenames, display names, array positions, or Godot paths.
-5. Add localization keys to `game/localization/en.json` for display and description fields.
+5. Add localization text to the appropriate scoped file under `game/localization/en/`. The
+   runtime loads that locale folder recursively; do not add new text to a retired root
+   `en.json` file.
 6. Run:
 
 ```powershell

@@ -1,9 +1,9 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "id": "dialogue.prologue.test-room-guide",
-  "speakerName": "Test Room Guide",
-  "lines": [
-	"Hello, James. This room is small, but it remembers what happens here.",
-    "Move away, reload the room with R, and I will still know we spoke."
+  "speakerNameKey": "dialogue.prologue.test-room-guide.speaker",
+  "lineTextKeys": [
+	"dialogue.prologue.test-room-guide.line.001",
+    "dialogue.prologue.test-room-guide.line.002"
   ]
 }

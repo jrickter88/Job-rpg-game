@@ -2,15 +2,12 @@
   "schemaVersion": 1,
   "locale": "en",
   "texts": {
-    "map.prologue.test-room.name": "Test Room",
-    "map.test-forest.name": "Test Forest",
     "item.iron-sword.description": "A dependable blade with enough nicks to have its own opinions.",
     "item.wooden-shield.description": "A round shield that has met more arguments than arrows.",
     "item.leather-armor.description": "Practical leather armor. It smells faintly of rain and old victories.",
     "item.leather-boots.description": "Scuffed leather boots. They know exactly how to leave a room dramatically.",
     "item.leather-helm.description": "A humble helm for keeping ambitious ceiling beams at bay.",
     "item.power-ring.description": "A small ring that makes carrying a sword feel like a personal statement.",
-    "item.spirit-charm.description": "A quiet charm said to keep one's courage from wandering off.",
-    "item.potion.description": "Red, fizzy, and almost certainly better than whatever the slime was drinking."
+    "item.spirit-charm.description": "A quiet charm said to keep one's courage from wandering off."
   }
 }

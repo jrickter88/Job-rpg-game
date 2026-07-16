@@ -719,7 +719,8 @@ ability/target policy.
 
 - final damage and progression formulas;
 - status-effect stacking and timing;
-- dialogue choices, conditions, cutscene commands, and localization;
+- dialogue choices, conditions, cutscene commands, additional locale/runtime language features,
+  and mod-owned localization;
 - general map transitions and random/scalable encounter triggering details;
 - item use, equipment ownership, active equipment slots, and application of authored weapon
   damage profiles;
