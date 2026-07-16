@@ -7,3 +7,5 @@ localization, audio, and art. Reusable rules and persistent-state models belong 
 Directories are organized by authoring concern, not by a single giant scene tree.
 Empty directories contain `.gitkeep` placeholders until their milestones begin.
 
+
+make sure to follow mrbeast
