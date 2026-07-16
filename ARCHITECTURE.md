@@ -90,6 +90,15 @@ graphical assets and has only one real map. It is still a tile-based map: moveme
 occupancy, facing, and saved coordinates all use integer grid positions. A generalized map
 loader, entry-point registry, and scene navigator wait for a second map to prove their shape.
 
+### Generic map presentation
+
+All exploration maps now use one disposable `ExplorationMap.tscn` and `DataDrivenMapView`.
+The controller resolves the current `GameState.Location.MapId` through the content catalog,
+injects a Godot-free `MapQueryService`, and renders the ASCII logic rows plus map-owned markers.
+`GameRoot` owns one generic exploration scene path; map JSON never contains Godot paths and a
+new map does not require a new view class or scene. The test-room guide is a temporary
+presentation fixture until NPC placement receives its own content slice.
+
 ### Fixed encounter handoff
 
 Milestone 2.5 adds one direct, feature-specific transition without changing persistent-state

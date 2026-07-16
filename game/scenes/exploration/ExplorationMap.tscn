@@ -1,7 +1,7 @@
 [gd_scene load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://src/Rpg.Game/Exploration/ExplorationSceneController.cs" id="1_controller"]
-[ext_resource type="Script" path="res://src/Rpg.Game/Exploration/TestRoomView.cs" id="2_room"]
+[ext_resource type="Script" path="res://src/Rpg.Game/Exploration/DataDrivenMapView.cs" id="2_room"]
 [ext_resource type="Script" path="res://src/Rpg.Game/Exploration/PlayerMarkerView.cs" id="3_player"]
 [ext_resource type="Script" path="res://src/Rpg.Game/Exploration/TestGuideNpc.cs" id="4_guide"]
 [ext_resource type="Script" path="res://src/Rpg.Game/Exploration/DialoguePanel.cs" id="5_dialogue"]
@@ -18,7 +18,7 @@ border_width_right = 6
 border_width_bottom = 6
 border_color = Color(0.28, 0.58, 0.88, 1)
 
-[node name="TestRoom" type="Node2D"]
+[node name="ExplorationMap" type="Node2D"]
 script = ExtResource("1_controller")
 
 [node name="Map" type="Node2D" parent="."]

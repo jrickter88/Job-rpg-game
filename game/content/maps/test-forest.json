@@ -12,11 +12,12 @@
 	"#.....E....#",
 	"#..........#",
 	"#..........#",
-	"#T.........#",
+	"#T........T#",
     "############"
   ],
   "spawns": [
-	{ "id": "spawn.from-test-room", "x": 1, "y": 7, "facing": "north" }
+	{ "id": "spawn.from-test-room", "x": 1, "y": 7, "facing": "north" },
+	{ "id": "spawn.from-clearing", "x": 10, "y": 7, "facing": "north" }
   ],
   "encounters": [
 	{
@@ -32,6 +33,12 @@
 	  "id": "transition.test-forest.to-test-room",
 	  "sourceCell": { "x": 1, "y": 7 },
 	  "destinationMapId": "map.prologue.test-room",
+	  "destinationSpawnId": "spawn.from-test-forest"
+	},
+	{
+	  "id": "transition.test-forest.to-clearing",
+	  "sourceCell": { "x": 10, "y": 7 },
+	  "destinationMapId": "map.prologue.clearing",
 	  "destinationSpawnId": "spawn.from-test-forest"
 	}
   ]

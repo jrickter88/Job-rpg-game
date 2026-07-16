@@ -113,7 +113,7 @@ public partial class ExplorationSceneController : Node2D
 		_gameMenuPanel.DisplayRequested += OnDisplayRequested;
 		_equipmentPanel.Initialize(_content, _session, text);
 		_room.Initialize(new RpgGame.Core.Maps.MapQueryService(
-			_content.GetRequired<MapDefinition>(_room.MapId)));
+			_content.GetRequired<MapDefinition>(_session.Current.Location.MapId)));
 		RefreshInstructionText();
 		ApplyAuthoritativeState();
 		SetProcessUnhandledInput(true);
@@ -449,11 +449,10 @@ public partial class ExplorationSceneController : Node2D
 			? _room.TileToWorld(_room.GuideTile)
 			: Vector2.Zero;
 		_guide.RefreshFromState(session);
-		_room.SetEncounterCleared(TestRoomEncounterProgress.IsCleared(
-			session,
-			_room.MapId == TestRoomView.MapId
-				? TestRoomView.EncounterId
-				: TestForestView.EncounterId));
+		_room.SetClearedEncounterFlags(session.Current.EventFlags
+			.Where(flag => flag.Value)
+			.Select(flag => flag.Key)
+			.ToHashSet(StringComparer.Ordinal));
 	}
 
 	private static bool TryGetMovement(

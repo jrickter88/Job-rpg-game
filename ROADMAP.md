@@ -563,12 +563,21 @@ keys/values, and missing base-locale references are rejected. Dialogue records n
 ordered speaker and line localization keys rather than literal prose. Mod localization remains
 deferred; data mods cannot override base text keys.
 
-### Milestone 5.3B - Cleanup, manual verification, and documentation consistency (current)
+### Milestone 5.3B - Cleanup, manual verification, and documentation consistency (implemented)
 
 This cleanup pass updates the handoff, authoring guidance, roadmap status, and runtime
 GameVersion after the 5.3A migration. It also verifies the scoped English bundles and the
 existing exploration dialogue in the Godot project. No new gameplay, save schema, or content
 systems are added.
+
+### Milestone 5.4 - Generic data-driven exploration scene (current)
+
+All validated map content now loads through one generic exploration scene and placeholder map
+view. Map JSON owns ASCII passability, spawns, encounter markers, and transitions; `GameRoot`
+owns only the generic exploration scene path and no longer maps map IDs to Godot scene paths.
+`map.prologue.clearing` proves the workflow with JSON-only content and a round trip from the
+test forest. The test-room guide remains a temporary compatibility fixture; data-authored NPC
+placement is intentionally deferred.
 
 Remaining vertical-slice work will then:
 

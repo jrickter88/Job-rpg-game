@@ -14,5 +14,5 @@ public interface IExplorationMapView
     bool IsWalkable(Vector2I tile);
     bool TryGetEncounterAt(Vector2I tile, out string encounterId);
     bool TryGetTransitionAt(Vector2I tile, out MapTransitionDefinition? transition);
-    void SetEncounterCleared(bool cleared);
+    void SetClearedEncounterFlags(IReadOnlySet<string> clearedFlagIds);
 }

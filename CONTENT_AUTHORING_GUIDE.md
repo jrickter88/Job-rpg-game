@@ -3,6 +3,13 @@
 This is the practical guide for adding items, equipment, maps, enemies, and loot tables. The
 complete field-level contract remains in `CONTENT_SCHEMA.md`.
 
+## Adding a Map
+
+Create one JSON file under `game/content/maps/` with ASCII `rows`, named `spawns`, optional
+encounter markers, and transitions. Add the map display key to the appropriate scoped bundle
+under `game/localization/en/maps/`. Every validated map is presented by the shared
+`ExplorationMap.tscn`; do not create a map-specific Godot scene or put a scene path in JSON.
+
 ## Workflow
 
 1. Choose a permanent lowercase ID. IDs are save/content identity and must not be renamed after release.

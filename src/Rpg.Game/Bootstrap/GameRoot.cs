@@ -38,7 +38,7 @@ namespace RpgGame.Bootstrap;
 /// </remarks>
 public partial class GameRoot : Node, IExplorationDevelopmentCommands
 {
-    private const string GameVersion = "0.5.3B";
+    private const string GameVersion = "0.5.4";
     private const string JamesId = "actor.hero.james";
     private const string IronSwordItemId = "item.equipment.iron-sword";
     private const string WoodenShieldItemId = "item.equipment.wooden-shield";
@@ -47,8 +47,7 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
     private const string LeatherHelmItemId = "item.equipment.leather-helm";
     private const string PowerRingItemId = "item.equipment.power-ring";
     private const string SpiritCharmItemId = "item.equipment.spirit-charm";
-    private const string TestRoomScenePath = "res://game/scenes/exploration/TestRoom.tscn";
-    private const string TestForestScenePath = "res://game/scenes/exploration/TestForest.tscn";
+    private const string ExplorationScenePath = "res://game/scenes/exploration/ExplorationMap.tscn";
     private const string BattleScenePath = "res://game/scenes/encounters/Battle.tscn";
     private const string RewardSummaryScenePath =
         "res://game/scenes/rewards/RewardSummary.tscn";
@@ -312,16 +311,9 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
     /// </remarks>
     private void ShowExploration(string? developmentStatus = null)
     {
-        string mapId = Session.Current.Location.MapId;
-        string scenePath = mapId switch
-        {
-            TestRoomView.MapId => TestRoomScenePath,
-            TestForestView.MapId => TestForestScenePath,
-            _ => throw new InvalidOperationException($"No exploration scene is registered for map '{mapId}'."),
-        };
-        PackedScene packedScene = ResourceLoader.Load<PackedScene>(scenePath)
+        PackedScene packedScene = ResourceLoader.Load<PackedScene>(ExplorationScenePath)
             ?? throw new InvalidOperationException(
-                $"Could not load exploration scene '{scenePath}'.");
+                $"Could not load exploration scene '{ExplorationScenePath}'.");
         var scene = packedScene.Instantiate<ExplorationSceneController>();
 
         RemoveActiveGameplayScene();

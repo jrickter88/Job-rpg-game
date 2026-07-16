@@ -1,8 +1,25 @@
 # Current Project Handoff
 
-> Current update: Milestone 5.3B cleanup is in progress locally and intentionally uncommitted
-> for review. Milestones 5.3A, 5.2A, and the later combat/equipment work are committed in the
-> repository history. Older sections below remain historical unless explicitly superseded above.
+> Current update: Milestone 5.4 generic data-driven exploration is implemented locally and
+> intentionally uncommitted for review. Older sections below remain historical unless explicitly
+> superseded above.
+
+## Current Milestone 5.4 summary
+
+`ExplorationMap.tscn` and `DataDrivenMapView` now present every validated `MapDefinition` from
+the current `GameState.Location.MapId`. `GameRoot` owns one generic scene path rather than a
+map-ID-to-scene switch. ASCII rows remain the logic source for collision and placeholder tiles;
+map content owns spawns, encounter markers, and transitions. The new `map.prologue.clearing`
+record proves a JSON-only map addition and round-trip transition with `map.test-forest`.
+
+The test-room guide remains a small compatibility fixture at its historical tile. Full NPC and
+interactable placement in map content is deliberately deferred. Save data remains map ID, tile,
+and facing only; no scene paths are persisted.
+
+Validation for this local, uncommitted work: 391 core tests passed; base content validation
+loaded 50 definitions; base plus the example mod loaded 53 definitions; `dotnet build
+RpgGame.sln --no-restore` completed with 0 warnings and 0 errors; and Godot 4.7 headless editor
+validation completed successfully. Interactive gameplay verification remains pending.
 
 ## Current Milestone 5.3B summary
 

@@ -18,6 +18,7 @@ public sealed class MapQueryService
     }
 
     public string DisplayNameKey => _map.DisplayNameKey;
+    public string MapId => _map.Id;
     public int Width => _map.Width;
     public int Height => _map.Height;
     public IReadOnlyCollection<MapEncounterMarkerDefinition> EncounterMarkers => _map.Encounters;

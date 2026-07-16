@@ -45,6 +45,7 @@ public sealed class SaveRoundTripTests
             session.ReplaceState(newGame);
             session.UpdateLocation(newGame.Location with
             {
+                MapId = "map.prologue.clearing",
                 X = 6,
                 Y = 4,
                 Facing = "east",
@@ -71,6 +72,7 @@ public sealed class SaveRoundTripTests
             AssertEquivalent(original, loaded);
             Assert.Equal((6, 4, "east"),
                 (loaded.Location.X, loaded.Location.Y, loaded.Location.Facing));
+            Assert.Equal("map.prologue.clearing", loaded.Location.MapId);
             Assert.True(loaded.EventFlags["flag.test-room.npc-spoken-to"]);
             Assert.True(loaded.EventFlags["flag.encounter.forest.slimes-01.cleared"]);
             Assert.Equal(3, loaded.Inventory["item.consumable.potion"]);
