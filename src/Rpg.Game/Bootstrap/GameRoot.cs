@@ -737,14 +737,22 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
             victoryMp3.Loop = false;
         }
 
-        FadeVolume(battlePlayer, -80.0f, 0.65f);
-        victoryPlayer.Stream = victoryStream;
-        victoryPlayer.VolumeDb = -80.0f;
-        victoryPlayer.Play();
+        const double fadeDuration = 0.65;
+        FadeVolume(battlePlayer, -80.0f, fadeDuration);
+        Tween transition = battlePlayer.GetTree().CreateTween();
+        transition.TweenInterval(fadeDuration);
+        transition.TweenCallback(Callable.From(() => StartVictoryMusic(victoryPlayer, victoryStream)));
+    }
+
+    private void StartVictoryMusic(AudioStreamPlayer player, AudioStream stream)
+    {
+        player.Stream = stream;
+        player.VolumeDb = -80.0f;
+        player.Play();
         FadeVolume(
-            victoryPlayer,
+            player,
             VolumePercentToDecibels(DisplaySettings.BattleMusicVolumePercent),
-            0.65f);
+            0.65);
     }
 
     private static void FadeVolume(AudioStreamPlayer player, float targetDb, double duration)

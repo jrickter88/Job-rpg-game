@@ -38,7 +38,7 @@ public partial class TestGuideNpc : Node2D, IExplorationInteractable
 
 	public override void _Draw()
 	{
-		var body = new Rect2(new Vector2(-17, -17), new Vector2(34, 34));
+		var body = new Rect2(new Vector2(-8, -8), new Vector2(16, 16));
 		Color bodyColor = _wasPreviouslySpokenTo
 			? new Color(0.25f, 0.78f, 0.47f)
 			: new Color(0.93f, 0.55f, 0.20f);
@@ -48,7 +48,7 @@ public partial class TestGuideNpc : Node2D, IExplorationInteractable
 
 		if (_wasPreviouslySpokenTo)
 		{
-			DrawCircle(new Vector2(0, -2), 6.0f, Colors.White);
+			DrawCircle(new Vector2(0, -1), 3.0f, Colors.White);
 		}
 	}
 }

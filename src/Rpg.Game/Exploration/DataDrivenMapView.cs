@@ -8,7 +8,8 @@ namespace RpgGame.Exploration;
 public partial class DataDrivenMapView : Node2D, IExplorationMapView
 {
     private const int TileSize = 16;
-    private static readonly Vector2 DrawingOrigin = new(96, 136);
+    private const float WorldScale = 3.0f;
+    private static readonly Vector2 DrawingOrigin = new(32, 32);
     private static readonly Vector2I TestRoomGuideTile = new(7, 4);
     private const string TestRoomMapId = "map.prologue.test-room";
 
@@ -21,12 +22,13 @@ public partial class DataDrivenMapView : Node2D, IExplorationMapView
     public void Initialize(MapQueryService map)
     {
         _map = map ?? throw new ArgumentNullException(nameof(map));
+        Scale = Vector2.One * WorldScale;
         QueueRedraw();
     }
 
-    public Vector2 TileToWorld(Vector2I tile) => DrawingOrigin + new Vector2(
+    public Vector2 TileToWorld(Vector2I tile) => (DrawingOrigin + new Vector2(
         (tile.X + 0.5f) * TileSize,
-        (tile.Y + 0.5f) * TileSize);
+        (tile.Y + 0.5f) * TileSize)) * WorldScale;
 
     public bool IsWalkable(Vector2I tile) => _map.IsPassable(tile.X, tile.Y);
 

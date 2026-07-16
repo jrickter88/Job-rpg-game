@@ -19,9 +19,9 @@ public partial class RewardSummaryController : Control
 
     public override void _Ready()
     {
-        _rewardLines = GetNode<VBoxContainer>("Margin/Summary/RewardLines");
-        _continueButton = GetNode<Button>("Margin/Summary/Continue");
-        _inputHint = GetNode<Label>("Margin/Summary/InputHint");
+        _rewardLines = GetNode<VBoxContainer>("Window/Margin/Summary/RewardLines");
+        _continueButton = GetNode<Button>("Window/Margin/Summary/Continue");
+        _inputHint = GetNode<Label>("Window/Margin/Summary/InputHint");
         _continueButton.Pressed += RequestContinue;
         SetProcessUnhandledInput(false);
     }
@@ -50,7 +50,11 @@ public partial class RewardSummaryController : Control
 
         if (itemSummaries.Count == 0)
         {
-            AddRewardLine("No items found.");
+            AddRewardLine(new Label
+            {
+                Text = "No items found.",
+                HorizontalAlignment = HorizontalAlignment.Center,
+            });
         }
         else
         {
@@ -63,7 +67,7 @@ public partial class RewardSummaryController : Control
                         $"Reward summary quantity for '{summary.ItemId}' must be positive.");
                 }
 
-                AddRewardLine($"{PlaceholderItemName(summary.ItemId)} ×{summary.Quantity}");
+                AddRewardLine(summary);
             }
         }
 
@@ -94,17 +98,35 @@ public partial class RewardSummaryController : Control
         RequestContinue();
     }
 
-    private void AddRewardLine(string text)
+    private void AddRewardLine(ItemRewardSummary summary)
     {
+        var row = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
+        int separator = summary.ItemId.LastIndexOf('.') + 1;
+        Texture2D? icon = ResourceLoader.Load<Texture2D>(
+            $"res://game/assets/items/{summary.ItemId[separator..]}.png");
+        if (icon is not null)
+        {
+            row.AddChild(new TextureRect
+            {
+                Texture = icon,
+                CustomMinimumSize = new Vector2(48, 48),
+                ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+                StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+            });
+        }
+
         var label = new Label
         {
-            Text = text,
+            Text = $"{PlaceholderItemName(summary.ItemId)} ×{summary.Quantity}",
             HorizontalAlignment = HorizontalAlignment.Center,
             AutowrapMode = TextServer.AutowrapMode.WordSmart,
         };
         label.AddThemeFontSizeOverride("font_size", 15);
-        _rewardLines.AddChild(label);
+        row.AddChild(label);
+        _rewardLines.AddChild(row);
     }
+
+    private void AddRewardLine(Control line) => _rewardLines.AddChild(line);
 
     private void RequestContinue()
     {
