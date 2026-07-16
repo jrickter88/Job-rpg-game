@@ -1,10 +1,22 @@
 # Current Project Handoff
 
-> Current update: Milestone 4.8 is implemented locally and intentionally uncommitted for review.
-> `main` is at `9be497b Add healing and ally targeting`; the sections below are retained only as
+> Current update: Milestone 4.9 is implemented locally and intentionally uncommitted for review.
+> `main` is at `ba94ca0 Add equipment ownership and weapon attack`; the sections below are retained only as
 > a historical Milestone 4.1 record and must not be treated as the current repository state.
 
-## Current Milestone 4.8 summary
+## Current Milestone 4.9 summary
+
+> Milestone 4.9 extends this summary with an exploration-local equipment menu. It uses the
+> read-only `EquipmentMenuProjectionResolver` and authoritative `EquipmentService`; UI state is
+> disposable, while equip selections remain in `GameState`. The existing Menu action opens a
+> small menu containing Equipment and Controls. This 4.9 work is uncommitted.
+>
+> 4.9 validation: solution build succeeds with 0 warnings/errors; focused equipment tests pass
+> (7 tests); content validation passes for base (27 definitions) and base plus mods (30); Godot
+> 4.7 editor validation and a headless game-start smoke test both exit successfully. The complete
+> core suite currently has four expected failures caused by the separate unstaged Black Mage
+> content edit that moves Ice and Lightning unlocks to levels 3 and 5 while older tests expect
+> all three spells at level 1. That content change is intentionally not part of 4.9.
 
 - `ActorProgressState.EquippedItems` persistently maps slots to owned inventory item IDs;
   omitted old-save maps deserialize empty.

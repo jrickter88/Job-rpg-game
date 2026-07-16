@@ -453,6 +453,20 @@ Explicitly excluded: equipment-menu UI, shops, battle items, dual wielding, two-
 multi-component weapon damage, weapon-based skills beyond Attack, armor affinities, per-instance
 equipment uniqueness, upgrades, affixes, and special accessories. See `MILESTONE_4_8_GUIDE.md`.
 
+### Milestone 4.9 - Basic equipment menu
+
+- Add a small exploration Menu overlay with Equipment and existing Controls access.
+- Project the active actor's supported slots, equipped item, and owned compatible choices.
+- Route equip/unequip actions through `EquipmentService`, then refresh from session state.
+- Show Strength, Defense, Weapon Attack, Max HP, and Max MP without duplicating combat damage.
+
+Exit criteria: James can equip or unequip Iron Sword through the exploration UI, start a battle
+with the resulting Attack behavior, and preserve the choice through the existing save/load flow.
+
+Explicitly excluded: shops, full inventory UI, comparison polish, multi-actor equipment
+management, per-instance uniqueness, special effects, armor/accessory advanced effects, ATB,
+status effects, and hybrid classes. See `MILESTONE_4_9_GUIDE.md`.
+
 Remaining vertical-slice work will then:
 
 - Add a three-character party shell, equipment, item rewards, a shop, and one short quest.

@@ -84,7 +84,7 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
             InitializeApplicationServices();
             ShowExploration();
             GD.Print(
-                $"Milestone 4.2 ready: loaded {Content.Count} definitions "
+                $"Milestone 4.9 ready: loaded {Content.Count} definitions "
                 + $"with {EnabledMods.Count} data mod(s); "
                 + $"new game {Session.Current.SaveId} starts at {Session.Current.Location.MapId}.");
         }

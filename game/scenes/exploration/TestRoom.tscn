@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://src/Rpg.Game/Exploration/ExplorationSceneController.cs" id="1_controller"]
 [ext_resource type="Script" path="res://src/Rpg.Game/Exploration/TestRoomView.cs" id="2_room"]
@@ -6,6 +6,8 @@
 [ext_resource type="Script" path="res://src/Rpg.Game/Exploration/TestGuideNpc.cs" id="4_guide"]
 [ext_resource type="Script" path="res://src/Rpg.Game/Exploration/DialoguePanel.cs" id="5_dialogue"]
 [ext_resource type="Script" path="res://src/Rpg.Game/Input/ControlsPanel.cs" id="6_controls"]
+[ext_resource type="Script" path="res://src/Rpg.Game/Exploration/GameMenuPanel.cs" id="7_menu"]
+[ext_resource type="Script" path="res://src/Rpg.Game/Exploration/EquipmentPanel.cs" id="8_equipment"]
 
 [node name="TestRoom" type="Node2D"]
 script = ExtResource("1_controller")
@@ -70,6 +72,102 @@ offset_bottom = 285.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("6_controls")
+
+[node name="GameMenu" type="PanelContainer" parent="Interface"]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -190.0
+offset_top = -150.0
+offset_right = 190.0
+offset_bottom = 150.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("7_menu")
+
+[node name="Margin" type="MarginContainer" parent="Interface/GameMenu"]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 20
+
+[node name="VBox" type="VBoxContainer" parent="Interface/GameMenu/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="Interface/GameMenu/Margin/VBox"]
+layout_mode = 2
+text = "Menu"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 26
+
+[node name="Equipment" type="Button" parent="Interface/GameMenu/Margin/VBox"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+text = "Equipment"
+
+[node name="Controls" type="Button" parent="Interface/GameMenu/Margin/VBox"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+text = "Controls"
+
+[node name="Close" type="Button" parent="Interface/GameMenu/Margin/VBox"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+text = "Close"
+
+[node name="Equipment" type="PanelContainer" parent="Interface"]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -290.0
+offset_top = -220.0
+offset_right = 290.0
+offset_bottom = 220.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("8_equipment")
+
+[node name="Margin" type="MarginContainer" parent="Interface/Equipment"]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 20
+
+[node name="VBox" type="VBoxContainer" parent="Interface/Equipment/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="Interface/Equipment/Margin/VBox"]
+layout_mode = 2
+text = "Equipment"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 24
+
+[node name="Statistics" type="Label" parent="Interface/Equipment/Margin/VBox"]
+layout_mode = 2
+text = "Statistics"
+horizontal_alignment = 1
+
+[node name="Actions" type="VBoxContainer" parent="Interface/Equipment/Margin/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 8
+
+[node name="Status" type="Label" parent="Interface/Equipment/Margin/VBox"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+text = "Select a slot."
+horizontal_alignment = 1
+autowrap_mode = 2
 
 [node name="Margin" type="MarginContainer" parent="Interface/Controls"]
 layout_mode = 2

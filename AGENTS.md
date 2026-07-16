@@ -63,6 +63,8 @@ a general-purpose RPG engine.
     `HealingApplied` events.
 32. Read `MILESTONE_4_8_GUIDE.md` before changing equipment ownership, equipped slots,
     weapon Attack, or the intrinsic basic Attack weapon profile.
+33. Read `MILESTONE_4_9_GUIDE.md` before changing the exploration equipment menu, its
+    projection, or the UI-to-core equipment mutation boundary.
 
 When a requested feature conflicts with those documents, update the relevant design
 document in the same change or explain why the exception is temporary.

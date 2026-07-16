@@ -484,6 +484,12 @@ bonus. A single 100% weapon profile overrides Attack's authored damage type; no 
 the authored/legacy type. Mixed weapon profiles are valid authoring data but are rejected at
 battle construction until component splitting is explicitly designed.
 
+Milestone 4.9 adds scene-owned `GameMenuPanel` and `EquipmentPanel` beneath exploration's
+existing `CanvasLayer`. They receive the same injected catalog/session as exploration and
+rebuild their presentation from a read-only `EquipmentMenuProjectionResolver` after session
+updates. The panel calls `EquipmentService` for equip/unequip; it never writes dictionaries,
+inventory, or combat values directly. Menu focus and selected slot are disposable UI state.
+
 ### Complete deterministic rounds
 
 Milestone 3.12 composes the single-action resolver without moving its validation or damage

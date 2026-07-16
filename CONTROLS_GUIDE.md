@@ -30,7 +30,7 @@ bindings, so remapped keys are honored without a battle-specific key table.
 ## How a player changes controls
 
 1. Press the current **Menu / Cancel** binding. Initially this is Escape or Tab.
-2. Select one of the binding buttons with the mouse or keyboard focus.
+2. Select **Controls** with the mouse or keyboard focus.
 3. Press the replacement keyboard key.
 4. The change is validated, applied immediately, and written to user settings.
 5. Select **Reset Defaults** to restore the table above.
@@ -71,7 +71,9 @@ next launch.
 3. `ControlsPanel` edits the service through its narrow rebind/reset methods.
 4. `ExplorationSceneController` calls `InputEvent.IsActionPressed` with stable action IDs.
 5. Accepted movement still updates `GameSession`; controls never become campaign state.
-6. `BattleController` reads the existing movement, Interact, and Menu actions while collecting
+6. The exploration-local Menu panel and Equipment panel read the existing movement, Interact,
+   and Menu actions; no new input action is introduced for equipment.
+7. `BattleController` reads the existing movement, Interact, and Menu actions while collecting
    Attack and target intent; it never compares a concrete gameplay keycode.
 
 `GameInputActions.Definitions` is intentionally a short explicit catalog. When a real new
@@ -85,8 +87,8 @@ systems that do not exist.
 - Each action has a fixed number of keyboard slots matching its defaults.
 - Key combinations, mouse buttons, controller buttons, analog deadzones, and per-device
   profiles are deferred until those input devices are part of a playable milestone.
-- There is no separate settings scene yet; the test room presents the controls panel through
-  the current Menu / Cancel action.
+- There is no separate settings scene yet; the test room's Menu panel presents Controls and
+  Equipment through the current Menu / Cancel action.
 
 These limits keep the feature small while establishing the boundary future menus and battle
 scenes can reuse.

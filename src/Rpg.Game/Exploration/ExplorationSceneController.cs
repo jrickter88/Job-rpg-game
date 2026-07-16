@@ -24,6 +24,8 @@ public partial class ExplorationSceneController : Node2D
     private TestGuideNpc _guide = null!;
     private DialoguePanel _dialogue = null!;
     private ControlsPanel _controlsPanel = null!;
+    private GameMenuPanel _gameMenuPanel = null!;
+    private EquipmentPanel _equipmentPanel = null!;
     private Label _instructions = null!;
     private Label _developmentStatus = null!;
     private IContentCatalog? _content;
@@ -49,6 +51,8 @@ public partial class ExplorationSceneController : Node2D
         _guide = GetNode<TestGuideNpc>("Guide");
         _dialogue = GetNode<DialoguePanel>("Interface/Dialogue");
         _controlsPanel = GetNode<ControlsPanel>("Interface/Controls");
+        _gameMenuPanel = GetNode<GameMenuPanel>("Interface/GameMenu");
+        _equipmentPanel = GetNode<EquipmentPanel>("Interface/Equipment");
         _instructions = GetNode<Label>("Interface/Instructions");
         _developmentStatus = GetNode<Label>("Interface/DevelopmentStatus");
         SetProcessUnhandledInput(false);
@@ -81,6 +85,9 @@ public partial class ExplorationSceneController : Node2D
         _session.StateChanged += OnSessionStateChanged;
         _inputBindings.BindingsChanged += OnBindingsChanged;
         _controlsPanel.Initialize(_inputBindings);
+        _gameMenuPanel.EquipmentRequested += OnEquipmentRequested;
+        _gameMenuPanel.ControlsRequested += OnControlsRequested;
+        _equipmentPanel.Initialize(_content, _session);
         RefreshInstructionText();
         ApplyAuthoritativeState();
         SetProcessUnhandledInput(true);
@@ -109,6 +116,12 @@ public partial class ExplorationSceneController : Node2D
         {
             _inputBindings.BindingsChanged -= OnBindingsChanged;
         }
+
+        if (_gameMenuPanel is not null)
+        {
+            _gameMenuPanel.EquipmentRequested -= OnEquipmentRequested;
+            _gameMenuPanel.ControlsRequested -= OnControlsRequested;
+        }
     }
 
     public override void _UnhandledInput(InputEvent @event)
@@ -122,7 +135,7 @@ public partial class ExplorationSceneController : Node2D
 
         // The controls panel captures rebinding input in _Input before this unhandled-input
         // phase. UI navigation that remains unconsumed must still never move James.
-        if (_controlsPanel.IsOpen)
+        if (_controlsPanel.IsOpen || _gameMenuPanel.Visible || _equipmentPanel.IsOpen)
         {
             return;
         }
@@ -175,7 +188,7 @@ public partial class ExplorationSceneController : Node2D
 
         if (keyEvent.IsActionPressed(GameInputActions.Menu))
         {
-            _controlsPanel.Open();
+            _gameMenuPanel.Open();
             GetViewport().SetInputAsHandled();
             return;
         }
@@ -272,8 +285,20 @@ public partial class ExplorationSceneController : Node2D
             + $"L[{bindings.FormatBindings(GameInputActions.MoveLeft)}]"
             + System.Environment.NewLine
             + $"Interact[{bindings.FormatBindings(GameInputActions.Interact)}]    "
-            + $"Menu / Controls[{bindings.FormatBindings(GameInputActions.Menu)}]    "
+            + $"Menu[{bindings.FormatBindings(GameInputActions.Menu)}]    "
             + "Developer: R rebuild, K save, L load";
+    }
+
+    private void OnEquipmentRequested(object? sender, EventArgs eventArgs)
+    {
+        _gameMenuPanel.Close();
+        _equipmentPanel.Open();
+    }
+
+    private void OnControlsRequested(object? sender, EventArgs eventArgs)
+    {
+        _gameMenuPanel.Close();
+        _controlsPanel.Open();
     }
 
     private void ApplyAuthoritativeState()
