@@ -537,10 +537,11 @@ status animations, and status-duration gameplay beyond timeline-time foundation.
 
 ### Milestone 5.2 - Map transitions and second encounter map
 
-Milestone 5.2 adds authored `MapDefinition` and `MapTransitionDefinition` records, persistent
-map-aware exploration scene selection, and a small visually distinct test forest. The player can
-step from the original room into the forest, fight one reusable slime encounter, and return via
-the authored transition. Encounter clearance remains a persistent map/encounter-specific flag.
+Milestone 5.2 adds authored `MapDefinition` records with embedded `MapTransitionDefinition`
+links, persistent map-aware exploration scene selection, and a small visually distinct test
+forest. The player can step from the original room into the forest, fight one reusable slime
+encounter, and return via the authored transition. Encounter clearance remains a persistent
+map/encounter-specific flag.
 Existing location state already stored map ID, tile coordinates, and facing, so old saves with no
 map ID normalize to the original room start.
 

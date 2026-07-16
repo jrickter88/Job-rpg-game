@@ -9,15 +9,11 @@ public sealed class MapQueryService
     private readonly IReadOnlyDictionary<(int X, int Y), MapEncounterMarkerDefinition> _encounters;
     private readonly IReadOnlyDictionary<(int X, int Y), MapTransitionDefinition> _transitions;
 
-    public MapQueryService(
-        MapDefinition map,
-        IEnumerable<MapTransitionDefinition> transitions)
+    public MapQueryService(MapDefinition map)
     {
         _map = map ?? throw new ArgumentNullException(nameof(map));
-        ArgumentNullException.ThrowIfNull(transitions);
         _encounters = map.Encounters.ToDictionary(marker => (marker.X, marker.Y));
-        _transitions = transitions
-            .Where(transition => string.Equals(transition.SourceMapId, map.Id, StringComparison.Ordinal))
+        _transitions = map.Transitions
             .ToDictionary(transition => (transition.SourceCell.X, transition.SourceCell.Y));
     }
 

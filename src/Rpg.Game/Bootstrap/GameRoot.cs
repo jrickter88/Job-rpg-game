@@ -461,12 +461,24 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
         object? sender,
         MapTransitionRequestedEventArgs eventArgs)
     {
-        MapTransitionDefinition transition = Content.GetRequired<MapTransitionDefinition>(
-            eventArgs.Request.TransitionId);
-        if (!string.Equals(transition.SourceMapId, Session.Current.Location.MapId, StringComparison.Ordinal))
+        (MapDefinition? sourceMap, MapTransitionDefinition? transition) = Content
+            .GetAll<MapDefinition>()
+            .SelectMany(map => map.Transitions.Select(candidate => (Map: map, Transition: candidate)))
+            .Where(candidate => string.Equals(
+                candidate.Transition.Id,
+                eventArgs.Request.TransitionId,
+                StringComparison.Ordinal))
+            .Select(candidate => ((MapDefinition?)candidate.Map, (MapTransitionDefinition?)candidate.Transition))
+            .SingleOrDefault();
+        if (sourceMap is null || transition is null)
+        {
+            throw new KeyNotFoundException(
+                $"Transition '{eventArgs.Request.TransitionId}' was not found in any map.");
+        }
+        if (!string.Equals(sourceMap.Id, Session.Current.Location.MapId, StringComparison.Ordinal))
         {
             throw new InvalidOperationException(
-                $"Transition '{transition.Id}' expects map '{transition.SourceMapId}', "
+                $"Transition '{transition.Id}' belongs to map '{sourceMap.Id}', "
                 + $"but the session is on '{Session.Current.Location.MapId}'.");
         }
 

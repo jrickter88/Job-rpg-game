@@ -41,7 +41,6 @@ The initial directory-to-type mapping is:
 | `starting-class-rules/` | `StartingClassRuleDefinition` |
 | `status-effects/` | `StatusEffectDefinition` |
 | `maps/` | `MapDefinition` |
-| `map-transitions/` | `MapTransitionDefinition` |
 
 ### Map and transition
 
@@ -49,11 +48,11 @@ The initial directory-to-type mapping is:
 contains only tile coordinates and facing; it never contains a Godot scene path. The composition
 root maps supported IDs to scenes.
 
-`map-transitions/` records contain `sourceMapId`, one `sourceCell`, `destinationMapId`, and a
-`destinationSpawnId`. The validator requires both maps and the destination spawn to exist. The
-exploration controller evaluates the authored source cell after a successful step and sends the
-typed transition request to `GameRoot`, which updates `GameState.Location` before replacing the
-disposable map scene.
+Each map may contain a `transitions` array. A transition contains an ID, one `sourceCell`, a
+`destinationMapId`, and a `destinationSpawnId`. The validator requires the destination map and
+spawn to exist and requires the source cell to be authored over `T`. The exploration controller
+evaluates the map-owned source cell after a successful step and sends the typed transition request
+to `GameRoot`, which updates `GameState.Location` before replacing the disposable map scene.
 
 `MapDefinition` records also require `width`, `height`, and `rows`. Each row is an ASCII string
 using only `#` (blocked), `.` (passable), `E` (passable encounter tile), and `T` (passable

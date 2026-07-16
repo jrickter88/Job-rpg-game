@@ -17,7 +17,7 @@ public sealed class ContentLoadingTests
     {
         var catalog = TestContent.LoadCatalog();
 
-        Assert.Equal(46, catalog.Count);
+        Assert.Equal(44, catalog.Count);
         Assert.Single(catalog.GetAll<ActorDefinition>());
         Assert.Equal(3, catalog.GetAll<ClassDefinition>().Count);
         Assert.Single(catalog.GetAll<DialogueDefinition>());
@@ -30,7 +30,6 @@ public sealed class ContentLoadingTests
         Assert.Single(catalog.GetAll<EnemyDefinition>());
         Assert.Equal(2, catalog.GetAll<EncounterDefinition>().Count);
         Assert.Equal(2, catalog.GetAll<MapDefinition>().Count);
-        Assert.Equal(2, catalog.GetAll<MapTransitionDefinition>().Count);
         Assert.Equal(
             "slot.accessory",
             catalog.GetRequired<EquipmentDefinition>("equipment.accessory.power-ring").SlotId);
@@ -72,8 +71,9 @@ public sealed class ContentLoadingTests
         Assert.Equal("item.consumable.potion", slimeDrop.ItemId);
         Assert.Equal(0.25m, slimeDrop.Chance);
 
-        MapTransitionDefinition transition = catalog.GetRequired<MapTransitionDefinition>(
-            "transition.test-room.to-test-forest");
+        MapTransitionDefinition transition = catalog
+            .GetRequired<MapDefinition>("map.prologue.test-room")
+            .Transitions.Single(candidate => candidate.Id == "transition.test-room.to-test-forest");
         Assert.Equal("map.test-forest", transition.DestinationMapId);
         Assert.Equal("spawn.from-test-room", transition.DestinationSpawnId);
     }

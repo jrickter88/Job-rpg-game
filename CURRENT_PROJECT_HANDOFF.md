@@ -8,21 +8,21 @@
 
 Milestone 5.2A replaces hardcoded map collision and trigger coordinates with validated ASCII rows
 inside the existing `MapDefinition` records. `#` is impassable; `.`, `E`, and `T` are passable.
-Map-owned encounter markers now provide encounter IDs and cleared flag IDs, while existing
-top-level transition definitions are queried only when their source cell is authored as `T`.
+Map-owned encounter and transition markers now provide encounter IDs, cleared flags, and
+destination map/spawn links directly inside each map record. Transitions are queried only when
+their source cell is authored as `T`; there is no separate transition content category.
 `MapQueryService` remains Godot-free and owns symbol, bounds, passability, spawn, encounter, and
 transition queries. Both placeholder map views initialize from it and draw logic rows rather than
 maintaining wall or encounter tile lists in C#.
 
-Validation for this update: solution build passed with 0 warnings/errors; core tests passed 383;
-content validation passed 46 definitions. The Godot executable is not available on `PATH`, so no
+Validation for this update: solution build passed with 0 warnings/errors; core tests passed 387;
+content validation passed 44 definitions. The Godot executable is not available on `PATH`, so no
 headless or interactive Godot run was performed.
 
 ## Current Milestone 5.2 summary
 
-Milestone 5.2 adds two validated content categories: `maps/` (`MapDefinition` with named tile
-spawns) and `map-transitions/` (`MapTransitionDefinition` with a one-cell source and destination
-spawn). `GameRoot` selects `TestRoom.tscn` or `TestForest.tscn` from the persistent map ID, while
+Milestone 5.2 adds validated `maps/` records (`MapDefinition` with named tile spawns and embedded
+transitions). `GameRoot` selects `TestRoom.tscn` or `TestForest.tscn` from the persistent map ID, while
 both scenes use the same disposable `ExplorationSceneController` and the narrow
 `IExplorationMapView` presentation contract. Stepping onto an authored source cell raises a typed
 transition request; GameRoot resolves the destination spawn and replaces the scene without

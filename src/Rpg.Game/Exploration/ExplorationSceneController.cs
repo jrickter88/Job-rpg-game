@@ -101,8 +101,7 @@ public partial class ExplorationSceneController : Node2D
 		_gameMenuPanel.DisplayRequested += OnDisplayRequested;
         _equipmentPanel.Initialize(_content, _session, text);
         _room.Initialize(new RpgGame.Core.Maps.MapQueryService(
-            _content.GetRequired<MapDefinition>(_room.MapId),
-            _content.GetAll<MapTransitionDefinition>()));
+            _content.GetRequired<MapDefinition>(_room.MapId)));
 		RefreshInstructionText();
 		ApplyAuthoritativeState();
 		SetProcessUnhandledInput(true);

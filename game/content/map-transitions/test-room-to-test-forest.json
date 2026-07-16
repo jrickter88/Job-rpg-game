@@ -1,8 +1,0 @@
-{
-  "schemaVersion": 1,
-  "id": "transition.test-room.to-test-forest",
-  "sourceMapId": "map.prologue.test-room",
-  "sourceCell": { "x": 10, "y": 1 },
-  "destinationMapId": "map.test-forest",
-  "destinationSpawnId": "spawn.from-test-room"
-}

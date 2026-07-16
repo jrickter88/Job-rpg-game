@@ -45,7 +45,6 @@ internal static class ContentCategoryRegistry
         Create<ItemDefinition>("items", "item."),
         Create<LootTableDefinition>("loot-tables", "loot-table."),
         Create<MapDefinition>("maps", "map."),
-        Create<MapTransitionDefinition>("map-transitions", "transition."),
         Create<MagicDisciplineDefinition>("magic-disciplines", "magic-discipline."),
         Create<QuestDefinition>("quests", "quest."),
         Create<StartingClassRuleDefinition>("starting-class-rules", "newgame.class-rule."),

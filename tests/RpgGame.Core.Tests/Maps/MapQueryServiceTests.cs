@@ -32,12 +32,12 @@ public sealed class MapQueryServiceTests
         var transition = new MapTransitionDefinition
         {
             Id = "transition.test.out",
-            SourceMapId = map.Id,
             SourceCell = new MapCellDefinition { X = 3, Y = 1 },
             DestinationMapId = "map.test.destination",
             DestinationSpawnId = "spawn.test.destination",
         };
-        var query = new MapQueryService(map, [transition]);
+        map = map with { Transitions = [transition] };
+        var query = new MapQueryService(map);
 
         Assert.True(query.IsInside(3, 1));
         Assert.False(query.IsInside(5, 1));

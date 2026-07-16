@@ -85,9 +85,6 @@ internal sealed class ContentValidator
                 case MapDefinition map:
                     ValidateMap(item, map);
                     break;
-                case MapTransitionDefinition transition:
-                    ValidateMapTransition(item, transition);
-                    break;
                 case MagicDisciplineDefinition magicDiscipline:
                     ValidateMagicDiscipline(item, magicDiscipline);
                     break;
@@ -854,44 +851,65 @@ internal sealed class ContentValidator
                 Add(item, path, "map.encounter-symbol-mismatch", "Encounter marker should be authored over E.");
             }
         }
+
+        IReadOnlyList<MapTransitionDefinition> transitions = RequireList(
+            item, "$.transitions", map.Transitions);
+        var transitionIds = new HashSet<string>(StringComparer.Ordinal);
+        for (int index = 0; index < transitions.Count; index++)
+        {
+            MapTransitionDefinition? transition = transitions[index];
+            if (transition is null) continue;
+            string path = $"$.transitions[{index}]";
+            RequireStableKey(item, $"{path}.id", transition.Id, "transition.");
+            if (!transitionIds.Add(transition.Id))
+            {
+                Add(item, $"{path}.id", "map.transition-duplicate", $"Transition ID '{transition.Id}' is duplicated.");
+            }
+            ValidateMapTransition(item, map, path, transition);
+        }
     }
 
     private static bool IsMapTile(MapDefinition map, int x, int y) =>
         x >= 0 && y >= 0 && x < map.Width && y < map.Height
         && y < map.Rows.Count && map.Rows[y] is not null && x < map.Rows[y].Length;
 
-    private void ValidateMapTransition(LoadedContent item, MapTransitionDefinition transition)
+    private void ValidateMapTransition(
+        LoadedContent item,
+        MapDefinition source,
+        string path,
+        MapTransitionDefinition transition)
     {
-        MapDefinition? source = RequireReference<MapDefinition>(item, "$.sourceMapId", transition.SourceMapId);
-        MapDefinition? destination = RequireReference<MapDefinition>(item, "$.destinationMapId", transition.DestinationMapId);
         if (transition.SourceCell is null)
         {
-            Add(item, "$.sourceCell", "value.null", "Source cell cannot be null.");
+            Add(item, $"{path}.sourceCell", "value.null", "Source cell cannot be null.");
         }
         else if (transition.SourceCell.X < 0 || transition.SourceCell.Y < 0)
         {
-            Add(item, "$.sourceCell", "map.cell-coordinate-invalid", "Source coordinates cannot be negative.");
+            Add(item, $"{path}.sourceCell", "map.cell-coordinate-invalid", "Source coordinates cannot be negative.");
         }
 
         MapCellDefinition? sourceCell = transition.SourceCell;
-        if (source is not null && sourceCell is not null)
+        if (sourceCell is not null)
         {
             if (!IsMapTile(source, sourceCell.X, sourceCell.Y))
             {
-                Add(item, "$.sourceCell", "map.marker-out-of-bounds", "Transition source cell must be inside the source map.");
+                Add(item, $"{path}.sourceCell", "map.marker-out-of-bounds", "Transition source cell must be inside the source map.");
             }
             else if (source.Rows[sourceCell.Y][sourceCell.X] != 'T')
             {
-                Add(item, "$.sourceCell", "map.transition-symbol-mismatch", "Transition source cell should be authored over T.");
+                Add(item, $"{path}.sourceCell", "map.transition-symbol-mismatch", "Transition source cell should be authored over T.");
             }
         }
 
+        MapDefinition? destination = RequireReference<MapDefinition>(
+            item,
+            $"{path}.destinationMapId",
+            transition.DestinationMapId);
         if (destination is not null
             && !destination.Spawns.Any(spawn => string.Equals(spawn.Id, transition.DestinationSpawnId, StringComparison.Ordinal)))
         {
-            Add(item, "$.destinationSpawnId", "reference.missing", $"Map '{destination.Id}' has no spawn '{transition.DestinationSpawnId}'.");
+            Add(item, $"{path}.destinationSpawnId", "reference.missing", $"Map '{destination.Id}' has no spawn '{transition.DestinationSpawnId}'.");
         }
-        _ = source;
     }
 
     private void ValidateEnemyFootprint(LoadedContent item, EnemyDefinition enemy)

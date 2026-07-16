@@ -95,8 +95,22 @@ row count.
 
 Spawns contain an ID, X/Y, and facing. Encounter markers contain `id`, X/Y, `encounterId`, and
 `clearedFlagId`; their tile should use `E`. Transition definitions live in
-`game/content/map-transitions/`; their source cell should use `T` and their destination map and
-spawn IDs must exist.
+The map's `transitions` array contains transition IDs, source cells, destination map IDs, and
+destination spawn IDs. Their source cell should use `T`, and their destination map and spawn IDs
+must exist. There is no separate transition file to maintain.
+
+Add the transition directly to the map record:
+
+```json
+"transitions": [
+  {
+    "id": "transition.test-grove.to-town",
+    "sourceCell": { "x": 8, "y": 3 },
+    "destinationMapId": "map.test-town",
+    "destinationSpawnId": "spawn.from-grove"
+  }
+]
+```
 
 ## Enemies
 

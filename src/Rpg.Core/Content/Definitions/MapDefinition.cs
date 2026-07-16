@@ -9,6 +9,7 @@ public sealed record MapDefinition : ContentDefinition
     public required List<string> Rows { get; init; }
     public List<MapSpawnDefinition> Spawns { get; init; } = [];
     public List<MapEncounterMarkerDefinition> Encounters { get; init; } = [];
+    public List<MapTransitionDefinition> Transitions { get; init; } = [];
 }
 
 /// <summary>A logical tile used when entering an exploration map.</summary>

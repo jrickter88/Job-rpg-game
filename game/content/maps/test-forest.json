@@ -24,7 +24,15 @@
 	  "x": 6,
 	  "y": 4,
 	  "encounterId": "encounter.test-forest.slime-01",
-	  "clearedFlagId": "flag.encounter.test-forest.slime-01.cleared"
-	}
+      "clearedFlagId": "flag.encounter.test-forest.slime-01.cleared"
+    }
+  ],
+  "transitions": [
+    {
+      "id": "transition.test-forest.to-test-room",
+      "sourceCell": { "x": 1, "y": 7 },
+      "destinationMapId": "map.prologue.test-room",
+      "destinationSpawnId": "spawn.from-test-forest"
+    }
   ]
 }
