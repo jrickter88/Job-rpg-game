@@ -73,9 +73,10 @@ Example: `game/content/abilities/shield-focus.json`
 `abilityKindId` may be omitted because Skill is the compatibility default. Writing it while
 learning is often clearer. A Skill must have no `magicDisciplineIds`.
 
-Keep `costStatisticId` null and `costAmount` zero for now. The schema retains those fields,
-but current MP/resource ownership and cost payment have not been implemented. Referencing
-`stat.max-mp` would describe a maximum statistic, not mutable current MP.
+Use `costStatisticId: null` and `costAmount: 0` for a free ability. Milestone 4.5 also supports
+`costStatisticId: "stat.max-mp"` with a nonnegative amount; that stable ID selects the separate
+transient CurrentMp pool and does not lower the maximum statistic. Other resource IDs are not
+implemented.
 
 ## Decide who learns it
 
@@ -183,7 +184,7 @@ Do not commit until these commands return exit code `0`.
 - The JSON file is in `abilities/` and contains explicit `schemaVersion: 1`.
 - The permanent ID starts with `ability.` and uses lowercase stable-ID syntax.
 - Skill/Magic kind, discipline list, targeting, ruleset, and parameters agree.
-- Cost is null/zero until current resources are implemented.
+- Cost is null/zero or a nonnegative `stat.max-mp` amount.
 - At least one actor, class, enemy, or future equipment source grants the ability.
 - Base and base-plus-mod content validation both pass.
 - A focused test is added when a new C# ruleset or target contract is introduced.

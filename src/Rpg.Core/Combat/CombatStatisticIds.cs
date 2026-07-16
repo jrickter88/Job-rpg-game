@@ -13,6 +13,11 @@ public static class CombatStatisticIds
 {
     public const string MaxHp = "stat.max-hp";
 
+    /// <summary>
+    /// Maximum MP selects the transient current-MP pool used by supported ability costs.
+    /// </summary>
+    public const string MaxMp = "stat.max-mp";
+
     public const string Strength = "stat.strength";
 
     public const string Defense = "stat.defense";

@@ -306,6 +306,7 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
         var actionResolver = new CombatResolver(Content);
         var roundResolver = new CombatRoundResolver(actionResolver);
         var enemyPlanner = new EnemyCommandPlanner(Content);
+        var commandAvailabilityResolver = new BattleCommandAvailabilityResolver(Content);
 
         PackedScene packedScene = ResourceLoader.Load<PackedScene>(BattleScenePath)
             ?? throw new InvalidOperationException(
@@ -318,6 +319,8 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
         {
             scene.Initialize(
                 encounter,
+                Content,
+                commandAvailabilityResolver,
                 initialSnapshot,
                 roundResolver,
                 enemyPlanner,

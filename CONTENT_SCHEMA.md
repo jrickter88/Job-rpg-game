@@ -323,8 +323,8 @@ See `LOOT_TABLE_AUTHORING_GUIDE.md`.
 | `abilityKindId` | ID | Optional; defaults to `ability-kind.skill`. Supported values are `ability-kind.skill` and `ability-kind.magic`. |
 | `magicDisciplineIds` | ID array | Empty for Skills; required and nonempty for Magic. References `magic-disciplines/`. |
 | `targetingId` | ID | Closed code-owned target contract; currently `target.self` or `target.enemy.single`. |
-| `costStatisticId` | ID or null | Statistic/resource spent, if any. |
-| `costAmount` | integer | Nonnegative. |
+| `costStatisticId` | ID or null | Null/zero for no cost, or `stat.max-mp` to spend transient current MP. |
+| `costAmount` | integer | Nonnegative amount from the selected supported resource pool. |
 | `rulesetId` | ID | Selects one supported code-owned behavior; currently `rules.defense.guard` or `rules.damage.physical`. |
 | `damageTypeId` | ID or null | Optional code-owned type for a damage ruleset: `damage-type.slash`, `damage-type.energy`, `damage-type.fire`, `damage-type.ice`, or `damage-type.lightning`. Omitted legacy physical damage defaults to Energy. |
 | `numericParameters` | object of string → number | Exact required keys and ranges are owned by the selected ruleset. Extra keys are errors. |
@@ -373,18 +373,19 @@ appliedDamage = min(roundedDamage, target CurrentHp)
 The signed target modifier is read from the matching enemy damage type: positive values are
 weaknesses, negative values are resistances, omitted values are neutral, and `-100` is
 immunity. Reaching zero current HP
-marks the transient combatant defeated. Current HP is runtime combat state, not an ability or
-save/content field. Guard and resource costs remain validated authoring contracts but are not
-executed yet.
+marks the transient combatant defeated. Current HP and current MP are runtime combat state, not
+ability or save/content fields. Guard remains a validated authoring contract but is not executed
+yet.
 
 Milestone 3.12 does not add an AI field or change this schema. Its basic enemy planner scans an
 enemy's existing `abilityIds` in authored order and selects the first cost-free ability using
 the currently executable physical contract. Target choice and Speed ordering are runtime core
 rules, not additional ability or enemy JSON properties.
 
-Cost fields remain part of the early DTO, but current resource spending is not implemented.
-New content should use null/zero until mutable current MP/resource ownership is defined. In
-particular, `stat.max-mp` is a maximum statistic and must not be treated as current MP.
+Milestone 4.5 supports only null/zero costs and `stat.max-mp` costs. The authored ID selects the
+MP resource family; the mutable value is the combat snapshot's separate `CurrentMp`, while
+`stat.max-mp` remains its immutable maximum statistic. Other cost IDs remain invalid until their
+resource pools are explicitly implemented.
 
 An omitted `abilityKindId` remains compatible and means `ability-kind.skill`. Skills appear
 directly as executable commands and must not list magic disciplines. Magic abilities are

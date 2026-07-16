@@ -11,34 +11,34 @@ namespace RpgGame.Core.Loot;
 /// </remarks>
 public interface ILootResolver
 {
-    LootResolution Resolve(
-        IReadOnlyList<string> defeatedEnemyDefinitionIds,
-        IRandomSource random);
+	LootResolution Resolve(
+		IReadOnlyList<string> defeatedEnemyDefinitionIds,
+		IRandomSource random);
 }
 
 /// <summary>Immutable ordered result of evaluating loot tables for defeated enemies.</summary>
 public sealed record LootResolution
 {
-    public LootResolution(IReadOnlyList<LootAward> awards)
-    {
-        ArgumentNullException.ThrowIfNull(awards);
-        if (awards.Any(award => award is null))
-        {
-            throw new ArgumentException(
-                "A loot resolution cannot contain a null award.",
-                nameof(awards));
-        }
+	public LootResolution(IReadOnlyList<LootAward> awards)
+	{
+		ArgumentNullException.ThrowIfNull(awards);
+		if (awards.Any(award => award is null))
+		{
+			throw new ArgumentException(
+				"A loot resolution cannot contain a null award.",
+				nameof(awards));
+		}
 
-        Awards = Array.AsReadOnly(awards.ToArray());
-    }
+		Awards = Array.AsReadOnly(awards.ToArray());
+	}
 
-    /// <summary>Independent successful entries, in supplied enemy and authored entry order.</summary>
-    public IReadOnlyList<LootAward> Awards { get; }
+	/// <summary>Independent successful entries, in supplied enemy and authored entry order.</summary>
+	public IReadOnlyList<LootAward> Awards { get; }
 }
 
 /// <summary>One successful loot-table entry for one defeated enemy definition.</summary>
 public sealed record LootAward(
-    string EnemyDefinitionId,
-    string LootTableId,
-    string ItemId,
-    int Quantity);
+	string EnemyDefinitionId,
+	string LootTableId,
+	string ItemId,
+	int Quantity);

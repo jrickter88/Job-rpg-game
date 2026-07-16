@@ -1,32 +1,32 @@
 using Godot;
 using RpgGame.Core.Combat;
 using RpgGame.Core.Combat.Formation;
+using RpgGame.Core.Content;
 using RpgGame.Core.Content.Definitions;
 using RpgGame.Input;
 
 namespace RpgGame.Encounters;
 
 /// <summary>
-/// Collects the first playable battle's Attack choice and presents authoritative core results.
+/// Projects the acting combatant's authored commands and presents authoritative combat results.
 /// </summary>
 /// <remarks>
 /// This Godot controller owns buttons, focus, labels, and event-log text. It never calculates
-/// damage, changes HP directly, orders actions, or decides victory. Those facts arrive through
+/// damage, changes HP or MP directly, orders actions, or decides victory. Those facts arrive through
 /// <see cref="ICombatRoundResolver"/>, replacement <see cref="CombatSnapshot"/> instances, and
 /// typed <see cref="CombatEvent"/> values. The controller also receives no GameSession, so it
 /// cannot accidentally clear an encounter before GameRoot handles a confirmed terminal result.
 /// </remarks>
 public partial class BattleController : Control
 {
-    private const string AttackAbilityId = "ability.command.attack";
-
     private Label _encounterLabel = null!;
     private Label _battlefieldLabel = null!;
     private BattleFormationView _formationView = null!;
     private VBoxContainer _partyStatus = null!;
     private VBoxContainer _enemyStatus = null!;
     private Label _phaseLabel = null!;
-    private Button _attackButton = null!;
+    private VBoxContainer _commandMenu = null!;
+    private HBoxContainer _targetRow = null!;
     private Label _targetPrompt = null!;
     private HBoxContainer _targetButtons = null!;
     private RichTextLabel _eventLog = null!;
@@ -38,13 +38,20 @@ public partial class BattleController : Control
         new(StringComparer.Ordinal);
     private readonly Dictionary<string, Button> _targetButtonByInstanceId =
         new(StringComparer.Ordinal);
+    private readonly List<Button> _commandButtons = [];
+    private readonly Dictionary<Button, Action> _commandActionByButton = [];
 
+    private IContentCatalog? _content;
+    private BattleCommandAvailabilityResolver? _commandAvailabilityResolver;
     private InputBindingService? _inputBindings;
     private ICombatRoundResolver? _roundResolver;
     private IEnemyCommandPlanner? _enemyPlanner;
     private CombatSnapshot? _snapshot;
     private string? _encounterId;
+    private string? _selectedAbilityId;
+    private string? _selectedMagicDisciplineId;
     private string? _selectedTargetId;
+    private Button? _focusedCommandButton;
     private BattleInputPhase _phase = BattleInputPhase.Uninitialized;
     private bool _completionRequested;
 
@@ -61,16 +68,15 @@ public partial class BattleController : Control
         _partyStatus = GetNode<VBoxContainer>("Margin/VBox/StatusRow/PartyStatus");
         _enemyStatus = GetNode<VBoxContainer>("Margin/VBox/StatusRow/EnemyStatus");
         _phaseLabel = GetNode<Label>("Margin/VBox/CommandArea/Phase");
-        _attackButton = GetNode<Button>("Margin/VBox/CommandArea/CommandRow/Attack");
-        _targetPrompt = GetNode<Label>("Margin/VBox/CommandArea/CommandRow/TargetPrompt");
-        _targetButtons = GetNode<HBoxContainer>(
-            "Margin/VBox/CommandArea/CommandRow/Targets");
+        _commandMenu = GetNode<VBoxContainer>("Margin/VBox/CommandArea/CommandMenu");
+        _targetRow = GetNode<HBoxContainer>("Margin/VBox/CommandArea/TargetRow");
+        _targetPrompt = GetNode<Label>("Margin/VBox/CommandArea/TargetRow/TargetPrompt");
+        _targetButtons = GetNode<HBoxContainer>("Margin/VBox/CommandArea/TargetRow/Targets");
         _eventLog = GetNode<RichTextLabel>("Margin/VBox/EventLog");
         _resultLabel = GetNode<Label>("Margin/VBox/ResultRow/Result");
         _continueButton = GetNode<Button>("Margin/VBox/ResultRow/Continue");
         _inputHint = GetNode<Label>("Margin/VBox/InputHint");
 
-        _attackButton.Pressed += BeginTargetSelection;
         _continueButton.Pressed += RequestCompletion;
         SetProcessUnhandledInput(false);
     }
@@ -80,12 +86,16 @@ public partial class BattleController : Control
     /// </summary>
     public void Initialize(
         EncounterDefinition encounter,
+        IContentCatalog content,
+        BattleCommandAvailabilityResolver commandAvailabilityResolver,
         CombatSnapshot initialSnapshot,
         ICombatRoundResolver roundResolver,
         IEnemyCommandPlanner enemyPlanner,
         InputBindingService inputBindings)
     {
         ArgumentNullException.ThrowIfNull(encounter);
+        ArgumentNullException.ThrowIfNull(content);
+        ArgumentNullException.ThrowIfNull(commandAvailabilityResolver);
         ArgumentNullException.ThrowIfNull(initialSnapshot);
         ArgumentNullException.ThrowIfNull(roundResolver);
         ArgumentNullException.ThrowIfNull(enemyPlanner);
@@ -102,15 +112,11 @@ public partial class BattleController : Control
                 nameof(initialSnapshot));
         }
 
-        CombatantSnapshot partyActor = RequireSingleLivingPartyActor(initialSnapshot);
-        if (!partyActor.AbilityIds.Contains(AttackAbilityId, StringComparer.Ordinal))
-        {
-            throw new InvalidDataException(
-                $"Party combatant '{partyActor.InstanceId}' does not own required command "
-                + $"'{AttackAbilityId}'.");
-        }
+        _ = RequireSingleLivingPartyActor(initialSnapshot);
 
         _encounterId = encounter.Id;
+        _content = content;
+        _commandAvailabilityResolver = commandAvailabilityResolver;
         _snapshot = initialSnapshot;
         _roundResolver = roundResolver;
         _enemyPlanner = enemyPlanner;
@@ -132,8 +138,7 @@ public partial class BattleController : Control
         CreateCombatantControls(initialSnapshot);
         AppendLog($"Battle started. Round {initialSnapshot.Round}.");
         _phase = BattleInputPhase.Command;
-        RefreshPresentation();
-        _attackButton.GrabFocus();
+        ShowTopLevelCommands();
         SetProcessUnhandledInput(true);
     }
 
@@ -165,12 +170,36 @@ public partial class BattleController : Control
             return;
         }
 
-        if (_phase == BattleInputPhase.Command)
+        if (_phase is BattleInputPhase.Command or BattleInputPhase.MagicSelection)
         {
+            if (_phase == BattleInputPhase.MagicSelection
+                && keyEvent.IsActionPressed(GameInputActions.Menu))
+            {
+                GetViewport().SetInputAsHandled();
+                ReturnToTopLevelCommands();
+                return;
+            }
+
+            if (keyEvent.IsActionPressed(GameInputActions.MoveLeft)
+                || keyEvent.IsActionPressed(GameInputActions.MoveUp))
+            {
+                GetViewport().SetInputAsHandled();
+                CycleCommand(-1);
+                return;
+            }
+
+            if (keyEvent.IsActionPressed(GameInputActions.MoveRight)
+                || keyEvent.IsActionPressed(GameInputActions.MoveDown))
+            {
+                GetViewport().SetInputAsHandled();
+                CycleCommand(1);
+                return;
+            }
+
             if (keyEvent.IsActionPressed(GameInputActions.Interact))
             {
                 GetViewport().SetInputAsHandled();
-                BeginTargetSelection();
+                ActivateFocusedCommand();
             }
 
             return;
@@ -202,7 +231,7 @@ public partial class BattleController : Control
         if (keyEvent.IsActionPressed(GameInputActions.Interact))
         {
             GetViewport().SetInputAsHandled();
-            ResolveSelectedAttack();
+            ResolveSelectedAbility(_selectedTargetId);
         }
     }
 
@@ -232,6 +261,158 @@ public partial class BattleController : Control
         }
     }
 
+    private void ShowTopLevelCommands()
+    {
+        CombatantSnapshot partyActor = RequireSingleLivingPartyActor(RequireSnapshot());
+        BattleCommandAvailability availability = RequireCommandAvailabilityResolver().Resolve(partyActor);
+        _selectedMagicDisciplineId = null;
+        ClearCommandButtons();
+
+        foreach (string abilityId in availability.DirectAbilityIds)
+        {
+            AddCommandButton(ShortDefinitionName(abilityId), () => SelectAbility(abilityId));
+        }
+
+        foreach (MagicBattleCommandAvailability discipline in availability.MagicDisciplines)
+        {
+            string disciplineId = discipline.MagicDisciplineId;
+            AddCommandButton(
+                $"{ShortDefinitionName(disciplineId)} >",
+                () => OpenMagicMenu(disciplineId),
+                discipline.SpellAbilityIds.Count == 0);
+        }
+
+        RefreshPresentation();
+        FocusFirstCommand();
+    }
+
+    private void OpenMagicMenu(string magicDisciplineId)
+    {
+        if (_phase is not (BattleInputPhase.Command or BattleInputPhase.MagicSelection)
+            || _selectedAbilityId is null)
+        {
+            return;
+        }
+
+        BattleCommandAvailability availability = RequireCommandAvailabilityResolver().Resolve(
+            RequireSingleLivingPartyActor(RequireSnapshot()));
+        MagicBattleCommandAvailability discipline = availability.MagicDisciplines
+            .Single(candidate => string.Equals(
+                candidate.MagicDisciplineId,
+                magicDisciplineId,
+                StringComparison.Ordinal));
+        _selectedMagicDisciplineId = magicDisciplineId;
+        _phase = BattleInputPhase.MagicSelection;
+        ClearCommandButtons();
+        foreach (string abilityId in discipline.SpellAbilityIds)
+        {
+            AddCommandButton(ShortDefinitionName(abilityId), () => SelectAbility(abilityId));
+        }
+
+        AddCommandButton("Back", ReturnToTopLevelCommands);
+        RefreshPresentation();
+        FocusFirstCommand();
+    }
+
+    private void ReturnToTopLevelCommands()
+    {
+        if (_phase != BattleInputPhase.MagicSelection)
+        {
+            return;
+        }
+
+        _phase = BattleInputPhase.Command;
+        ShowTopLevelCommands();
+    }
+
+    private void AddCommandButton(string text, Action action, bool disabled = false)
+    {
+        var button = new Button
+        {
+            CustomMinimumSize = new Vector2(180.0f, 34.0f),
+            Text = text,
+            Disabled = disabled,
+        };
+        button.Pressed += action;
+        button.FocusEntered += () => _focusedCommandButton = button;
+        _commandMenu.AddChild(button);
+        _commandButtons.Add(button);
+        _commandActionByButton.Add(button, action);
+    }
+
+    private void ClearCommandButtons()
+    {
+        foreach (Button button in _commandButtons)
+        {
+            _commandMenu.RemoveChild(button);
+            button.QueueFree();
+        }
+
+        _commandButtons.Clear();
+        _commandActionByButton.Clear();
+        _focusedCommandButton = null;
+    }
+
+    private void FocusFirstCommand()
+    {
+        Button? first = _commandButtons.FirstOrDefault(button => !button.Disabled);
+        if (first is not null)
+        {
+            first.GrabFocus();
+        }
+    }
+
+    private void CycleCommand(int offset)
+    {
+        Button[] enabled = _commandButtons.Where(button => !button.Disabled).ToArray();
+        if (enabled.Length == 0)
+        {
+            return;
+        }
+
+        int currentIndex = Array.IndexOf(enabled, _focusedCommandButton);
+        int nextIndex = currentIndex < 0
+            ? 0
+            : (currentIndex + offset + enabled.Length) % enabled.Length;
+        enabled[nextIndex].GrabFocus();
+    }
+
+    private void ActivateFocusedCommand()
+    {
+        Button? focused = _focusedCommandButton;
+        if (focused is not null && !focused.Disabled
+            && _commandActionByButton.TryGetValue(focused, out Action? action))
+        {
+            action();
+        }
+    }
+
+    private void SelectAbility(string abilityId)
+    {
+        if (_phase is not (BattleInputPhase.Command or BattleInputPhase.MagicSelection))
+        {
+            return;
+        }
+
+        AbilityDefinition ability = RequireContent().GetRequired<AbilityDefinition>(abilityId);
+        CombatantSnapshot partyActor = RequireSingleLivingPartyActor(RequireSnapshot());
+        _selectedAbilityId = ability.Id;
+        if (string.Equals(ability.TargetingId, AbilityTargetingIds.SingleEnemy, StringComparison.Ordinal))
+        {
+            BeginTargetSelection();
+            return;
+        }
+
+        if (string.Equals(ability.TargetingId, AbilityTargetingIds.Self, StringComparison.Ordinal))
+        {
+            ResolveSelectedAbility(partyActor.InstanceId);
+            return;
+        }
+
+        throw new NotSupportedException(
+            $"Battle command UI does not support targeting contract '{ability.TargetingId}'.");
+    }
+
     private void BeginTargetSelection()
     {
         if (_phase != BattleInputPhase.Command)
@@ -247,11 +428,10 @@ public partial class BattleController : Control
         }
 
         _phase = BattleInputPhase.TargetSelection;
-        string selectedTargetId = livingTargets[0];
-        _selectedTargetId = selectedTargetId;
+        _selectedTargetId = livingTargets[0];
         AppendLog("Choose an enemy target.");
         RefreshPresentation();
-        _targetButtonByInstanceId[selectedTargetId].GrabFocus();
+        _targetButtonByInstanceId[_selectedTargetId].GrabFocus();
     }
 
     private void CancelTargetSelection()
@@ -262,9 +442,16 @@ public partial class BattleController : Control
         }
 
         _selectedTargetId = null;
+        _selectedAbilityId = null;
+        if (_selectedMagicDisciplineId is null)
+        {
+            _phase = BattleInputPhase.Command;
+            ShowTopLevelCommands();
+            return;
+        }
+
         _phase = BattleInputPhase.Command;
-        RefreshPresentation();
-        _attackButton.GrabFocus();
+        OpenMagicMenu(_selectedMagicDisciplineId);
     }
 
     private void CycleTarget(int offset)
@@ -281,10 +468,9 @@ public partial class BattleController : Control
         int nextIndex = currentIndex < 0
             ? 0
             : (currentIndex + offset + livingTargets.Length) % livingTargets.Length;
-        string selectedTargetId = livingTargets[nextIndex];
-        _selectedTargetId = selectedTargetId;
+        _selectedTargetId = livingTargets[nextIndex];
         RefreshPresentation();
-        _targetButtonByInstanceId[selectedTargetId].GrabFocus();
+        _targetButtonByInstanceId[_selectedTargetId].GrabFocus();
     }
 
     private void SelectFocusedTarget(string instanceId)
@@ -311,23 +497,37 @@ public partial class BattleController : Control
         }
 
         _selectedTargetId = instanceId;
-        ResolveSelectedAttack();
+        ResolveSelectedAbility(instanceId);
     }
 
-    private void ResolveSelectedAttack()
+    private void ResolveSelectedAbility(string? targetId)
     {
-        if (_phase != BattleInputPhase.TargetSelection || _selectedTargetId is null)
+        if (_selectedAbilityId is null || targetId is null)
         {
             return;
         }
 
         CombatSnapshot current = RequireSnapshot();
         CombatantSnapshot partyActor = RequireSingleLivingPartyActor(current);
-        CombatantSnapshot target = current.GetRequiredCombatant(_selectedTargetId);
-        if (target.Side != BattleSide.Enemy || target.IsDefeated)
+        AbilityDefinition ability = RequireContent().GetRequired<AbilityDefinition>(_selectedAbilityId);
+        if (string.Equals(ability.TargetingId, AbilityTargetingIds.SingleEnemy, StringComparison.Ordinal))
         {
-            throw new InvalidOperationException(
-                $"Selected target '{target.InstanceId}' is not a living enemy.");
+            if (_phase != BattleInputPhase.TargetSelection)
+            {
+                return;
+            }
+
+            CombatantSnapshot target = current.GetRequiredCombatant(targetId);
+            if (target.Side != BattleSide.Enemy || target.IsDefeated)
+            {
+                throw new InvalidOperationException(
+                    $"Selected target '{target.InstanceId}' is not a living enemy.");
+            }
+        }
+        else if (string.Equals(ability.TargetingId, AbilityTargetingIds.Self, StringComparison.Ordinal)
+                 && !string.Equals(targetId, partyActor.InstanceId, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("A self-targeted ability must target its acting combatant.");
         }
 
         _phase = BattleInputPhase.Resolving;
@@ -335,7 +535,7 @@ public partial class BattleController : Control
 
         var commands = new List<CombatCommand>
         {
-            new(partyActor.InstanceId, AttackAbilityId, [target.InstanceId]),
+            new(partyActor.InstanceId, ability.Id, [targetId]),
         };
         commands.AddRange(current.Combatants
             .Where(combatant => combatant.Side == BattleSide.Enemy && !combatant.IsDefeated)
@@ -348,10 +548,11 @@ public partial class BattleController : Control
 
         if (next.Outcome == BattleOutcome.InProgress)
         {
+            _selectedAbilityId = null;
+            _selectedMagicDisciplineId = null;
             _selectedTargetId = null;
             _phase = BattleInputPhase.Command;
-            RefreshPresentation();
-            _attackButton.GrabFocus();
+            ShowTopLevelCommands();
             return;
         }
 
@@ -365,6 +566,8 @@ public partial class BattleController : Control
                 + $"'{next.Outcome}'.");
         }
 
+        _selectedAbilityId = null;
+        _selectedMagicDisciplineId = null;
         _selectedTargetId = null;
         _phase = BattleInputPhase.Completed;
         RefreshPresentation();
@@ -377,6 +580,13 @@ public partial class BattleController : Control
         {
             switch (combatEvent)
             {
+                case ResourceSpent spent:
+                    AppendLog(
+                        $"{DisplayName(spent.CombatantId)} spent {spent.Amount} MP for "
+                        + $"{ShortDefinitionName(spent.AbilityId)} ({spent.PreviousValue} -> "
+                        + $"{spent.CurrentValue} MP).");
+                    break;
+
                 case DamageApplied damage:
                     string reaction = damage.DamagePercentModifier switch
                     {
@@ -390,7 +600,7 @@ public partial class BattleController : Control
                         + $"{ShortDefinitionName(damage.AbilityId)} on "
                         + $"{DisplayName(damage.TargetCombatantId)}: {damage.Amount} "
                         + $"{ShortDefinitionName(damage.DamageTypeId)} damage{reaction} "
-                        + $"({damage.PreviousHp} → {damage.CurrentHp} HP).");
+                        + $"({damage.PreviousHp} -> {damage.CurrentHp} HP).");
                     break;
 
                 case CombatantDefeated defeated:
@@ -421,10 +631,11 @@ public partial class BattleController : Control
         CombatSnapshot snapshot = RequireSnapshot();
         foreach (CombatantSnapshot combatant in snapshot.Combatants)
         {
-            string defeatedSuffix = combatant.IsDefeated ? " — defeated" : string.Empty;
+            string defeatedSuffix = combatant.IsDefeated ? " - defeated" : string.Empty;
             _hpLabelByInstanceId[combatant.InstanceId].Text =
                 $"{DisplayName(combatant.InstanceId)}: "
-                + $"{combatant.CurrentHp}/{combatant.MaximumHp} HP{defeatedSuffix}";
+                + $"{combatant.CurrentHp}/{combatant.MaximumHp} HP | "
+                + $"{combatant.CurrentMp}/{combatant.MaximumMp} MP{defeatedSuffix}";
 
             if (_targetButtonByInstanceId.TryGetValue(
                     combatant.InstanceId,
@@ -438,7 +649,8 @@ public partial class BattleController : Control
             }
         }
 
-        _attackButton.Disabled = _phase != BattleInputPhase.Command;
+        _commandMenu.Visible = _phase is BattleInputPhase.Command or BattleInputPhase.MagicSelection;
+        _targetRow.Visible = _phase == BattleInputPhase.TargetSelection;
         _targetPrompt.Visible = _phase == BattleInputPhase.TargetSelection;
         _targetButtons.Visible = _phase == BattleInputPhase.TargetSelection;
         _continueButton.Visible = _phase == BattleInputPhase.Completed;
@@ -447,7 +659,10 @@ public partial class BattleController : Control
         _phaseLabel.Text = _phase switch
         {
             BattleInputPhase.Command => $"Round {snapshot.Round}: choose a command.",
-            BattleInputPhase.TargetSelection => "Attack: choose a living enemy.",
+            BattleInputPhase.MagicSelection =>
+                $"{ShortDefinitionName(_selectedMagicDisciplineId ?? "magic")}: choose a spell.",
+            BattleInputPhase.TargetSelection =>
+                $"{ShortDefinitionName(_selectedAbilityId ?? "ability")}: choose a living enemy.",
             BattleInputPhase.Resolving => "Resolving the round...",
             BattleInputPhase.Completed => "Battle ended.",
             _ => string.Empty,
@@ -490,8 +705,12 @@ public partial class BattleController : Control
         _inputHint.Text = _phase switch
         {
             BattleInputPhase.Command =>
-                $"Choose Attack, then confirm "
+                $"Choose a command with movement; confirm "
                 + $"[{bindings.FormatBindings(GameInputActions.Interact)}].",
+            BattleInputPhase.MagicSelection =>
+                $"Choose a spell with movement; confirm "
+                + $"[{bindings.FormatBindings(GameInputActions.Interact)}], back "
+                + $"[{bindings.FormatBindings(GameInputActions.Menu)}].",
             BattleInputPhase.TargetSelection =>
                 $"Change target with movement; confirm "
                 + $"[{bindings.FormatBindings(GameInputActions.Interact)}], cancel "
@@ -541,6 +760,12 @@ public partial class BattleController : Control
     private CombatSnapshot RequireSnapshot() => _snapshot
         ?? throw new InvalidOperationException("Battle scene is not initialized.");
 
+    private IContentCatalog RequireContent() => _content
+        ?? throw new InvalidOperationException("Battle scene is not initialized.");
+
+    private BattleCommandAvailabilityResolver RequireCommandAvailabilityResolver() => _commandAvailabilityResolver
+        ?? throw new InvalidOperationException("Battle scene is not initialized.");
+
     private ICombatRoundResolver RequireRoundResolver() => _roundResolver
         ?? throw new InvalidOperationException("Battle scene is not initialized.");
 
@@ -554,6 +779,7 @@ public partial class BattleController : Control
     {
         Uninitialized,
         Command,
+        MagicSelection,
         TargetSelection,
         Resolving,
         Completed,

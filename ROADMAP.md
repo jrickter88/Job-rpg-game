@@ -379,6 +379,36 @@ Explicitly excluded: equipment ownership or activation, weapon attack splitting,
 statistics, statuses, affinity inspection UI, critical hits, absorption, reflection, and
 mod-defined damage types. See `MILESTONE_4_3_GUIDE.md`.
 
+### Milestone 4.4 - Data-driven battle command menu
+
+- Project an acting party combatant's direct Skills and unlocked Magic disciplines into the
+  battle menu.
+- Select authored ability IDs, enter authored supported target modes, and submit ordinary
+  combat commands through the existing round resolver.
+- Preserve deterministic focus order and remappable input; use temporary stable-ID-derived
+  names.
+
+Exit criteria: the battle controller no longer has a required Attack-specific command path and
+can select every currently executable, affordable direct Skill or nested Magic ability.
+
+Explicitly excluded: new abilities, magic disciplines, Guard execution, healing, items,
+equipment, multi-party command queues, command icons, localization, and new target modes. See
+`MILESTONE_4_4_GUIDE.md`.
+
+### Milestone 4.5 - Current MP and ability cost payment
+
+- Add transient current MP to combatant snapshots and initialize it from resolved maximum MP.
+- Support null/zero costs and `stat.max-mp` costs, rejecting unsupported or unaffordable
+  commands without state changes.
+- Deduct MP atomically with an ability effect, emit `ResourceSpent`, and present MP in battle.
+
+Exit criteria: an affordable MP-costing ability spends MP exactly once, emits an authoritative
+event before its effect, and an unaffordable command changes neither HP nor MP.
+
+Explicitly excluded: new spell content, magic damage formulas, healing, MP recovery,
+out-of-battle resources, save persistence, and additional mutable resource families. See
+`MILESTONE_4_5_GUIDE.md`.
+
 Remaining vertical-slice work will then:
 
 - Add a three-character party shell, equipment, item rewards, a shop, and one short quest.

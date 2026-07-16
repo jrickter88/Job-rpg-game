@@ -19,6 +19,15 @@ public sealed record DamageApplied(
     int PreviousHp,
     int CurrentHp) : CombatEvent;
 
+/// <summary>Reports the authoritative deduction from one transient combat resource pool.</summary>
+public sealed record ResourceSpent(
+    string CombatantId,
+    string AbilityId,
+    string ResourceStatisticId,
+    int Amount,
+    int PreviousValue,
+    int CurrentValue) : CombatEvent;
+
 /// <summary>Reports that one combatant reached zero HP during the resolved action.</summary>
 /// <remarks>
 /// This is a fact about one combatant. When the defeated combatant was the last living member of

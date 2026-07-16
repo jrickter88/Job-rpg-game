@@ -428,8 +428,9 @@ never serializes it as campaign state.
 Milestone 3.10 implements the first narrow use of the reserved `ICombatResolver`,
 `CombatCommand`, `CombatResolution`, and `CombatEvent` contracts. `CombatResolver` receives an
 already validated `IContentCatalog`; it does not read files or discover behavior dynamically.
-It accepts only a living combatant using an owned, free `target.enemy.single` plus
-`rules.damage.physical` ability against one living opposing combatant.
+It accepts only a living combatant using an owned, affordable supported ability. The current
+executable effect contract remains `target.enemy.single` plus `rules.damage.physical` against
+one living opposing combatant.
 
 ```mermaid
 flowchart TD
@@ -450,10 +451,12 @@ a separate `BattleEnded` fact only when that defeat removes the final living mem
 
 Invalid runtime intent raises `CombatCommandValidationException` with a stable problem code
 instead of requiring a caller to parse text. Malformed catalog/snapshot invariants remain data
-errors. Resource-bearing abilities are rejected because current MP/resource state does not
-exist yet. Guard behavior, rewards, campaign changes, and Godot presentation remain outside
-this resolver. Milestone 3.12 composes actions into ordered rounds and Milestone 3.13 derives
-the battle-local outcome without moving those responsibilities into presentation.
+errors. Milestone 4.5 maps only `stat.max-mp` cost content to the snapshot's separate mutable
+current-MP pool, replaces that actor state atomically with the effect, and emits `ResourceSpent`
+before the effect event. Other resource IDs remain rejected. Guard behavior, rewards, campaign
+changes, and Godot presentation remain outside this resolver. Milestone 3.12 composes actions
+into ordered rounds and Milestone 3.13 derives the battle-local outcome without moving those
+responsibilities into presentation.
 
 ### Complete deterministic rounds
 
@@ -521,15 +524,17 @@ campaign dependency. See `MILESTONE_3_13_GUIDE.md`.
 
 ### Playable battle presentation and campaign handoff
 
-`BattleController` receives the initial snapshot plus `ICombatRoundResolver` and
-`IEnemyCommandPlanner`. It displays HP by reading combatant snapshots, submits James's existing
-Attack with the selected battle-local enemy ID, and submits planner-produced commands for each
-living slime. It renders `DamageApplied`, `CombatantDefeated`, and `BattleEnded`; it never
-repeats the physical formula, Speed ordering, HP mutation, or terminal-side query.
+`BattleController` receives the initial snapshot, content catalog, command-availability
+resolver, `ICombatRoundResolver`, and `IEnemyCommandPlanner`. It projects structured party
+Skills and Magic-discipline submenus, displays HP/MP from snapshots, submits the selected
+authored ability ID with its authored supported target route, and submits planner-produced
+commands for each living slime. It renders `ResourceSpent`, `DamageApplied`,
+`CombatantDefeated`, and `BattleEnded`; it never repeats the physical formula, Speed ordering,
+HP/MP mutation, or terminal-side query.
 
 ```mermaid
 flowchart TD
-    UI["Attack + target"] --> Commands["Party and enemy commands"]
+    UI["Authored command + target"] --> Commands["Party and enemy commands"]
     Commands --> Core["Pure round resolver"]
     Core --> Present["Snapshot + typed events"]
     Present --> Handoff["Confirmed terminal request + defeated enemy definitions"]

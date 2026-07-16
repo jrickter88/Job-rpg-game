@@ -66,6 +66,23 @@ public sealed class CombatSnapshotFactoryTests
     }
 
     [Fact]
+    public void Create_FixedEncounter_InitializesCurrentMpFromResolvedMaximumMp()
+    {
+        CombatSnapshot snapshot = CombatTestFixture.CreateFixedBattle().Snapshot;
+
+        CombatantSnapshot james = snapshot.GetRequiredCombatant("party-0");
+        Assert.Equal(12, james.MaximumMp);
+        Assert.Equal(james.MaximumMp, james.CurrentMp);
+        Assert.All(
+            snapshot.Combatants.Where(combatant => combatant.Side == BattleSide.Enemy),
+            combatant =>
+            {
+                Assert.Equal(0, combatant.MaximumMp);
+                Assert.Equal(0, combatant.CurrentMp);
+            });
+    }
+
+    [Fact]
     public void Create_FixedEncounter_PreservesStructuredPartyAbilityAvailability()
     {
         CombatantSnapshot james = CombatTestFixture.CreateFixedBattle()
@@ -500,6 +517,46 @@ public sealed class CombatSnapshotFactoryTests
             },
             [],
             currentHp));
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(11)]
+    public void CombatantSnapshot_CurrentMpOutsideRuntimeRange_IsRejected(int currentMp)
+    {
+        var placement = new FormationPlacement(
+            "party-0",
+            CombatTestFixture.JamesId,
+            new FormationCell(BattleSide.Party, 0, 0),
+            FormationFootprint.SingleCell);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => new CombatantSnapshot(
+            placement,
+            new Dictionary<string, int>(StringComparer.Ordinal)
+            {
+                [CombatStatisticIds.MaxHp] = 10,
+                [CombatStatisticIds.MaxMp] = 10,
+            },
+            [],
+            currentHp: 10,
+            currentMp: currentMp));
+    }
+
+    [Fact]
+    public void CombatantSnapshot_CurrentMpReplacementPreservesHpAndOtherState()
+    {
+        FixedBattle battle = CombatTestFixture.CreateFixedBattle();
+        CombatantSnapshot original = battle.Snapshot.GetRequiredCombatant("party-0");
+
+        CombatantSnapshot replaced = original.WithCurrentMp(3);
+        CombatantSnapshot damaged = replaced.WithCurrentHp(80);
+
+        Assert.Equal(12, original.CurrentMp);
+        Assert.Equal(3, replaced.CurrentMp);
+        Assert.Equal(original.CurrentHp, replaced.CurrentHp);
+        Assert.Equal(3, damaged.CurrentMp);
+        Assert.Equal(80, damaged.CurrentHp);
+        Assert.Equal(original.DamageTypePercentModifiers, damaged.DamageTypePercentModifiers);
     }
 
     [Fact]

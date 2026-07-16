@@ -47,6 +47,7 @@ Each combatant owns:
 | `Statistics` | Complete resolved statistic map copied into read-only storage |
 | `AbilityIds` | Abilities currently available at battle start, in authored order |
 | `CurrentHp` | Temporary HP initialized from `stat.max-hp` |
+| `CurrentMp` | Temporary MP initialized from `stat.max-mp`, or zero when absent |
 
 Convenience properties such as `InstanceId`, `DefinitionId`, and `Side` delegate to the
 placement. They do not duplicate formation data.

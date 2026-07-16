@@ -73,7 +73,7 @@ Before calculating damage, `CombatResolver` checks:
 1. the acting instance exists and is alive;
 2. its snapshot lists the selected executable ability;
 3. the ability exists in the validated content catalog;
-4. it declares no resource cost;
+4. it declares a supported cost and the actor can afford it;
 5. exactly one target was supplied;
 6. the target exists, is alive, and is on the opposing side;
 7. the ability uses the supported `target.enemy.single` and
@@ -207,7 +207,7 @@ new visible battle behavior is expected when running the game.
 
 - Guard execution and defensive state;
 - additional action effects beyond the implemented physical-damage contract;
-- current MP, resource payment, items, and status effects;
+- items, status effects, and resource families beyond current MP;
 - campaign outcome application, encounter clearing, experience, loot rolls, and rewards;
 - campaign-state changes and battle saves;
 - Godot battle menus, targeting UI, animation, sound, and event presentation.

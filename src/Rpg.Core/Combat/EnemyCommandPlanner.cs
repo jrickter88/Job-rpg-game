@@ -60,7 +60,7 @@ public sealed class EnemyCommandPlanner : IEnemyCommandPlanner
                     + $"'{abilityId}'.");
             }
 
-            if (CombatAbilityExecutionSupport.IsCurrentlyUsable(ability))
+            if (CombatAbilityExecutionSupport.IsCurrentlyUsable(enemy, ability))
             {
                 selectedAbility = ability;
                 break;

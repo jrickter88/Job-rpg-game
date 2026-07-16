@@ -72,8 +72,10 @@ An elemental attack spell may currently reuse `target.enemy.single` plus
 enemy affinity; it does not change the Strength/Defense formula. See
 `MILESTONE_4_3_GUIDE.md`.
 
-Do not charge `stat.max-mp`. Maximum MP is definition/statistic data, while current MP will be
-mutable battle state. Leave cost null/zero until the resource milestone defines that boundary.
+Use `costStatisticId: "stat.max-mp"` with a nonnegative amount to charge the combatant's
+separate transient CurrentMp pool. `stat.max-mp` still remains the immutable maximum statistic;
+the ID is the compatibility resource-family selector. Null/zero remains a free spell. Other
+resource IDs are not implemented.
 
 ## Step 3: grant container access and the individual spell
 
@@ -172,7 +174,7 @@ dotnet test tests/RpgGame.Core.Tests/RpgGame.Core.Tests.csproj
 - Mark the spell `ability-kind.magic`.
 - List at least one real `magic-discipline.` ID.
 - Use a currently supported target/ruleset/parameter contract.
-- Keep costs null/zero until current resources exist.
+- Use null/zero or a nonnegative `stat.max-mp` amount.
 - Grant the individual spell through `abilityUnlocks` or `startingAbilityIds`.
 - Grant at least one matching container through `magicDisciplineUnlocks`.
 - Validate base content, base plus mods, and headless tests.

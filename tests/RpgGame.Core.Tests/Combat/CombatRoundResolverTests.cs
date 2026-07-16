@@ -358,6 +358,33 @@ public sealed class CombatRoundResolverTests
     }
 
     [Fact]
+    public void Plan_AffordableMpAbilityUsesTheSamePaymentPathAsPartyCommands()
+    {
+        const string abilityId = "ability.test.mana-tackle";
+        FixedBattle battle = CombatTestFixture.CreateFixedBattle();
+        AbilityDefinition manaTackle = CostlyPhysicalAbility(abilityId) with
+        {
+            CostAmount = 2,
+        };
+        CombatSnapshot prepared = ReplaceCombatant(
+            battle.Snapshot,
+            "enemy-0",
+            combatant => WithAbilities(
+                WithStatistic(combatant, CombatStatisticIds.MaxMp, 3),
+                [abilityId]).WithCurrentMp(3));
+        var planner = new EnemyCommandPlanner(new TestCatalog(manaTackle));
+
+        CombatCommand command = planner.Plan(prepared, "enemy-0");
+        CombatResolution resolution = new CombatResolver(new TestCatalog(manaTackle)).Resolve(
+            prepared,
+            command);
+
+        Assert.Equal(abilityId, command.AbilityId);
+        Assert.Equal(1, resolution.Next.GetRequiredCombatant("enemy-0").CurrentMp);
+        Assert.IsType<ResourceSpent>(resolution.Events[0]);
+    }
+
+    [Fact]
     public void Plan_NoLivingPartyTargetIsRejected()
     {
         FixedBattle battle = CombatTestFixture.CreateFixedBattle();
@@ -466,12 +493,16 @@ public sealed class CombatRoundResolverTests
                 source.Placement,
                 statistics,
                 source.AbilityIds,
-                source.CurrentHp)
+                source.CurrentHp,
+                source.DamageTypePercentModifiers,
+                source.CurrentMp)
             : new CombatantSnapshot(
                 source.Placement,
                 statistics,
                 source.PartyAbilityAvailability,
-                source.CurrentHp);
+                source.CurrentHp,
+                source.DamageTypePercentModifiers,
+                source.CurrentMp);
     }
 
     private static CombatantSnapshot WithAbilities(
@@ -480,5 +511,7 @@ public sealed class CombatRoundResolverTests
         source.Placement,
         source.Statistics,
         abilityIds,
-        source.CurrentHp);
+        source.CurrentHp,
+        source.DamageTypePercentModifiers,
+        source.CurrentMp);
 }

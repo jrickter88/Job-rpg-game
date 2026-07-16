@@ -22,7 +22,7 @@ its content, runtime state, events, round behavior, or UI.
 
 | Concern | Owner | Why |
 |---|---|---|
-| Attack button, focus, target buttons, HP labels, log text | `BattleController` in `Rpg.Game` | These are Godot presentation concerns. |
+| Command buttons/submenus, focus, target buttons, HP/MP labels, log text | `BattleController` in `Rpg.Game` | These are Godot presentation concerns. |
 | Damage, HP replacement, defeated actors | `CombatResolver` in `Rpg.Core` | Rules remain deterministic and headless-testable. |
 | Speed ordering, skipped defeated actors, round advancement | `CombatRoundResolver` in `Rpg.Core` | UI collection order must never change simulation order. |
 | Slime ability and target intent | `EnemyCommandPlanner` in `Rpg.Core` | Enemy and player actions use ordinary `CombatCommand` values. |
@@ -97,8 +97,8 @@ solely for manual testing.
 
 ## Deliberately deferred
 
-- Guard, class abilities, magic, items, escape, or command queues for multiple party members;
-- resource costs/current MP, statuses, healing, area targets, or retargeting;
+- Guard execution, items, escape, or command queues for multiple party members;
+- statuses, healing, area targets, or retargeting;
 - animation, sprites, sound, floating numbers, and polished battle UI;
 - rewards, loot resolution, experience, gold, or inventory mutation;
 - saving/resuming a transient battle and controller navigation.

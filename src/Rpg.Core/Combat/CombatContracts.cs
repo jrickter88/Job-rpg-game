@@ -177,14 +177,16 @@ public sealed record CombatantSnapshot
         IReadOnlyDictionary<string, int> statistics,
         IReadOnlyList<string> abilityIds,
         int currentHp,
-        IReadOnlyDictionary<string, int>? damageTypePercentModifiers = null)
+        IReadOnlyDictionary<string, int>? damageTypePercentModifiers = null,
+        int? currentMp = null)
         : this(
             placement,
             statistics,
             abilityIds,
             currentHp,
             partyAbilityAvailability: null,
-            damageTypePercentModifiers)
+            damageTypePercentModifiers,
+            currentMp)
     {
     }
 
@@ -193,7 +195,8 @@ public sealed record CombatantSnapshot
         IReadOnlyDictionary<string, int> statistics,
         PartyAbilityAvailability partyAbilityAvailability,
         int currentHp,
-        IReadOnlyDictionary<string, int>? damageTypePercentModifiers = null)
+        IReadOnlyDictionary<string, int>? damageTypePercentModifiers = null,
+        int? currentMp = null)
         : this(
             placement,
             statistics,
@@ -201,7 +204,8 @@ public sealed record CombatantSnapshot
                 ?? throw new ArgumentNullException(nameof(partyAbilityAvailability)),
             currentHp,
             partyAbilityAvailability,
-            damageTypePercentModifiers)
+            damageTypePercentModifiers,
+            currentMp)
     {
     }
 
@@ -211,7 +215,8 @@ public sealed record CombatantSnapshot
         IReadOnlyList<string> abilityIds,
         int currentHp,
         PartyAbilityAvailability? partyAbilityAvailability,
-        IReadOnlyDictionary<string, int>? damageTypePercentModifiers)
+        IReadOnlyDictionary<string, int>? damageTypePercentModifiers,
+        int? currentMp)
     {
         ArgumentNullException.ThrowIfNull(placement);
         ArgumentNullException.ThrowIfNull(statistics);
@@ -256,6 +261,27 @@ public sealed record CombatantSnapshot
                 currentHp,
                 $"Current HP for '{placement.InstanceId}' must be within "
                 + $"0..{maximumHp}.");
+        }
+
+        int maximumMp = statistics.TryGetValue(CombatStatisticIds.MaxMp, out int authoredMaximumMp)
+            ? authoredMaximumMp
+            : 0;
+        if (maximumMp < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(statistics),
+                maximumMp,
+                $"Combatant '{placement.InstanceId}' has negative "
+                + $"'{CombatStatisticIds.MaxMp}' statistic {maximumMp}.");
+        }
+
+        int resolvedCurrentMp = currentMp ?? maximumMp;
+        if (resolvedCurrentMp < 0 || resolvedCurrentMp > maximumMp)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(currentMp),
+                resolvedCurrentMp,
+                $"Current MP for '{placement.InstanceId}' must be within 0..{maximumMp}.");
         }
 
         if (abilityIds.Any(string.IsNullOrWhiteSpace))
@@ -303,6 +329,7 @@ public sealed record CombatantSnapshot
         DamageTypePercentModifiers = new ReadOnlyDictionary<string, int>(damageModifierCopy);
         PartyAbilityAvailability = partyAbilityAvailability;
         CurrentHp = currentHp;
+        CurrentMp = resolvedCurrentMp;
     }
 
     public FormationPlacement Placement { get; }
@@ -333,6 +360,12 @@ public sealed record CombatantSnapshot
 
     public int CurrentHp { get; }
 
+    /// <summary>
+    /// Transient MP remaining in this battle. It is initialized from <see cref="MaximumMp"/>
+    /// and never appears in campaign state or authored content.
+    /// </summary>
+    public int CurrentMp { get; }
+
     public string InstanceId => Placement.InstanceId;
 
     public string DefinitionId => Placement.DefinitionId;
@@ -340,6 +373,13 @@ public sealed record CombatantSnapshot
     public BattleSide Side => Placement.Anchor.Side;
 
     public int MaximumHp => Statistics[CombatStatisticIds.MaxHp];
+
+    /// <summary>
+    /// Resolved maximum MP, or zero when the combatant has no <c>stat.max-mp</c> statistic.
+    /// </summary>
+    public int MaximumMp => Statistics.TryGetValue(CombatStatisticIds.MaxMp, out int value)
+        ? value
+        : 0;
 
     /// <summary>True when this battle-local combatant has no remaining HP.</summary>
     public bool IsDefeated => CurrentHp == 0;
@@ -360,13 +400,36 @@ public sealed record CombatantSnapshot
                 Statistics,
                 AbilityIds,
                 currentHp,
-                DamageTypePercentModifiers)
+                DamageTypePercentModifiers,
+                CurrentMp)
             : new CombatantSnapshot(
                 Placement,
                 Statistics,
                 PartyAbilityAvailability,
                 currentHp,
-                DamageTypePercentModifiers);
+                DamageTypePercentModifiers,
+                CurrentMp);
+
+    /// <summary>
+    /// Creates a replacement state with different current MP while preserving every other
+    /// battle-local property.
+    /// </summary>
+    public CombatantSnapshot WithCurrentMp(int currentMp) =>
+        PartyAbilityAvailability is null
+            ? new CombatantSnapshot(
+                Placement,
+                Statistics,
+                AbilityIds,
+                CurrentHp,
+                DamageTypePercentModifiers,
+                currentMp)
+            : new CombatantSnapshot(
+                Placement,
+                Statistics,
+                PartyAbilityAvailability,
+                CurrentHp,
+                DamageTypePercentModifiers,
+                currentMp);
 }
 
 /// <summary>

@@ -107,7 +107,7 @@ The existing action events remain in exact action order. Milestone 3.13 now appe
 For one living enemy, `EnemyCommandPlanner`:
 
 1. scans `AbilityIds` in authored order;
-2. skips abilities with unsupported costs or target/ruleset contracts;
+2. skips abilities with unsupported costs, insufficient current MP, or target/ruleset contracts;
 3. selects the first ability the current resolver can execute;
 4. finds the living party member with the lowest absolute `CurrentHp`;
 5. breaks equal-HP ties with ordinal instance ID;
@@ -131,8 +131,8 @@ documentation must change together.
 - Every vanilla class still has an empty `abilityUnlocks` array.
 - No random source is consumed, so identical snapshots and commands produce identical results.
 
-Explicitly deferred: Godot command UI, party input collection, automatic retargeting, resource
-costs, class skills, advanced AI profiles, status effects, campaign victory/reward application,
+Explicitly deferred: Godot command UI, party input collection, automatic retargeting, class
+skills, advanced AI profiles, status effects, campaign victory/reward application,
 encounter clearing, loot rolls, battle saves, animation, and sound.
 
 ## Automated coverage

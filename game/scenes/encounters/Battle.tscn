@@ -40,13 +40,13 @@ theme_override_constants/separation = 5
 
 [node name="Title" type="Label" parent="Margin/VBox"]
 layout_mode = 2
-text = "Milestone 3.14 — Playable Battle"
+text = "Milestone 4.4 — Playable Battle Commands"
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 25
 
 [node name="Explanation" type="Label" parent="Margin/VBox"]
 layout_mode = 2
-text = "Choose Attack and a target. Core combat resolves both sides; this scene only presents the result."
+text = "Choose an available Skill or Magic command. Core combat resolves both sides; this scene only presents the result."
 horizontal_alignment = 1
 autowrap_mode = 2
 theme_override_colors/font_color = Color(0.72, 0.82, 1, 1)
@@ -78,7 +78,7 @@ size_flags_horizontal = 3
 
 [node name="Heading" type="Label" parent="Margin/VBox/StatusRow/PartyStatus"]
 layout_mode = 2
-text = "PARTY HP"
+text = "PARTY STATUS"
 theme_override_colors/font_color = Color(0.66, 0.82, 1, 1)
 theme_override_font_sizes/font_size = 15
 
@@ -88,7 +88,7 @@ size_flags_horizontal = 3
 
 [node name="Heading" type="Label" parent="Margin/VBox/StatusRow/EnemyStatus"]
 layout_mode = 2
-text = "ENEMY HP"
+text = "ENEMY STATUS"
 theme_override_colors/font_color = Color(1, 0.72, 0.72, 1)
 theme_override_font_sizes/font_size = 15
 
@@ -103,22 +103,22 @@ horizontal_alignment = 1
 theme_override_colors/font_color = Color(1, 0.83, 0.58, 1)
 theme_override_font_sizes/font_size = 15
 
-[node name="CommandRow" type="HBoxContainer" parent="Margin/VBox/CommandArea"]
+[node name="CommandMenu" type="VBoxContainer" parent="Margin/VBox/CommandArea"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 6
+
+[node name="TargetRow" type="HBoxContainer" parent="Margin/VBox/CommandArea"]
 layout_mode = 2
 alignment = 1
 theme_override_constants/separation = 10
 
-[node name="Attack" type="Button" parent="Margin/VBox/CommandArea/CommandRow"]
-custom_minimum_size = Vector2(130, 34)
-layout_mode = 2
-text = "Attack"
-
-[node name="TargetPrompt" type="Label" parent="Margin/VBox/CommandArea/CommandRow"]
+[node name="TargetPrompt" type="Label" parent="Margin/VBox/CommandArea/TargetRow"]
 layout_mode = 2
 text = "Target:"
 vertical_alignment = 1
 
-[node name="Targets" type="HBoxContainer" parent="Margin/VBox/CommandArea/CommandRow"]
+[node name="Targets" type="HBoxContainer" parent="Margin/VBox/CommandArea/TargetRow"]
 layout_mode = 2
 theme_override_constants/separation = 6
 

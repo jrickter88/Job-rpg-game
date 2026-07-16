@@ -490,7 +490,7 @@ public sealed class CombatResolverTests
     }
 
     [Fact]
-    public void Resolve_CostBearingPhysicalAbility_IsRejected()
+    public void Resolve_UnsupportedCostStatistic_IsRejected()
     {
         const string abilityId = "ability.test.costly-strike";
         FixedBattle battle = CombatTestFixture.CreateFixedBattle();
@@ -504,7 +504,7 @@ public sealed class CombatResolverTests
                 combatant.CurrentHp));
         AbilityDefinition costly = PhysicalAbility(abilityId, 4m) with
         {
-            CostStatisticId = "stat.max-mp",
+            CostStatisticId = CombatStatisticIds.MaxHp,
             CostAmount = 1,
         };
         var resolver = new CombatResolver(new TestCatalog(costly));
@@ -515,6 +515,69 @@ public sealed class CombatResolverTests
                 new CombatCommand("party-0", abilityId, ["enemy-0"])));
 
         Assert.Equal(CombatCommandProblemCodes.AbilityCostUnsupported, exception.ProblemCode);
+    }
+
+    [Fact]
+    public void Resolve_MpCostingAbility_DeductsOnceAndEmitsResourceEventBeforeDamage()
+    {
+        const string abilityId = "ability.test.mana-strike";
+        FixedBattle battle = CombatTestFixture.CreateFixedBattle();
+        CombatSnapshot withAbility = ReplaceCombatant(
+            battle.Snapshot,
+            "party-0",
+            combatant => WithAbilities(combatant, [abilityId]).WithCurrentMp(3));
+        AbilityDefinition manaStrike = PhysicalAbility(abilityId, 4m) with
+        {
+            CostStatisticId = CombatStatisticIds.MaxMp,
+            CostAmount = 2,
+        };
+
+        CombatResolution resolution = new CombatResolver(new TestCatalog(manaStrike)).Resolve(
+            withAbility,
+            new CombatCommand("party-0", abilityId, ["enemy-0"]));
+
+        Assert.Equal(3, withAbility.GetRequiredCombatant("party-0").CurrentMp);
+        Assert.Equal(1, resolution.Next.GetRequiredCombatant("party-0").CurrentMp);
+        Assert.Collection(
+            resolution.Events,
+            combatEvent =>
+            {
+                ResourceSpent spent = Assert.IsType<ResourceSpent>(combatEvent);
+                Assert.Equal("party-0", spent.CombatantId);
+                Assert.Equal(abilityId, spent.AbilityId);
+                Assert.Equal(CombatStatisticIds.MaxMp, spent.ResourceStatisticId);
+                Assert.Equal(2, spent.Amount);
+                Assert.Equal(3, spent.PreviousValue);
+                Assert.Equal(1, spent.CurrentValue);
+            },
+            combatEvent => Assert.IsType<DamageApplied>(combatEvent));
+    }
+
+    [Fact]
+    public void Resolve_InsufficientMpRejectsWithoutChangingHpOrMp()
+    {
+        const string abilityId = "ability.test.mana-strike";
+        FixedBattle battle = CombatTestFixture.CreateFixedBattle();
+        CombatSnapshot withAbility = ReplaceCombatant(
+            battle.Snapshot,
+            "party-0",
+            combatant => WithAbilities(combatant, [abilityId]).WithCurrentMp(1));
+        AbilityDefinition manaStrike = PhysicalAbility(abilityId, 4m) with
+        {
+            CostStatisticId = CombatStatisticIds.MaxMp,
+            CostAmount = 2,
+        };
+
+        CombatCommandValidationException exception = Assert.Throws<
+            CombatCommandValidationException>(() => new CombatResolver(
+                new TestCatalog(manaStrike)).Resolve(
+                withAbility,
+                new CombatCommand("party-0", abilityId, ["enemy-0"])));
+
+        Assert.Equal(CombatCommandProblemCodes.AbilityResourceInsufficient, exception.ProblemCode);
+        Assert.Equal(1, withAbility.GetRequiredCombatant("party-0").CurrentMp);
+        Assert.Equal(96, withAbility.GetRequiredCombatant("party-0").CurrentHp);
+        Assert.Equal(22, withAbility.GetRequiredCombatant("enemy-0").CurrentHp);
     }
 
     [Fact]
@@ -602,13 +665,15 @@ public sealed class CombatResolverTests
                 statistics,
                 source.AbilityIds,
                 source.CurrentHp,
-                source.DamageTypePercentModifiers)
+                source.DamageTypePercentModifiers,
+                source.CurrentMp)
             : new CombatantSnapshot(
                 source.Placement,
                 statistics,
                 source.PartyAbilityAvailability,
                 source.CurrentHp,
-                source.DamageTypePercentModifiers);
+                source.DamageTypePercentModifiers,
+                source.CurrentMp);
     }
 
     private static CombatantSnapshot WithDamageTypeModifiers(
@@ -620,11 +685,32 @@ public sealed class CombatResolverTests
                 source.Statistics,
                 source.AbilityIds,
                 source.CurrentHp,
-                damageTypePercentModifiers)
+                damageTypePercentModifiers,
+                source.CurrentMp)
             : new CombatantSnapshot(
                 source.Placement,
                 source.Statistics,
                 source.PartyAbilityAvailability,
                 source.CurrentHp,
-                damageTypePercentModifiers);
+                damageTypePercentModifiers,
+                source.CurrentMp);
+
+    private static CombatantSnapshot WithAbilities(
+        CombatantSnapshot source,
+        IReadOnlyList<string> abilityIds) =>
+        source.PartyAbilityAvailability is null
+            ? new CombatantSnapshot(
+                source.Placement,
+                source.Statistics,
+                abilityIds,
+                source.CurrentHp,
+                source.DamageTypePercentModifiers,
+                source.CurrentMp)
+            : new CombatantSnapshot(
+                source.Placement,
+                source.Statistics,
+                abilityIds,
+                source.CurrentHp,
+                source.DamageTypePercentModifiers,
+                source.CurrentMp);
 }

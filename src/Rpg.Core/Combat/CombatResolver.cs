@@ -69,14 +69,21 @@ public sealed class CombatResolver : ICombatResolver
                 $"Owned ability '{command.AbilityId}' is missing from the content catalog.");
         }
 
-        // Resource pools such as current MP do not exist yet. Even a zero-valued authored cost
-        // with a resource ID is rejected so the resolver never pretends it paid a resource.
         if (!CombatAbilityExecutionSupport.HasSupportedCost(ability))
         {
             Reject(
                 CombatCommandProblemCodes.AbilityCostUnsupported,
-                $"Ability '{ability.Id}' declares a resource cost, but combat resource "
-                + "payment is not implemented.");
+                $"Ability '{ability.Id}' has unsupported cost statistic "
+                + $"'{ability.CostStatisticId ?? "<null>"}'. Only null and "
+                + $"'{CombatStatisticIds.MaxMp}' are supported.");
+        }
+
+        if (!CombatAbilityExecutionSupport.HasSufficientResource(actor.Value, ability))
+        {
+            Reject(
+                CombatCommandProblemCodes.AbilityResourceInsufficient,
+                $"Combatant '{actor.Value.InstanceId}' has {actor.Value.CurrentMp} current MP, "
+                + $"but ability '{ability.Id}' requires {ability.CostAmount}.");
         }
 
         if (command.TargetCombatantIds.Count != 1)
@@ -139,22 +146,38 @@ public sealed class CombatResolver : ICombatResolver
         // Copy the ordered collection and replace exactly the target's slot. Every unaffected
         // combatant keeps the same immutable instance; the CombatSnapshot constructor then owns
         // a new read-only list and preserves formation/order/round data.
+        int costAmount = ability.CostAmount;
+        int nextMp = actor.Value.CurrentMp - costAmount;
         CombatantSnapshot[] nextCombatants = current.Combatants.ToArray();
+        if (costAmount > 0)
+        {
+            nextCombatants[actor.Index] = actor.Value.WithCurrentMp(nextMp);
+        }
+
         nextCombatants[target.Index] = target.Value.WithCurrentHp(nextHp);
         var nextSnapshot = new CombatSnapshot(current.Round, nextCombatants);
 
-        var events = new List<CombatEvent>
+        var events = new List<CombatEvent>();
+        if (costAmount > 0)
         {
-            new DamageApplied(
+            events.Add(new ResourceSpent(
                 actor.Value.InstanceId,
-                target.Value.InstanceId,
                 ability.Id,
-                damageTypeId,
-                damagePercentModifier,
-                appliedDamage,
-                target.Value.CurrentHp,
-                nextHp),
-        };
+                ability.CostStatisticId!,
+                costAmount,
+                actor.Value.CurrentMp,
+                nextMp));
+        }
+
+        events.Add(new DamageApplied(
+            actor.Value.InstanceId,
+            target.Value.InstanceId,
+            ability.Id,
+            damageTypeId,
+            damagePercentModifier,
+            appliedDamage,
+            target.Value.CurrentHp,
+            nextHp));
         if (nextHp == 0)
         {
             events.Add(new CombatantDefeated(target.Value.InstanceId));
