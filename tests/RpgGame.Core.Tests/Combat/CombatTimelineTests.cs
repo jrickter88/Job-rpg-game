@@ -7,12 +7,14 @@ namespace RpgGame.Core.Tests.Combat;
 public sealed class CombatTimelineTests
 {
     [Fact]
-    public void Factory_InitializesEveryLivingCombatantAtTimelineZero()
+    public void Factory_InitializesOpeningTimelineFromSpeed()
     {
         CombatSnapshot snapshot = CombatTestFixture.CreateFixedBattle().Snapshot;
 
         Assert.Equal(0, snapshot.TimelineTime);
-        Assert.All(snapshot.Combatants, combatant => Assert.Equal(0, combatant.NextActionTime));
+        Assert.Equal(70, snapshot.GetRequiredCombatant("party-0").NextActionTime);
+        Assert.Equal(90, snapshot.GetRequiredCombatant("enemy-0").NextActionTime);
+        Assert.Equal(90, snapshot.GetRequiredCombatant("enemy-1").NextActionTime);
         Assert.Equal("party-0", CombatTimeline.SelectReadyActor(snapshot).InstanceId);
     }
 
@@ -26,7 +28,7 @@ public sealed class CombatTimelineTests
             .WithNextActionTime(20);
         CombatSnapshot delayed = Replace(battle.Snapshot, party, firstEnemy);
 
-        Assert.Equal("enemy-1", CombatTimeline.SelectReadyActor(delayed).InstanceId);
+        Assert.Equal("enemy-0", CombatTimeline.SelectReadyActor(delayed).InstanceId);
 
         CombatSnapshot tied = Replace(
             delayed,
@@ -40,15 +42,15 @@ public sealed class CombatTimelineTests
         FixedBattle battle = CombatTestFixture.CreateFixedBattle();
         CombatSnapshot snapshot = Replace(
             battle.Snapshot,
-            battle.Snapshot.GetRequiredCombatant("party-0").WithNextActionTime(100),
-            battle.Snapshot.GetRequiredCombatant("enemy-0").WithNextActionTime(1),
+            battle.Snapshot.GetRequiredCombatant("party-0").WithNextActionTime(0),
+            battle.Snapshot.GetRequiredCombatant("enemy-0").WithNextActionTime(80),
             battle.Snapshot.GetRequiredCombatant("enemy-1").WithNextActionTime(80));
 
         TurnOrderPreview preview = new TurnOrderPreviewService().Create(snapshot, 6);
 
-        Assert.Equal("enemy-0", preview.Entries[0].CombatantInstanceId);
-        Assert.True(preview.Entries.Count(entry => entry.CombatantInstanceId == "enemy-0") >
-            preview.Entries.Count(entry => entry.CombatantInstanceId == "enemy-1"));
+        Assert.Equal("party-0", preview.Entries[0].CombatantInstanceId);
+        Assert.True(preview.Entries.Count(entry => entry.CombatantInstanceId == "party-0") >
+            preview.Entries.Count(entry => entry.CombatantInstanceId == "enemy-0"));
     }
 
     [Fact]
@@ -61,11 +63,12 @@ public sealed class CombatTimelineTests
                 snapshot,
                 new CombatCommand("party-0", CombatTestFixture.AttackId, ["enemy-0"]));
 
-        Assert.Equal(0, result.Next.TimelineTime);
+        Assert.Equal(70, result.Next.TimelineTime);
         Assert.Equal(
-            CombatTimeline.CalculateActionDelay(snapshot.GetRequiredCombatant("party-0")),
+            snapshot.GetRequiredCombatant("party-0").NextActionTime
+            + CombatTimeline.CalculateActionDelay(snapshot.GetRequiredCombatant("party-0")),
             result.Next.GetRequiredCombatant("party-0").NextActionTime);
-        Assert.Equal(0, result.Next.GetRequiredCombatant("enemy-0").NextActionTime);
+        Assert.Equal(90, result.Next.GetRequiredCombatant("enemy-0").NextActionTime);
     }
 
     [Fact]
@@ -106,7 +109,7 @@ public sealed class CombatTimelineTests
         TurnOrderPreview before = service.Create(battle.Snapshot, 1);
         CombatSnapshot delayed = Replace(
             battle.Snapshot,
-            battle.Snapshot.GetRequiredCombatant("party-0").WithNextActionTime(50));
+            battle.Snapshot.GetRequiredCombatant("party-0").WithNextActionTime(100));
         TurnOrderPreview after = service.Create(delayed, 1);
 
         Assert.NotEqual(

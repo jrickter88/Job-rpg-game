@@ -7,16 +7,20 @@ each `CombatantSnapshot.NextActionTime` is an absolute integer position. The rea
 living combatant with the lowest next action time. Ties use higher effective Speed, Party before
 Enemy, and ordinal instance ID.
 
-After a successful action, the actor is rescheduled with:
+After a successful action, the actor is rescheduled with a smoothed integer delay:
 
 ```text
-ActionDelay = max(1, 100 * 10 / max(1, EffectiveSpeed))
+ActionDelay = max(1, 1000 / (max(1, EffectiveSpeed) + 4))
 ```
 
 The current implementation clamps Speed to at least one and rejects missing Speed as malformed
 combat state. The timeline advances to the ready actor's action time only after command legality
 and effect resolution succeed. A rejected command therefore changes no HP, MP, timeline time, or
 next action time.
+
+Opening initiative uses `max(0, 100 - Speed * 5)` as each combatant's initial next action time.
+This keeps ordinary speed differences close together while allowing a truly exceptional speed to
+take a second turn before a slow actor's first turn.
 
 ## Wait-mode behavior
 

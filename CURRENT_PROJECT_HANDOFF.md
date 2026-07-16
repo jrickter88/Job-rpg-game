@@ -13,9 +13,11 @@ an enemy is ready. The UI shows the current actor and an eight-entry forecast. T
 remains only for compatibility with historical headless callers; new runtime battle composition
 uses the timeline interface.
 
-The action delay is integer-only: `max(1, 100 * 10 / max(1, Speed))`. Ties are next action time,
-higher Speed, Party before Enemy, then ordinal instance ID. Timeline state is transient and does
-does not change save or content schemas.
+The action delay is integer-only: `max(1, 1000 / (max(1, Speed) + 4))`. Initial next action time
+is `max(0, 100 - Speed * 5)`, keeping ordinary openings close while permitting an exceptionally
+fast actor to take a second turn before a slow actor's first. Ties are next action time, higher
+Speed, Party before Enemy, then ordinal instance ID. Timeline state is transient and does not
+change save or content schemas.
 
 Validation for this ticket passed: 369 core tests; base content validation loaded 41 definitions;
 base plus example mod validation loaded 44 definitions; the solution build completed with 0

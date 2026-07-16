@@ -162,7 +162,14 @@ public sealed class CombatSnapshotFactory
         }
 
         ValidateFormationRules(partyPlacements, enemyPlacements);
-        return new CombatSnapshot(1, combatants);
+        CombatSnapshot initial = new CombatSnapshot(1, combatants);
+        CombatantSnapshot[] initializedCombatants = initial.Combatants
+            .Select(combatant => combatant.Statistics.ContainsKey(CombatStatisticIds.Speed)
+                ? combatant.WithNextActionTime(
+                    CombatTimeline.CalculateOpeningActionTime(combatant))
+                : combatant)
+            .ToArray();
+        return new CombatSnapshot(1, 0, initializedCombatants);
     }
 
     private static void ValidateSide(

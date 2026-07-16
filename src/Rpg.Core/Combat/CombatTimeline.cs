@@ -5,8 +5,10 @@ namespace RpgGame.Core.Combat;
 /// <summary>Closed, integer-only timing rules for wait-mode ATB initiative.</summary>
 public static class CombatTimeline
 {
-    public const int BaseActionDelay = 100;
-    public const int SpeedScale = 10;
+    public const int BaseActionDelay = 1000;
+    public const int SpeedBaseline = 4;
+    public const int OpeningWindow = 100;
+    public const int OpeningSpeedScale = 5;
     public const int MinActionDelay = 1;
 
     public static int CalculateActionDelay(CombatantSnapshot combatant)
@@ -20,8 +22,18 @@ public static class CombatTimeline
                 $"Combatant '{combatant.InstanceId}' is missing required combat statistic "
                 + $"'{CombatStatisticIds.Speed}'.");
 
-        long delay = (long)BaseActionDelay * SpeedScale / effectiveSpeed;
+        long delay = BaseActionDelay / (effectiveSpeed + SpeedBaseline);
         return (int)Math.Max(MinActionDelay, delay);
+    }
+
+    /// <summary>
+    /// Creates a deterministic opening offset. The opening window keeps ordinary actors close,
+    /// while an exceptionally fast actor may complete another delay before slow actors open.
+    /// </summary>
+    public static long CalculateOpeningActionTime(CombatantSnapshot combatant)
+    {
+        int effectiveSpeed = EffectiveSpeed(combatant);
+        return Math.Max(0, OpeningWindow - (long)effectiveSpeed * OpeningSpeedScale);
     }
 
     public static IReadOnlyList<CombatantSnapshot> OrderReadyActors(
@@ -190,8 +202,8 @@ public sealed class TurnOrderPreviewService
             simulated[next.InstanceId] = next with
             {
                 NextActionTime = checked(
-                    next.NextActionTime + CombatTimeline.BaseActionDelay * CombatTimeline.SpeedScale
-                    / next.Speed),
+                    next.NextActionTime + CombatTimeline.BaseActionDelay
+                    / (next.Speed + CombatTimeline.SpeedBaseline)),
             };
         }
 

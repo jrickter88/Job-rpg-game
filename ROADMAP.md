@@ -500,7 +500,8 @@ font scaling, and any campaign/core-rules changes. See `MILESTONE_4_96_GUIDE.md`
 
 - Replace live battle's complete-round command collection with one ready actor at a time.
 - Store transient timeline time and each combatant's next action time in `CombatSnapshot`.
-- Schedule successful actions with `max(1, 100 * 10 / max(1, Speed))` using integer arithmetic.
+- Schedule successful actions with `max(1, 1000 / (max(1, Speed) + 4))` using integer arithmetic,
+  with a deterministic opening offset for the first turn.
 - Resolve ties by next action time, higher Speed, party side, then ordinal instance ID.
 - Forecast the next eight turns through a non-mutating projection and refresh it after actions.
 - Preserve the existing command, enemy-planner, MP, typed damage/healing, victory, reward, and

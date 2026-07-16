@@ -559,7 +559,9 @@ flowchart TD
     Snapshot --> Preview["TurnOrderPreviewService"]
 ```
 
-The action delay is `max(1, 100 * 10 / max(1, EffectiveSpeed))`. Ready ties use lower
+The action delay is `max(1, 1000 / (max(1, EffectiveSpeed) + 4))`. Initial next action time is
+`max(0, 100 - Speed * 5)`, giving ordinary actors a close opening while allowing an exceptional
+speed to take a second turn before a slow actor's first turn. Ready ties use lower
 `NextActionTime`, higher effective Speed, Party before Enemy, and ordinal instance ID. The
 preview simulates only ordinary delays and living actors without mutating authoritative state;
 deaths, statuses, target choices, and resource use can invalidate the forecast.
