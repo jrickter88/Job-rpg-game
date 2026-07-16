@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "locale": "en",
   "texts": {
-    "dialogue.prologue.test-room-guide.speaker": "Test Room Guide",
-    "dialogue.prologue.test-room-guide.line.001": "Hello, James. This room is small, but it remembers what happens here.",
-    "dialogue.prologue.test-room-guide.line.002": "Move away, reload the room with R, and I will still know we spoke."
+	"dialogue.prologue.test-room-guide.speaker": "Test Room Guide",
+	"dialogue.prologue.test-room-guide.line.001": "Hello, James. This room is small, but it remembers what happens here.",
+	"dialogue.prologue.test-room-guide.line.002": "Move away, reload the room with R, and I will still know we spoke."
   }
 }

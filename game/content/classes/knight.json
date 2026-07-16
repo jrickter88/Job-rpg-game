@@ -3,14 +3,14 @@
   "id": "class.martial.knight",
   "displayNameKey": "class.knight.name",
   "baseStatisticBonuses": {
-    "stat.max-hp": 12,
-    "stat.defense": 2
+	"stat.max-hp": 12,
+	"stat.defense": 2
   },
   "abilityUnlocks": [
-    {
-      "level": 1,
-      "abilityId": "ability.knight.power-strike"
-    }
+	{
+	  "level": 1,
+	  "abilityId": "ability.knight.power-strike"
+	}
   ],
   "magicDisciplineUnlocks": []
 }
