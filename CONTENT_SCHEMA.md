@@ -22,7 +22,8 @@ Every top-level record contains:
 | `schemaVersion` | integer | Required explicitly in JSON. Starts at `1`; increment only when this record category needs migration. |
 | `id` | string | Permanent, globally unique, stable ID. |
 
-The initial directory-to-type mapping is:
+The initial directory-to-type mapping is. Each category may contain authoring subdirectories;
+the top-level directory still determines the definition type.
 
 | Directory | Definition |
 |---|---|
@@ -30,8 +31,8 @@ The initial directory-to-type mapping is:
 | `classes/` | `ClassDefinition` |
 | `dialogues/` | `DialogueDefinition` |
 | `statistics/` | `StatisticDefinition` |
-| `items/` | `ItemDefinition` |
-| `equipment/` | `EquipmentDefinition` |
+| `items/` and its subdirectories | `ItemDefinition` |
+| `equipment/` and its subdirectories | `EquipmentDefinition` |
 | `loot-tables/` | `LootTableDefinition` |
 | `abilities/` | `AbilityDefinition` |
 | `magic-disciplines/` | `MagicDisciplineDefinition` |

@@ -6,7 +6,8 @@ complete field-level contract remains in `CONTENT_SCHEMA.md`.
 ## Workflow
 
 1. Choose a permanent lowercase ID. IDs are save/content identity and must not be renamed after release.
-2. Add one UTF-8 JSON file in the correct folder under `game/content/`.
+2. Add one UTF-8 JSON file in the correct folder under `game/content/`. Subfolders are allowed and
+   are discovered recursively.
 3. Include `schemaVersion` and `id` in every top-level record.
 4. Reference other records by stable IDs, never filenames, display names, array positions, or Godot paths.
 5. Add localization keys to `game/localization/en.json` for display and description fields.
@@ -22,7 +23,27 @@ Do not put C# scripts, formulas, scene paths, or arbitrary behavior in content J
 ## Items
 
 Items live in `game/content/items/`. Equipment is a separate record that points to an item with
-`itemId`.
+`itemId`. Keep related records together using this recommended layout:
+
+```text
+game/content/
+  items/
+    weapons/
+    body/
+    feet/
+    helm/
+    accessories/
+    consumables/
+  equipment/
+    weapons/
+    body/
+    feet/
+    helm/
+    accessories/
+```
+
+The folder is for authoring organization only. Stable JSON IDs and cross-record `itemId`
+references do not change when a file moves.
 
 ```json
 {
@@ -42,7 +63,7 @@ quest items, not merely because an item is equipment.
 
 ## Equipment
 
-Equipment lives in `game/content/equipment/`:
+Equipment lives in the matching slot folder under `game/content/equipment/`:
 
 ```json
 {
