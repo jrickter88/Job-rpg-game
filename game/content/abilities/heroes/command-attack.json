@@ -9,7 +9,7 @@
   "costStatisticId": null,
   "costAmount": 0,
   "rulesetId": "rules.damage.physical",
-  "damageTypeId": "damage-type.slash",
+  "damageTypeId": "damage-type.blunt",
   "numericParameters": {
 	"power": 4
   }

@@ -56,6 +56,11 @@ public partial class DataDrivenMapView : Node2D, IExplorationMapView
 
     public override void _Draw()
     {
+        if (_map is null)
+        {
+            return;
+        }
+
         Color floor = new(0.16f, 0.19f, 0.25f);
         Color alternateFloor = new(0.18f, 0.21f, 0.28f);
         Color wall = new(0.34f, 0.38f, 0.48f);
@@ -67,7 +72,28 @@ public partial class DataDrivenMapView : Node2D, IExplorationMapView
             Rect2 rectangle = new(DrawingOrigin + new Vector2(x * TileSize, y * TileSize),
                 new Vector2(TileSize, TileSize));
             DrawRect(rectangle, _map.GetSymbol(x, y) == '#' ? wall : ((x + y) % 2 == 0 ? floor : alternateFloor));
-            DrawRect(rectangle, grid, false, 1.0f);
+        }
+
+        // Draw shared tile edges once. Outlining every tile makes adjacent borders overlap and
+        // creates the thicker center lines visible in the placeholder map.
+        for (int x = 0; x <= _map.Width; x++)
+        {
+            float position = DrawingOrigin.X + x * TileSize;
+            DrawLine(
+                new Vector2(position, DrawingOrigin.Y),
+                new Vector2(position, DrawingOrigin.Y + _map.Height * TileSize),
+                grid,
+                1.0f);
+        }
+
+        for (int y = 0; y <= _map.Height; y++)
+        {
+            float position = DrawingOrigin.Y + y * TileSize;
+            DrawLine(
+                new Vector2(DrawingOrigin.X, position),
+                new Vector2(DrawingOrigin.X + _map.Width * TileSize, position),
+                grid,
+                1.0f);
         }
 
         foreach (MapEncounterMarkerDefinition marker in _map.EncounterMarkers)

@@ -47,7 +47,7 @@ public sealed class CombatResolverTests
         Assert.Equal("party-0", damage.ActingCombatantId);
         Assert.Equal("enemy-0", damage.TargetCombatantId);
         Assert.Equal(CombatTestFixture.AttackId, damage.AbilityId);
-        Assert.Equal(DamageTypeIds.Slash, damage.DamageTypeId);
+        Assert.Equal(DamageTypeIds.Blunt, damage.DamageTypeId);
         Assert.Equal(0, damage.DamagePercentModifier);
         Assert.Equal(100, damage.VariancePercent);
         Assert.Equal(11, damage.Amount);
@@ -333,7 +333,7 @@ public sealed class CombatResolverTests
             Attack("party-0", "enemy-0"));
 
         DamageApplied damage = Assert.IsType<DamageApplied>(Assert.Single(resolution.Events));
-        Assert.Equal(DamageTypeIds.Energy, damage.DamageTypeId);
+        Assert.Equal(DamageTypeIds.Blunt, damage.DamageTypeId);
         Assert.Equal(0, damage.DamagePercentModifier);
         Assert.Equal(11, damage.Amount);
     }

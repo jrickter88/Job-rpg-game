@@ -5,26 +5,26 @@
   "width": 12,
   "height": 9,
   "rows": [
-    "############",
-    "#..........#",
-    "#..........#",
-    "#..........#",
-    "#..........#",
-    "#..........#",
-    "#..........#",
-    "#T.........#",
+	"############",
+	"#..........#",
+	"#..........#",
+	"#..........#",
+	"#..........#",
+	"#..........#",
+	"#..........#",
+	"#T.........#",
     "############"
   ],
   "spawns": [
-    { "id": "spawn.from-test-forest", "x": 1, "y": 7, "facing": "north" }
+	{ "id": "spawn.from-test-forest", "x": 1, "y": 7, "facing": "north" }
   ],
   "encounters": [],
   "transitions": [
-    {
-      "id": "transition.clearing.to-test-forest",
-      "sourceCell": { "x": 1, "y": 7 },
-      "destinationMapId": "map.test-forest",
-      "destinationSpawnId": "spawn.from-clearing"
-    }
+	{
+	  "id": "transition.clearing.to-test-forest",
+	  "sourceCell": { "x": 1, "y": 7 },
+	  "destinationMapId": "map.test-forest",
+	  "destinationSpawnId": "spawn.from-clearing"
+	}
   ]
 }

@@ -13,7 +13,7 @@ public sealed class DamageTypeContentTests
         var catalog = TestContent.LoadCatalog();
 
         Assert.Equal(
-            DamageTypeIds.Slash,
+            DamageTypeIds.Blunt,
             catalog.GetRequired<AbilityDefinition>("ability.command.attack").DamageTypeId);
         Assert.Equal(
             DamageTypeIds.Energy,

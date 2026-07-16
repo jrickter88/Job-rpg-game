@@ -152,8 +152,9 @@ public sealed class CombatResolver : ICombatResolver
 
 		decimal power = RequirePositivePower(ability);
 		bool isBasicAttack = string.Equals(ability.Id, BasicAttackAbilityId, StringComparison.Ordinal);
-		string damageTypeId = isBasicAttack && actor.Value.EquippedWeaponDamageTypeId is not null
+		string damageTypeId = isBasicAttack
 			? actor.Value.EquippedWeaponDamageTypeId
+				?? (ability.DamageTypeId is null ? DamageTypeIds.Blunt : RequireDamageTypeId(ability))
 			: RequireDamageTypeId(ability);
 		int strength = RequireStatistic(actor.Value, CombatStatisticIds.Strength);
 		int defense = RequireStatistic(target.Value, CombatStatisticIds.Defense);

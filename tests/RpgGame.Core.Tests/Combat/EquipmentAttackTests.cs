@@ -24,6 +24,7 @@ public sealed class EquipmentAttackTests
 
         DamageApplied unarmedDamage = Assert.IsType<DamageApplied>(new CombatResolver(unarmed.Content)
             .Resolve(unarmed.Snapshot, Attack("party-0", "enemy-0")).Events.Single());
+        Assert.Equal(DamageTypeIds.Blunt, unarmedDamage.DamageTypeId);
         DamageApplied armedDamage = Assert.IsType<DamageApplied>(new CombatResolver(armed.Content)
             .Resolve(armedSnapshot, Attack("party-0", "enemy-0")).Events.Single());
 
