@@ -68,7 +68,14 @@ public partial class PlayerMarkerView : Node2D
     {
         if (_currentFrame is not null)
         {
-            DrawTexture(_currentFrame, new Vector2(-8.0f, -24.0f));
+            // Source frames are 16x24 pixel art; 2x nearest-neighbor scaling makes the
+            // character readable against the 48x48 exploration tile without blur.
+            DrawTextureRect(
+                _currentFrame,
+                new Rect2(-16.0f, -48.0f, 32.0f, 48.0f),
+                tile: false,
+                modulate: Colors.White,
+                transpose: false);
         }
     }
 

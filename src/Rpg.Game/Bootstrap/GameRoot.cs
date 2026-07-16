@@ -62,6 +62,7 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
     private string? _activeOverworldMusicCueId;
     private IRandomSource? _randomSource;
     private BattleCompletionService? _battleCompletion;
+    private bool _victoryTransitionInProgress;
 
     /// <summary>Validated immutable content available after <see cref="_Ready"/>.</summary>
     public IContentCatalog Content { get; private set; } = null!;
@@ -681,8 +682,34 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
 
     private void OnRewardSummaryContinueRequested(
         object? sender,
-        RewardSummaryContinueRequestedEventArgs eventArgs) =>
-        ShowExploration("Victory rewards applied; encounter cleared.");
+        RewardSummaryContinueRequestedEventArgs eventArgs)
+    {
+        if (_victoryTransitionInProgress)
+        {
+            return;
+        }
+
+        _victoryTransitionInProgress = true;
+        if (_victoryMusicPlayer is not null && _victoryMusicPlayer.Playing)
+        {
+            FadeVolume(_victoryMusicPlayer, -80.0f, 0.65);
+        }
+        _ = ContinueAfterVictoryAsync();
+    }
+
+    private async Task ContinueAfterVictoryAsync()
+    {
+        try
+        {
+            // Give the victory cue time to finish its fade before removing the battle tree.
+            await ToSignal(GetTree().CreateTimer(0.7), SceneTreeTimer.SignalName.Timeout);
+            ShowExploration("Victory rewards applied; encounter cleared.");
+        }
+        finally
+        {
+            _victoryTransitionInProgress = false;
+        }
+    }
 
     private void PlayVictoryMusic()
     {
