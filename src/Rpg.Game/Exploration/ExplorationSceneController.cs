@@ -44,6 +44,7 @@ public partial class ExplorationSceneController : Node2D
 	private bool _developmentCommandInProgress;
 	private bool _encounterTransitionRequested;
 	private bool _animateNextPlayerPosition;
+	private bool _playerMovementInProgress;
 	private bool _readyForInput;
 	private string? _heldMovementAction;
 	private Vector2I _heldMovementDelta;
@@ -52,8 +53,7 @@ public partial class ExplorationSceneController : Node2D
 	private MapEncounterMarkerDefinition? _pendingEncounterAfterDialogue;
 	private static readonly RandomEncounterResolver RandomEncounterResolver = new();
 
-	private const double MovementInitialDelaySeconds = 0.48;
-	private const double MovementRepeatIntervalSeconds = 0.32;
+	private const double MovementInitialDelaySeconds = 0.18;
 
 	/// <summary>Requests reconstruction by the composition root without adding navigation.</summary>
 	public event EventHandler? ReloadRequested;
@@ -163,6 +163,12 @@ public partial class ExplorationSceneController : Node2D
 			return;
 		}
 
+		if (_playerMovementInProgress)
+		{
+			UpdateCamera(_player.Position);
+			return;
+		}
+
 		_movementRepeatTimer -= delta;
 		if (_movementRepeatTimer > 0)
 		{
@@ -170,7 +176,6 @@ public partial class ExplorationSceneController : Node2D
 		}
 
 		TryMove(_heldMovementDelta, _heldMovementFacing);
-		_movementRepeatTimer = MovementRepeatIntervalSeconds;
 	}
 
 	/// <summary>
@@ -301,23 +306,19 @@ public partial class ExplorationSceneController : Node2D
 
 	private void BeginHeldMovement(string action, Vector2I delta, string facing)
 	{
-		bool changedDirection = !string.Equals(
-			RequireSession().Current.Location.Facing,
-			facing,
-			StringComparison.Ordinal);
-
 		_heldMovementAction = action;
 		_heldMovementDelta = delta;
 		_heldMovementFacing = facing;
 		_movementRepeatTimer = MovementInitialDelaySeconds;
+		_player.SetFacing(facing);
 
-		if (changedDirection)
+		// Direction changes are rendered immediately, but the logical step already in
+		// progress owns movement until its tween completes. The held direction remains
+		// queued in these fields and is consumed by OnPlayerMovementCompleted.
+		if (!_playerMovementInProgress)
 		{
-			TurnTo(facing);
-			return;
+			TryMove(delta, facing);
 		}
-
-		TryMove(delta, facing);
 	}
 
 	private void ResumeHeldMovementIfPressed()
@@ -340,13 +341,6 @@ public partial class ExplorationSceneController : Node2D
 		}
 	}
 
-	private void TurnTo(string facing)
-	{
-		IGameSession session = RequireSession();
-		MapLocationState location = session.Current.Location;
-		session.UpdateLocation(location with { Facing = facing });
-	}
-
 	private void ClearHeldMovement()
 	{
 		_heldMovementAction = null;
@@ -357,6 +351,11 @@ public partial class ExplorationSceneController : Node2D
 
 	private void TryMove(Vector2I delta, string facing)
 	{
+		if (_playerMovementInProgress)
+		{
+			return;
+		}
+
 		IGameSession session = RequireSession();
 		MapLocationState location = session.Current.Location;
 		var currentTile = new Vector2I(location.X, location.Y);
@@ -371,6 +370,7 @@ public partial class ExplorationSceneController : Node2D
 		Vector2I acceptedTile = canEnter ? requestedTile : currentTile;
 		bool moved = acceptedTile != currentTile;
 		_animateNextPlayerPosition = moved;
+		_playerMovementInProgress = moved;
 
 		// Facing changes even when a wall blocks movement, matching classic JRPG controls
 		// and allowing the player to turn toward an adjacent NPC before interacting.
@@ -548,15 +548,15 @@ public partial class ExplorationSceneController : Node2D
 		}
 
 		Vector2 targetPosition = _room.TileToWorld(tile);
-		UpdateCamera(targetPosition);
 		if (_animateNextPlayerPosition)
 		{
 			_animateNextPlayerPosition = false;
-			_player.AnimateTo(targetPosition);
+			_player.AnimateTo(targetPosition, OnPlayerMovementCompleted);
 		}
 		else
 		{
 			_player.Position = targetPosition;
+			UpdateCamera(targetPosition);
 		}
 		_player.SetFacing(location.Facing);
 		_guide.Visible = _room.GuideTile.X >= 0;
@@ -568,6 +568,21 @@ public partial class ExplorationSceneController : Node2D
 			.Where(flag => flag.Value)
 			.Select(flag => flag.Key)
 			.ToHashSet(StringComparer.Ordinal));
+	}
+
+	private void OnPlayerMovementCompleted()
+	{
+		_playerMovementInProgress = false;
+		UpdateCamera(_player.Position);
+		if (_heldMovementAction is null
+			|| _session is null
+			|| !global::Godot.Input.IsActionPressed(_heldMovementAction))
+		{
+			ClearHeldMovement();
+			return;
+		}
+
+		TryMove(_heldMovementDelta, _heldMovementFacing);
 	}
 
 	private void ConfigureCamera()

@@ -261,11 +261,14 @@ public partial class BattleFormationView : Control
             ? BattleFormationRules.EnemyColumnCount - 1 - cell.Column
             : cell.Column;
         float left = cell.Side == BattleSide.Enemy ? layout.EnemyLeft : layout.PartyLeft;
+        float cellWidth = cell.Side == BattleSide.Enemy
+            ? layout.EnemyCellWidth
+            : layout.PartyCellWidth;
         return new Rect2(
             new Vector2(
-                left + (visualColumn * layout.CellWidth),
+                left + (visualColumn * cellWidth),
                 layout.GridTop + (cell.Row * layout.CellHeight)),
-            new Vector2(layout.CellWidth, layout.CellHeight));
+            new Vector2(cellWidth, layout.CellHeight));
     }
 
     private Rect2 GetPlacementRectangle(FormationPlacement placement)
@@ -470,8 +473,8 @@ public partial class BattleFormationView : Control
     private void CreateGridLabels()
     {
         FormationLayout layout = GetLayout();
-        float enemyWidth = BattleFormationRules.EnemyColumnCount * layout.CellWidth;
-        float partyWidth = BattleFormationRules.PartyColumnCount * layout.CellWidth;
+        float enemyWidth = BattleFormationRules.EnemyColumnCount * layout.EnemyCellWidth;
+        float partyWidth = BattleFormationRules.PartyColumnCount * layout.PartyCellWidth;
         AddLabel(
             "ENEMIES",
             new Rect2(new Vector2(layout.EnemyLeft, 0.0f), new Vector2(enemyWidth, 16.0f)),
@@ -592,13 +595,22 @@ public partial class BattleFormationView : Control
         const float outerMargin = 18.0f;
         const float gridGap = 24.0f;
         float availableWidth = Mathf.Max(1.0f, Size.X - (outerMargin * 2.0f) - gridGap);
-        float cellWidth = availableWidth / (
-            BattleFormationRules.EnemyColumnCount + BattleFormationRules.PartyColumnCount);
+        const float enemyCellWidthRatio = 1.25f;
+        float layoutUnits = (BattleFormationRules.EnemyColumnCount * enemyCellWidthRatio)
+            + BattleFormationRules.PartyColumnCount;
+        float partyCellWidth = availableWidth / layoutUnits;
+        float enemyCellWidth = partyCellWidth * enemyCellWidthRatio;
         float gridHeight = Mathf.Min(220.0f, Mathf.Max(64.0f, Size.Y - 24.0f));
         float gridTop = Mathf.Max(20.0f, Size.Y - gridHeight - 4.0f);
         float cellHeight = gridHeight / BattleFormationRules.RowCount;
-        float partyLeft = outerMargin + (BattleFormationRules.EnemyColumnCount * cellWidth) + gridGap;
-        return new FormationLayout(cellWidth, cellHeight, gridTop, outerMargin, partyLeft);
+        float partyLeft = outerMargin + (BattleFormationRules.EnemyColumnCount * enemyCellWidth) + gridGap;
+        return new FormationLayout(
+            enemyCellWidth,
+            partyCellWidth,
+            cellHeight,
+            gridTop,
+            outerMargin,
+            partyLeft);
     }
 
     private void OnResized()
@@ -611,7 +623,8 @@ public partial class BattleFormationView : Control
     }
 
     private sealed record FormationLayout(
-        float CellWidth,
+        float EnemyCellWidth,
+        float PartyCellWidth,
         float CellHeight,
         float GridTop,
         float EnemyLeft,

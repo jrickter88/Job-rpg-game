@@ -52,12 +52,15 @@ public partial class PlayerMarkerView : Node2D
         QueueRedraw();
     }
 
-    public void AnimateTo(Vector2 targetPosition)
+    public void AnimateTo(Vector2 targetPosition, Action completed)
     {
-        CreateTween()
-            .SetTrans(Tween.TransitionType.Linear)
-            .SetEase(Tween.EaseType.InOut)
-            .TweenProperty(this, "position", targetPosition, 0.26);
+        ArgumentNullException.ThrowIfNull(completed);
+
+        Tween tween = CreateTween();
+        tween.SetTrans(Tween.TransitionType.Linear);
+        tween.SetEase(Tween.EaseType.InOut);
+        tween.TweenProperty(this, "position", targetPosition, 0.22);
+        tween.TweenCallback(Callable.From(completed));
     }
 
     public override void _Draw()

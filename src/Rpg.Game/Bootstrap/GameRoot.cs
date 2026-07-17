@@ -37,6 +37,7 @@ namespace RpgGame.Bootstrap;
 /// </remarks>
 public partial class GameRoot : Node, IExplorationDevelopmentCommands
 {
+	private const double MusicFadeDurationSeconds = 1.25;
 	private const string GameVersion = "0.5.4";
 	private const string JamesId = "actor.hero.james";
 	private const string IronSwordItemId = "item.equipment.iron-sword";
@@ -471,12 +472,11 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
 
 		AudioStreamPlayer player = _battleMusicPlayer
 			?? throw new InvalidOperationException("Battle music player is not initialized.");
-		double fadeDuration = 0.65;
 		if (player.Playing)
 		{
-			FadeVolume(player, -80.0f, fadeDuration);
+			FadeVolume(player, -80.0f, MusicFadeDurationSeconds);
 			Tween transition = player.GetTree().CreateTween();
-			transition.TweenInterval(fadeDuration);
+			transition.TweenInterval(MusicFadeDurationSeconds);
 			transition.TweenCallback(Callable.From(() => StartBattleMusic(stream)));
 		}
 		else
@@ -492,7 +492,10 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
 		player.Stream = stream;
 		player.VolumeDb = -80.0f;
 		player.Play();
-		FadeVolume(player, VolumePercentToDecibels(DisplaySettings.BattleMusicVolumePercent), 0.65);
+		FadeVolume(
+			player,
+			VolumePercentToDecibels(DisplaySettings.BattleMusicVolumePercent),
+			MusicFadeDurationSeconds);
 	}
 
 	private void PlayOverworldMusic(string? musicCueId)
@@ -705,32 +708,28 @@ public partial class GameRoot : Node, IExplorationDevelopmentCommands
 			return;
 		}
 
-		if (victoryStream is AudioStreamMP3 victoryMp3)
-		{
-			victoryMp3.Loop = false;
-		}
-
-		const double fadeDuration = 0.65;
-		FadeVolume(battlePlayer, -80.0f, fadeDuration);
-		Tween transition = battlePlayer.GetTree().CreateTween();
-		transition.TweenInterval(fadeDuration);
-		transition.TweenCallback(Callable.From(() => StartVictoryMusic(victoryPlayer, victoryStream)));
-	}
-
-	private void StartVictoryMusic(AudioStreamPlayer player, AudioStream stream)
-	{
-		player.Stream = stream;
-		player.VolumeDb = -80.0f;
-		player.Play();
+		// Start both players together. Victory begins inaudibly while combat fades out,
+		// then rises through the same interval instead of waiting for a hard handoff.
+		victoryPlayer.Stream = victoryStream;
+		victoryPlayer.VolumeDb = -80.0f;
+		victoryPlayer.Play();
+		FadeVolume(battlePlayer, -80.0f, MusicFadeDurationSeconds);
 		FadeVolume(
-			player,
+			victoryPlayer,
 			VolumePercentToDecibels(DisplaySettings.BattleMusicVolumePercent),
-			0.65);
+			MusicFadeDurationSeconds);
+
+		Tween stopBattle = battlePlayer.GetTree().CreateTween();
+		stopBattle.TweenInterval(MusicFadeDurationSeconds);
+		stopBattle.TweenCallback(Callable.From(battlePlayer.Stop));
 	}
 
 	private static void FadeVolume(AudioStreamPlayer player, float targetDb, double duration)
 	{
-		player.GetTree().CreateTween().TweenProperty(player, "volume_db", targetDb, duration);
+		Tween fade = player.GetTree().CreateTween();
+		fade.SetTrans(Tween.TransitionType.Sine);
+		fade.SetEase(Tween.EaseType.InOut);
+		fade.TweenProperty(player, "volume_db", targetDb, duration);
 	}
 
 	private void OnExplorationReloadRequested(object? sender, EventArgs eventArgs) =>
