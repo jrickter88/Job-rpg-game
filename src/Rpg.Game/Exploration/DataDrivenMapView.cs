@@ -10,6 +10,7 @@ namespace RpgGame.Exploration;
 public partial class DataDrivenMapView : Node2D, IExplorationMapView
 {
     private const int TileSize = PixelPerfectGeometry.NativeTileSize;
+    private const float EncounterMarkerMaxSize = TileSize * 2.0f;
     private static readonly Vector2I TestRoomGuideTile = new(7, 4);
     private const string TestRoomMapId = "map.prologue.test-room";
 
@@ -59,7 +60,37 @@ public partial class DataDrivenMapView : Node2D, IExplorationMapView
         _clearedEncounterFlags = new HashSet<string>(clearedFlagIds, StringComparer.Ordinal);
         QueueRedraw();
     }
+    private static Rect2 CalculateEncounterTextureRectangle(
+    Texture2D texture,
+    Vector2 tileCenter)
+    {
+        Vector2 sourceSize = texture.GetSize();
 
+        if (sourceSize.X <= 0.0f || sourceSize.Y <= 0.0f)
+        {
+            return new Rect2(tileCenter, Vector2.Zero);
+        }
+
+        // Never allow an exploration encounter actor to exceed 32x32 native pixels.
+        // Smaller true pixel-art assets remain at their authored size.
+        float scale = Mathf.Min(
+            1.0f,
+            Mathf.Min(
+                EncounterMarkerMaxSize / sourceSize.X,
+                EncounterMarkerMaxSize / sourceSize.Y));
+
+        // Round destination dimensions and coordinates so scaled sprites remain
+        // aligned to the native pixel grid.
+        Vector2 drawSize = new(
+            Mathf.Max(1.0f, Mathf.Round(sourceSize.X * scale)),
+            Mathf.Max(1.0f, Mathf.Round(sourceSize.Y * scale)));
+
+        Vector2 topLeft = new(
+            Mathf.Round(tileCenter.X - (drawSize.X * 0.5f)),
+            Mathf.Round(tileCenter.Y + (TileSize * 0.5f) - drawSize.Y));
+
+        return new Rect2(topLeft, drawSize);
+    }
     public override void _Draw()
     {
         if (_map is null)
@@ -104,17 +135,17 @@ public partial class DataDrivenMapView : Node2D, IExplorationMapView
 
         foreach (MapEncounterMarkerDefinition marker in _map.EncounterMarkers)
         {
+
             if (_clearedEncounterFlags.Contains(marker.ClearedFlagId)) continue;
             Vector2 center = TileToLocal(new Vector2I(marker.X, marker.Y));
             if (marker.DialogueId is not null
                 && _encounterTextureByMarkerId.TryGetValue(marker.Id, out Texture2D? texture))
             {
-                Vector2 size = texture.GetSize();
                 DrawTextureRect(
                     texture,
-                    new Rect2(center.X - size.X * 0.5f, center.Y + TileSize * 0.5f - size.Y,
-                        size.X, size.Y),
+                    CalculateEncounterTextureRectangle(texture, center),
                     tile: false);
+
                 continue;
             }
 

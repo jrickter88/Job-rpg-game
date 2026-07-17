@@ -477,22 +477,25 @@ public partial class ExplorationSceneController : Node2D
 	private void OnBindingsChanged(object? sender, EventArgs eventArgs) =>
 		RefreshInstructionText();
 
-	private void RefreshInstructionText()
-	{
-		InputBindingService bindings = RequireInputBindings();
-		_instructions.Text =
-			$"Move: U[{bindings.FormatBindings(GameInputActions.MoveUp)}] "
-			+ $"R[{bindings.FormatBindings(GameInputActions.MoveRight)}] "
-			+ $"D[{bindings.FormatBindings(GameInputActions.MoveDown)}] "
-			+ $"L[{bindings.FormatBindings(GameInputActions.MoveLeft)}]"
-			+ System.Environment.NewLine
-			+ $"Interact[{bindings.FormatBindings(GameInputActions.Interact)}]    "
-			+ $"Equipment[{bindings.FormatBindings(GameInputActions.Equipment)}]    "
-			+ $"Menu[{bindings.FormatBindings(GameInputActions.Menu)}]    "
-			+ "Developer: R rebuild";
-	}
+    private void RefreshInstructionText()
+    {
+        InputBindingService bindings = RequireInputBindings();
 
-	private void OnEquipmentRequested(object? sender, EventArgs eventArgs)
+        _instructions.Text =
+            $"Move U[{bindings.FormatBindings(GameInputActions.MoveUp)}] "
+            + $"R[{bindings.FormatBindings(GameInputActions.MoveRight)}]"
+            + System.Environment.NewLine
+            + $"Move D[{bindings.FormatBindings(GameInputActions.MoveDown)}] "
+            + $"L[{bindings.FormatBindings(GameInputActions.MoveLeft)}]"
+            + System.Environment.NewLine
+            + $"Interact[{bindings.FormatBindings(GameInputActions.Interact)}] "
+            + $"Menu[{bindings.FormatBindings(GameInputActions.Menu)}]"
+            + System.Environment.NewLine
+            + $"Equipment[{bindings.FormatBindings(GameInputActions.Equipment)}]  "
+            + "R rebuild";
+    }
+
+    private void OnEquipmentRequested(object? sender, EventArgs eventArgs)
 	{
 		_gameMenuPanel.Close();
 		_equipmentPanel.Open();
