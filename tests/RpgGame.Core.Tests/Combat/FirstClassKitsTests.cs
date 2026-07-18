@@ -19,6 +19,7 @@ public sealed class FirstClassKitsTests
     private const string BlackMagicId = "magic-discipline.black-magic";
     private const string WhiteMagicId = "magic-discipline.white-magic";
     private const string CureId = "ability.white-magic.cure";
+    private const string PotionId = "ability.item.potion";
 
     [Fact]
     public void ResolvePartyActor_KnightAddsPowerStrikeAsDirectSkill()
@@ -105,6 +106,31 @@ public sealed class FirstClassKitsTests
         Assert.Equal(originalParty.CurrentMp, spent.PreviousValue);
         Assert.Equal(originalParty.CurrentMp - spent.Amount, spent.CurrentValue);
         Assert.Equal(spent.CurrentValue, updatedParty.CurrentMp);
+    }
+
+    [Fact]
+    public void Resolve_PotionSelfHeal_RestoresHpWithoutSpendingMp()
+    {
+        FixedBattle battle = CombatTestFixture.CreateFixedBattle();
+        CombatantSnapshot[] combatants = battle.Snapshot.Combatants.ToArray();
+        combatants[0] = combatants[0].WithCurrentHp(40);
+        var injuredSnapshot = new CombatSnapshot(
+            battle.Snapshot.Round,
+            battle.Snapshot.TimelineTime,
+            combatants);
+
+        CombatResolution resolution = new CombatResolver(battle.Content).Resolve(
+            injuredSnapshot,
+            new CombatCommand("party-0", PotionId, ["party-0"]));
+
+        HealingApplied healing = Assert.IsType<HealingApplied>(Assert.Single(resolution.Events));
+        Assert.Equal(30, healing.Amount);
+        Assert.Equal(40, healing.PreviousHp);
+        Assert.Equal(70, healing.CurrentHp);
+        Assert.Equal(70, resolution.Next.GetRequiredCombatant("party-0").CurrentHp);
+        Assert.Equal(
+            injuredSnapshot.GetRequiredCombatant("party-0").CurrentMp,
+            resolution.Next.GetRequiredCombatant("party-0").CurrentMp);
     }
 
     [Fact]

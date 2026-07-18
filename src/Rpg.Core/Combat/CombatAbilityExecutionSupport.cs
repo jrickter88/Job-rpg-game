@@ -66,6 +66,7 @@ public static class CombatAbilityExecutionSupport
         && string.Equals(ability.RulesetId, AbilityRulesetIds.PhysicalDamage, StringComparison.Ordinal);
 
     private static bool IsFlatHealing(AbilityDefinition ability) =>
-        string.Equals(ability.TargetingId, AbilityTargetingIds.SingleAlly, StringComparison.Ordinal)
+        (string.Equals(ability.TargetingId, AbilityTargetingIds.SingleAlly, StringComparison.Ordinal)
+         || string.Equals(ability.TargetingId, AbilityTargetingIds.Self, StringComparison.Ordinal))
         && string.Equals(ability.RulesetId, AbilityRulesetIds.FlatHealing, StringComparison.Ordinal);
 }
