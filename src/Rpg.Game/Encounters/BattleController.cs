@@ -1181,6 +1181,10 @@ public partial class BattleController : Control
 						+ $"{DisplayName(damage.TargetCombatantId)}: {damage.Amount} "
 						+ $"{ShortDefinitionName(damage.DamageTypeId)} damage{reaction} "
 						+ $"({damage.PreviousHp} -> {damage.CurrentHp} HP).");
+					if (damage.DamageTypeId == DamageTypeIds.Fire)
+					{
+						ShowFireballEffect(damage.TargetCombatantId);
+					}
 					break;
 
 				case CombatantDefeated defeated:
@@ -1229,6 +1233,51 @@ public partial class BattleController : Control
 						+ $"'{combatEvent.GetType().Name}'.");
 			}
 		}
+	}
+
+	private async void ShowFireballEffect(string targetCombatantId)
+	{
+		Texture2D sheet = GD.Load<Texture2D>("res://game/assets/sprites/ff4spells.png")
+			?? throw new InvalidDataException("Could not load the Fire spell spritesheet.");
+		var effect = new Sprite2D
+		{
+			Texture = sheet,
+			RegionEnabled = true,
+			RegionRect = new Rect2(0, 1375, 704, 64),
+			Hframes = 11,
+			Vframes = 1,
+			Frame = 0,
+			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
+			TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
+			ZIndex = 20,
+		};
+		var shader = new Shader
+		{
+			Code = "shader_type canvas_item;\n"
+				+ "void fragment() {\n"
+				+ "    vec4 color = texture(TEXTURE, UV);\n"
+				+ "    if (distance(color.rgb, vec3(0.2, 0.8353, 0.8039)) < 0.001) discard;\n"
+				+ "    COLOR = color;\n"
+				+ "}\n",
+		};
+		effect.Material = new ShaderMaterial { Shader = shader };
+		Vector2 targetInFormation = _formationView.GetPlacementCenter(targetCombatantId);
+		Vector2 targetOnCanvas = _formationView.GetGlobalTransformWithCanvas() * targetInFormation;
+		effect.Position = GetGlobalTransformWithCanvas().AffineInverse() * targetOnCanvas;
+		effect.Scale = new Vector2(1.6f, 1.6f);
+		AddChild(effect);
+
+		Tween tween = CreateTween();
+		tween.TweenProperty(effect, "modulate:a", 1.0f, 0.08f);
+		for (int frame = 0; frame < effect.Hframes; frame++)
+		{
+			effect.Frame = frame;
+			await ToSignal(GetTree().CreateTimer(0.06f), "timeout");
+		}
+
+		tween = CreateTween();
+		tween.TweenProperty(effect, "modulate:a", 0.0f, 0.18f);
+		tween.TweenCallback(Callable.From(effect.QueueFree));
 	}
 
 	private void RefreshPresentation()
