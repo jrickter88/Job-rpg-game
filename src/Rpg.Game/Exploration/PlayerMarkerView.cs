@@ -72,7 +72,7 @@ public partial class PlayerMarkerView : Node2D
             Vector2 size = _currentFrame.GetSize();
             DrawTextureRect(
                 _currentFrame,
-                new Rect2(-size.X * 0.5f, -size.Y, size.X, size.Y),
+                new Rect2(-size.X * 0.5f, -size.Y * 0.5f, size.X, size.Y),
                 tile: false,
                 modulate: Colors.White,
                 transpose: false);
