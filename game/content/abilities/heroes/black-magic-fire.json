@@ -10,6 +10,7 @@
   "costAmount": 3,
   "rulesetId": "rules.damage.physical",
   "damageTypeId": "damage-type.fire",
+  "battleAnimationId": "animation.spell.fire",
   "numericParameters": {
 	"power": 7
   }

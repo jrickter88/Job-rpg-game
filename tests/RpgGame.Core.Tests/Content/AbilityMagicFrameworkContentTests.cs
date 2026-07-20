@@ -21,6 +21,9 @@ public sealed class AbilityMagicFrameworkContentTests
         Assert.Empty(attack.MagicDisciplineIds);
         Assert.Equal(AbilityKindIds.Skill, tackle.AbilityKindId);
         Assert.Empty(tackle.MagicDisciplineIds);
+        Assert.Equal(
+            "animation.spell.fire",
+            catalog.GetRequired<AbilityDefinition>("ability.black-magic.fire").BattleAnimationId);
 
         ClassDefinition knight = catalog.GetRequired<ClassDefinition>("class.martial.knight");
         Assert.Equal("ability.knight.power-strike", Assert.Single(knight.AbilityUnlocks).AbilityId);
@@ -184,6 +187,17 @@ public sealed class AbilityMagicFrameworkContentTests
     }
 
     [Fact]
+    public void BattleAnimationId_RequiresAnimationPrefix()
+    {
+        ContentLoadResult result = LoadMagicDocuments(
+            AbilityDocument(
+                "ability.test.fire",
+                battleAnimationId: "ability.test.not-animation"));
+
+        AssertProblem(result, "key.wrong-prefix");
+    }
+
+    [Fact]
     public void AbilityExecutionContract_TargetCompatibilityAndParameters_AreValidated()
     {
         ContentLoadResult result = LoadMagicDocuments(
@@ -329,7 +343,8 @@ public sealed class AbilityMagicFrameworkContentTests
         IReadOnlyList<string>? magicDisciplineIds = null,
         string targetingId = AbilityTargetingIds.Self,
         string rulesetId = AbilityRulesetIds.Guard,
-        string numericParametersJson = "{ \"damage-reduction\": 0.5 }")
+        string numericParametersJson = "{ \"damage-reduction\": 0.5 }",
+        string? battleAnimationId = null)
     {
         string abilityKindMember = abilityKindId is null
             ? string.Empty
@@ -337,6 +352,9 @@ public sealed class AbilityMagicFrameworkContentTests
         string disciplineMember = magicDisciplineIds is null
             ? string.Empty
             : $",{Environment.NewLine}  \"magicDisciplineIds\": [{string.Join(", ", magicDisciplineIds.Select(id => $"\"{id}\""))}]";
+        string battleAnimationMember = battleAnimationId is null
+            ? string.Empty
+            : $",{Environment.NewLine}  \"battleAnimationId\": \"{battleAnimationId}\"";
 
         return new ContentDocument(
             $"abilities/{id.Split('.')[^1]}.json",
@@ -345,7 +363,7 @@ public sealed class AbilityMagicFrameworkContentTests
               "schemaVersion": 1,
               "id": "{{id}}",
               "displayNameKey": "{{id}}.name",
-              "descriptionKey": "{{id}}.description"{{abilityKindMember}}{{disciplineMember}},
+              "descriptionKey": "{{id}}.description"{{abilityKindMember}}{{disciplineMember}}{{battleAnimationMember}},
               "targetingId": "{{targetingId}}",
               "costStatisticId": null,
               "costAmount": 0,

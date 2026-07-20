@@ -73,6 +73,12 @@ An elemental attack spell may currently reuse `target.enemy.single` plus
 enemy affinity; it does not change the Strength/Defense formula. See
 `MILESTONE_4_3_GUIDE.md`.
 
+To give the spell a battle animation, add an optional `battleAnimationId` beginning with
+`animation.`. The Godot battle animation catalog maps that stable ID to an uploaded asset and
+playback profile. Adding Ice or Lightning is the same three-part change: upload the asset, add
+its catalog entry, and put the matching ID on the spell JSON. The animation plays before the
+resolved damage and defeat presentation is published.
+
 Use `costStatisticId: "stat.max-mp"` with a nonnegative amount to charge the combatant's
 separate transient CurrentMp pool. `stat.max-mp` still remains the immutable maximum statistic;
 the ID is the compatibility resource-family selector. Null/zero remains a free spell. Other

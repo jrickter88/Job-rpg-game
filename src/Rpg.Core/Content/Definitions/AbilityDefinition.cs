@@ -63,6 +63,15 @@ public sealed record AbilityDefinition : ContentDefinition
     /// </remarks>
     public string? DamageTypeId { get; init; }
 
+    /// <summary>
+    /// Optional stable presentation ID resolved by the Godot battle animation catalog.
+    /// </summary>
+    /// <remarks>
+    /// This is intentionally only a presentation selection. It does not affect combat
+    /// rules, damage, targeting, or animation behavior in the core assembly.
+    /// </remarks>
+    public string? BattleAnimationId { get; init; }
+
     public DamageVarianceDefinition? DamageVariance { get; init; }
 
     /// <summary>

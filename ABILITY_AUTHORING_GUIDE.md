@@ -45,6 +45,23 @@ Example damage members:
 "numericParameters": { "power": 4 }
 ```
 
+### Add a battle spell animation
+
+Magic abilities may opt into a battle animation by setting `battleAnimationId` to a stable
+`animation.*` ID. The ID is presentation-only and does not create a new combat behavior. The
+Godot catalog in `src/Rpg.Game/Encounters/BattleSpellAnimationCatalog.cs` maps that ID to the
+uploaded spritesheet, frame region, timing, and scale.
+
+For a new Ice or Lightning animation:
+
+1. Add the approved spritesheet under `game/assets/`.
+2. Add one catalog entry with its asset path and frame geometry.
+3. Add the matching `battleAnimationId` to the ability JSON, for example
+   `"battleAnimationId": "animation.spell.ice"`.
+
+If the asset and catalog entry are ready, ask Codex to wire the new ID; no combat resolver,
+targeting, damage, or magic-discipline code needs to change.
+
 See `MILESTONE_4_3_GUIDE.md` for affinity percentages and rounding.
 
 ## Add one direct Skill

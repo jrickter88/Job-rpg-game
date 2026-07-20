@@ -569,6 +569,11 @@ internal sealed class ContentValidator
             }
         }
 
+        if (ability.BattleAnimationId is not null)
+        {
+            RequireStableKey(item, "$.battleAnimationId", ability.BattleAnimationId, "animation.");
+        }
+
         if (string.IsNullOrWhiteSpace(ability.AbilityKindId))
         {
             Add(item, "$.abilityKindId", "ability.kind-invalid",

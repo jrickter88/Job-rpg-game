@@ -1008,7 +1008,7 @@ public partial class BattleController : Control
 		ResolveSelectedAbility(instanceId);
 	}
 
-	private void ResolveSelectedAbility(string? targetId)
+	private async void ResolveSelectedAbility(string? targetId)
 	{
 		if (_selectedAbilityId is null || targetId is null)
 		{
@@ -1075,6 +1075,25 @@ public partial class BattleController : Control
 		CombatResolution resolution = RequireTimelineResolver().ResolveNext(
 			current,
 			new CombatCommand(partyActor.InstanceId, ability.Id, [targetId]));
+		DamageApplied? animatedDamage = resolution.Events
+			.OfType<DamageApplied>()
+			.FirstOrDefault(damage => damage.AbilityId == ability.Id);
+		if (animatedDamage is not null && ability.BattleAnimationId is not null)
+		{
+			if (BattleSpellAnimationCatalog.TryGet(
+					ability.BattleAnimationId,
+					out BattleSpellAnimation animation))
+			{
+				await ShowSpellAnimation(animation, animatedDamage.TargetCombatantId);
+			}
+			else
+			{
+				GD.PushWarning(
+					$"Ability '{ability.Id}' references unregistered battle animation "
+					+ $"'{ability.BattleAnimationId}'.");
+			}
+		}
+
 		CombatSnapshot next = resolution.Next;
 		_snapshot = next;
 		if (_selectedItemId is not null)
@@ -1181,10 +1200,6 @@ public partial class BattleController : Control
 						+ $"{DisplayName(damage.TargetCombatantId)}: {damage.Amount} "
 						+ $"{ShortDefinitionName(damage.DamageTypeId)} damage{reaction} "
 						+ $"({damage.PreviousHp} -> {damage.CurrentHp} HP).");
-					if (damage.DamageTypeId == DamageTypeIds.Fire)
-					{
-						ShowFireballEffect(damage.TargetCombatantId);
-					}
 					break;
 
 				case CombatantDefeated defeated:
@@ -1235,16 +1250,20 @@ public partial class BattleController : Control
 		}
 	}
 
-	private async void ShowFireballEffect(string targetCombatantId)
+	private async Task ShowSpellAnimation(
+		BattleSpellAnimation animation,
+		string targetCombatantId)
 	{
-		Texture2D sheet = GD.Load<Texture2D>("res://game/assets/sprites/ff4spells.png")
-			?? throw new InvalidDataException("Could not load the Fire spell spritesheet.");
+		Texture2D sheet = GD.Load<Texture2D>(animation.AssetPath)
+			?? throw new InvalidDataException(
+				$"Could not load battle spell animation asset '{animation.AssetPath}' "
+				+ $"for '{animation.Id}'.");
 		var effect = new Sprite2D
 		{
 			Texture = sheet,
 			RegionEnabled = true,
-			RegionRect = new Rect2(0, 1375, 704, 64),
-			Hframes = 11,
+			RegionRect = animation.RegionRect,
+			Hframes = animation.FrameCount,
 			Vframes = 1,
 			Frame = 0,
 			Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f),
@@ -1264,7 +1283,9 @@ public partial class BattleController : Control
 		Vector2 targetInFormation = _formationView.GetPlacementCenter(targetCombatantId);
 		Vector2 targetOnCanvas = _formationView.GetGlobalTransformWithCanvas() * targetInFormation;
 		effect.Position = GetGlobalTransformWithCanvas().AffineInverse() * targetOnCanvas;
-		effect.Scale = new Vector2(1.6f, 1.6f);
+		// Fire frames are 64x64; keep the impact at native size so it matches the
+		// one-cell enemy presentation instead of overwhelming the target.
+		effect.Scale = Vector2.One * animation.Scale;
 		AddChild(effect);
 
 		Tween tween = CreateTween();
@@ -1272,12 +1293,13 @@ public partial class BattleController : Control
 		for (int frame = 0; frame < effect.Hframes; frame++)
 		{
 			effect.Frame = frame;
-			await ToSignal(GetTree().CreateTimer(0.06f), "timeout");
+			await ToSignal(GetTree().CreateTimer(animation.FrameDuration), "timeout");
 		}
 
 		tween = CreateTween();
-		tween.TweenProperty(effect, "modulate:a", 0.0f, 0.18f);
-		tween.TweenCallback(Callable.From(effect.QueueFree));
+		tween.TweenProperty(effect, "modulate:a", 0.0f, animation.FadeDuration);
+		await ToSignal(GetTree().CreateTimer(animation.FadeDuration), "timeout");
+		effect.QueueFree();
 	}
 
 	private void RefreshPresentation()

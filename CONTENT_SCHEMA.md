@@ -388,6 +388,7 @@ See `LOOT_TABLE_AUTHORING_GUIDE.md`.
 | `costAmount` | integer | Nonnegative amount from the selected supported resource pool. |
 | `rulesetId` | ID | Selects one supported code-owned behavior; currently `rules.defense.guard`, `rules.damage.physical`, or `rules.healing.flat`. |
 | `damageTypeId` | ID or null | Optional code-owned type for a damage ruleset: `damage-type.slash`, `damage-type.blunt`, `damage-type.pierce`, `damage-type.energy`, `damage-type.fire`, `damage-type.ice`, `damage-type.lightning`, or `damage-type.psychic`. Omitted legacy physical damage defaults to Blunt. |
+| `battleAnimationId` | ID or null | Optional battle presentation selection beginning with `animation.`. The Godot animation catalog resolves the ID to a trusted asset and playback profile; it never changes combat rules. |
 | `numericParameters` | object of string → number | Exact required keys and ranges are owned by the selected ruleset. Extra keys are errors. |
 
 ```json
