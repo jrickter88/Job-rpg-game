@@ -254,6 +254,23 @@ public partial class BattleFormationView : Control
                 $"Formation view has no combatant instance '{instanceId}'.");
     }
 
+    /// <summary>Returns the screen-space center of a placed combatant.</summary>
+    public Vector2 GetPlacementCenter(string instanceId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(instanceId);
+        if (!_initialized)
+        {
+            throw new InvalidOperationException("BattleFormationView is not initialized.");
+        }
+
+        FormationPlacement placement = _enemyPlacements
+            .Concat(_partyPlacements)
+            .FirstOrDefault(candidate => candidate.InstanceId == instanceId)
+            ?? throw new KeyNotFoundException(
+                $"Formation view has no combatant instance '{instanceId}'.");
+        return GetPlacementRectangle(placement).GetCenter();
+    }
+
     private Rect2 GetCellRectangle(FormationCell cell)
     {
         FormationLayout layout = GetLayout();
