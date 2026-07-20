@@ -11,37 +11,37 @@ namespace RpgGame.Encounters;
 /// GameRoot resolves the ID through IContentCatalog before it removes exploration.
 /// </remarks>
 public sealed record EncounterLaunchRequest(
-    string EncounterId,
-    string SourceMapId = "map.prologue.test-room",
-    string? ClearanceFlagId = null);
+	string EncounterId,
+	string SourceMapId = "map.prologue.test-room",
+	string? ClearanceFlagId = null);
 
 public sealed record MapTransitionRequest(string TransitionId);
 
 public sealed class MapTransitionRequestedEventArgs(MapTransitionRequest request) : EventArgs
 {
-    public MapTransitionRequest Request { get; } = request ?? throw new ArgumentNullException(nameof(request));
+	public MapTransitionRequest Request { get; } = request ?? throw new ArgumentNullException(nameof(request));
 }
 
 /// <summary>Typed event payload raised when exploration enters an encounter tile.</summary>
 public sealed class EncounterLaunchRequestedEventArgs : EventArgs
 {
-    public EncounterLaunchRequestedEventArgs(EncounterLaunchRequest request)
-    {
-        ArgumentNullException.ThrowIfNull(request);
-        Request = request;
-    }
+	public EncounterLaunchRequestedEventArgs(EncounterLaunchRequest request)
+	{
+		ArgumentNullException.ThrowIfNull(request);
+		Request = request;
+	}
 
-    public EncounterLaunchRequest Request { get; }
+	public EncounterLaunchRequest Request { get; }
 }
 
 /// <summary>Typed event payload raised after the player confirms a terminal battle result.</summary>
 public sealed class BattleCompletionRequestedEventArgs : EventArgs
 {
-    public BattleCompletionRequestedEventArgs(BattleCompletionRequest request)
-    {
-        ArgumentNullException.ThrowIfNull(request);
-        Request = request;
-    }
+	public BattleCompletionRequestedEventArgs(BattleCompletionRequest request)
+	{
+		ArgumentNullException.ThrowIfNull(request);
+		Request = request;
+	}
 
-    public BattleCompletionRequest Request { get; }
+	public BattleCompletionRequest Request { get; }
 }

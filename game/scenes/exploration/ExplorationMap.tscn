@@ -410,6 +410,7 @@ layout_mode = 2
 
 [node name="Lower" type="HBoxContainer" parent="Interface/Equipment/Margin/VBox" unique_id=252388228]
 layout_mode = 2
+size_flags_vertical = 3
 theme_override_constants/separation = 4
 
 [node name="ChoicesColumn" type="VBoxContainer" parent="Interface/Equipment/Margin/VBox/Lower" unique_id=331579850]
@@ -431,6 +432,7 @@ theme_override_constants/separation = 0
 [node name="StatsColumn" type="VBoxContainer" parent="Interface/Equipment/Margin/VBox/Lower" unique_id=56824203]
 layout_mode = 2
 size_flags_horizontal = 3
+size_flags_vertical = 3
 theme_override_constants/separation = 1
 
 [node name="Comparison" type="RichTextLabel" parent="Interface/Equipment/Margin/VBox/Lower/StatsColumn" unique_id=1977942160]
@@ -441,14 +443,17 @@ scroll_active = false
 theme_override_font_sizes/normal_font_size = 5
 
 [node name="Detail" type="Label" parent="Interface/Equipment/Margin/VBox/Lower/StatsColumn" unique_id=1998614613]
-visible = false
+visible = true
 layout_mode = 2
+custom_minimum_size = Vector2(0, 22)
 theme_override_font_sizes/font_size = 5
-text = "Empty slot."
+text = "Description: Empty slot.\nSpecial effects: None"
 autowrap_mode = 2
-max_lines_visible = 3
+clip_text = true
+max_lines_visible = 4
 
 [node name="Status" type="Label" parent="Interface/Equipment/Margin/VBox" unique_id=46861677]
+visible = false
 layout_mode = 2
 text = "Select a slot."
 horizontal_alignment = 1

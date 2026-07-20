@@ -172,11 +172,17 @@ public partial class CharacterEquipmentPanel : PanelContainer
 
     private void ShowItemDetail(EquipmentItemDetail? item)
     {
-        if (item is null) { _detail.Text = "Effects: None"; return; }
+        if (item is null)
+        {
+            _detail.Text = "Description: Empty slot.\nSpecial effects: None";
+            return;
+        }
+
         string effects = item.SpecialEffectIds.Count == 0
             ? "None"
             : string.Join(", ", item.SpecialEffectIds.Select(ShortName));
-        _detail.Text = $"{RequireText().Resolve(item.DescriptionKey)}{System.Environment.NewLine}Effects: {effects}";
+        _detail.Text = $"Description: {RequireText().Resolve(item.DescriptionKey)}"
+            + $"{System.Environment.NewLine}Special effects: {effects}";
     }
 
     private void TryEquip(string itemId, string slotId)
